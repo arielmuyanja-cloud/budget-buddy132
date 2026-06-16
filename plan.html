@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Savings Plan</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #0f172a;
+            color: white;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .card {
+            background: #1e293b;
+            padding: 20px;
+            border-radius: 10px;
+            max-width: 500px;
+            margin: auto;
+        }
+
+        h1 {
+            margin-bottom: 20px;
+        }
+
+        .good {
+            color: #22c55e;
+        }
+
+        .bad {
+            color: #ef4444;
+        }
+
+        a {
+            color: #60a5fa;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>📊 Your Savings Plan</h1>
+
+    <div class="card">
+
+        <p><strong>Income:</strong> ${{ income }}</p>
+        <p><strong>Goal:</strong> ${{ goal }}</p>
+        <p><strong>Time:</strong> {{ months }} months</p>
+
+        <hr>
+
+        <h2>💰 Monthly Save: ${{ monthly_save }}</h2>
+        <h2>📅 Weekly Save: ${{ weekly_save }}</h2>
+
+        <h3 class="{{ 'bad' if '⚠️' in suggestion else 'good' }}">
+            {{ suggestion }}
+        </h3>
+
+        <br>
+
+        <a href="/">← Back to Budget Buddy</a>
+
+    </div>
+
+</body>
+</html>
