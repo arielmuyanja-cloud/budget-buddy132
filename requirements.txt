@@ -1,3 +1,10 @@
+<<<<<<< HEAD
 flask
 openai
 gunicorn
+=======
+flask
+openai
+gunicorn
+python-dotenv
+>>>>>>> 2ee18e8fd330d8e3ae2c5af2304e639402bcdda6
