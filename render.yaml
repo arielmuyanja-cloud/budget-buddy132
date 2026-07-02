@@ -1,14 +1,6 @@
-<<<<<<< HEAD
 services:
   - type: web
     name: budget-buddy
     env: python
     buildCommand: pip install -r requirements.txt
-=======
-services:
-  - type: web
-    name: budget-buddy
-    env: python
-    buildCommand: pip install -r requirements.txt
->>>>>>> 2ee18e8fd330d8e3ae2c5af2304e639402bcdda6
     startCommand: gunicorn app:app
