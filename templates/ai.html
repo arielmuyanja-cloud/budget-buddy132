@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Budget Buddy AI Coach</title>
+
+    <style>
+        body{
+            font-family:Arial;
+            background:#0f172a;
+            color:white;
+            padding:20px;
+        }
+
+        .container{
+            max-width:900px;
+            margin:auto;
+        }
+
+        .card{
+            background:#1e293b;
+            padding:20px;
+            border-radius:12px;
+            margin-bottom:20px;
+        }
+
+        textarea{
+            width:100%;
+            height:150px;
+            padding:12px;
+            border:none;
+            border-radius:8px;
+            margin-top:10px;
+        }
+
+        button{
+            margin-top:10px;
+            padding:12px 20px;
+            background:#22c55e;
+            color:white;
+            border:none;
+            border-radius:8px;
+            cursor:pointer;
+        }
+
+        .answer{
+            margin-top:20px;
+            background:#0f766e;
+            padding:15px;
+            border-radius:10px;
+        }
+
+        a{
+            color:white;
+            text-decoration:none;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <div class="card">
+        <h1>🤖 Budget Buddy AI Coach</h1>
+
+        <a href="/">⬅ Back to Dashboard</a>
+    </div>
+
+    <div class="card">
+
+        <form method="POST">
+
+            <h3>Ask your financial question</h3>
+
+            <textarea
+                name="question"
+                placeholder="Example: How can I save more money this month?"
+                required></textarea>
+
+            <br>
+
+            <button type="submit">
+                Get Advice
+            </button>
+
+        </form>
+
+        {% if answer %}
+        <div class="answer">
+            <h3>💡 AI Advice</h3>
+            <p>{{ answer }}</p>
+        </
+        </div>
+{% endif %}
+
+    </div>
+
+</div>
+
+</body>
+</html>
