@@ -206,6 +206,11 @@ def home():
         for g in c.fetchall()
     ]
 
+    # current plan
+    c.execute("SELECT plan FROM subscriptions WHERE username=?", (username,))
+    plan_row = c.fetchone()
+    current_plan = plan_row[0] if plan_row else "free"
+
     conn.close()
 
     remaining = income - total
@@ -232,6 +237,7 @@ def home():
         income=income,
         remaining=remaining,
         goals=goals,
+        current_plan=current_plan,
         warning=warning,
         chart_labels=list(category_totals.keys()),
         chart_values=list(category_totals.values())
@@ -286,14 +292,38 @@ def set_income():
     return redirect('/')
 
 
-# ================= SUBSCRIPTIONS =================
-@app.route('/subscribe', methods=['GET', 'POST'])
+# ================= CHECKOUT =================
+@app.route('/checkout')
+def checkout():
+    if 'user' not in session:
+        return redirect('/login')
+
+    plan = request.args.get('plan')
+
+    plan_details = {
+        "personal_starter": {"name": "Starter", "price": 5},
+        "personal_plus": {"name": "Plus", "price": 10},
+        "personal_pro": {"name": "Pro", "price": 25},
+        "personal_premium": {"name": "Premium", "price": 50},
+        "team_starter": {"name": "Team Starter", "price": 100},
+        "team_growth": {"name": "Team Growth", "price": 200},
+        "business_pro": {"name": "Business Pro", "price": 500},
+        "enterprise": {"name": "Enterprise", "price": 1000}
+    }
+
+    details = plan_details.get(plan, {"name": "Starter", "price": 5})
+
+    return render_template('checkout.html', plan=plan, plan_name=details["name"], price=details["price"])
+
+
+# ================= SUBSCRIBE (called after checkout form submit) =================
+@app.route('/subscribe', methods=['POST'])
 def subscribe():
     if 'user' not in session:
         return redirect('/login')
 
     username = session['user']
-    plan = request.values.get('plan')
+    plan = request.form.get('plan')
 
     prices = {
         "personal_starter": 5,

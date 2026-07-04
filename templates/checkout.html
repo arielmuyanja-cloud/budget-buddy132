@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XHK5KLN2RM"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-XHK5KLN2RM');
+    </script>
+
+    <title>Checkout - Budget Buddy</title>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <style>
+        body{
+            font-family:Arial, sans-serif;
+            background:#0f172a;
+            color:white;
+            margin:0;
+            padding:20px;
+        }
+
+        .container{
+            max-width:900px;
+            margin:auto;
+            display:grid;
+            grid-template-columns:1fr 1fr;
+            gap:30px;
+        }
+
+        .back{
+            grid-column:1 / -1;
+            margin-bottom:10px;
+        }
+
+        a{
+            color:#60a5fa;
+            text-decoration:none;
+        }
+
+        .summary{
+            background:#1e293b;
+            padding:25px;
+            border-radius:12px;
+            height:fit-content;
+        }
+
+        .summary h3{
+            margin-top:0;
+            color:#94a3b8;
+            font-size:14px;
+            text-transform:uppercase;
+            letter-spacing:1px;
+        }
+
+        .plan-row{
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            padding:15px 0;
+            border-bottom:1px solid #334155;
+        }
+
+        .plan-name{
+            font-size:18px;
+            font-weight:bold;
+        }
+
+        .plan-price{
+            font-size:18px;
+            font-weight:bold;
+        }
+
+        .total-row{
+            display:flex;
+            justify-content:space-between;
+            padding-top:15px;
+            font-size:20px;
+            font-weight:bold;
+        }
+
+        .form-card{
+            background:#1e293b;
+            padding:25px;
+            border-radius:12px;
+        }
+
+        .form-card h2{
+            margin-top:0;
+        }
+
+        label{
+            display:block;
+            font-size:13px;
+            color:#94a3b8;
+            margin:15px 0 6px 0;
+        }
+
+        input{
+            width:100%;
+            padding:12px;
+            border:none;
+            border-radius:8px;
+            box-sizing:border-box;
+            font-size:15px;
+        }
+
+        .row{
+            display:flex;
+            gap:10px;
+        }
+
+        .row input{
+            flex:1;
+        }
+
+        button{
+            width:100%;
+            padding:14px;
+            border:none;
+            border-radius:8px;
+            background:#22c55e;
+            color:white;
+            font-size:16px;
+            font-weight:bold;
+            cursor:pointer;
+            margin-top:20px;
+        }
+
+        .secure-note{
+            text-align:center;
+            font-size:12px;
+            color:#94a3b8;
+            margin-top:15px;
+        }
+
+        .placeholder-note{
+            background:#422006;
+            border:1px solid #92400e;
+            color:#fde68a;
+            padding:12px 16px;
+            border-radius:8px;
+            font-size:13px;
+            margin-bottom:20px;
+            grid-column:1 / -1;
+        }
+
+        @media (max-width:700px){
+            .container{
+                grid-template-columns:1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <div class="back">
+        <a href="/pricing">← Back to plans</a>
+    </div>
+
+    <div class="placeholder-note">
+        ⚠️ Demo checkout — no real payment will be processed. This is a placeholder UI while real payment processing is being set up.
+    </div>
+
+    <div class="form-card">
+        <h2>💳 Payment details</h2>
+
+        <form method="POST" action="/subscribe">
+            <input type="hidden" name="plan" value="{{ plan }}">
+
+            <label>Cardholder name</label>
+            <input type="text" placeholder="Full name on card" required>
+
+            <label>Card number</label>
+            <input type="text" placeholder="1234 5678 9012 3456" maxlength="19" required>
+
+            <div class="row">
+                <div>
+                    <label>Expiry</label>
+                    <input type="text" placeholder="MM/YY" maxlength="5" required>
+                </div>
+                <div>
+                    <label>CVC</label>
+                    <input type="text" placeholder="123" maxlength="4" required>
+                </div>
+            </div>
+
+            <label>Billing email</label>
+            <input type="email" placeholder="you@example.com" required>
+
+            <button type="submit">Subscribe — ${{ price }}/month</button>
+        </form>
+
+        <p class="secure-note">🔒 Payments are securely processed. Your card details are never stored on our servers.</p>
+    </div>
+
+    <div class="summary">
+        <h3>Order Summary</h3>
+
+        <div class="plan-row">
+            <span class="plan-name">{{ plan_name }}</span>
+            <span class="plan-price">${{ price }}/mo</span>
+        </div>
+
+        <div class="total-row">
+            <span>Total due today</span>
+            <span>${{ price }}</span>
+        </div>
+    </div>
+
+</div>
+
+</body>
+</html>
