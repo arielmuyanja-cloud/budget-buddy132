@@ -202,6 +202,14 @@
 
     </form>
 
+    {% if income %}
+        <form method="POST" action="/delete_income" style="margin-top:10px;">
+            <button type="submit" style="background:#ef4444;">
+                🗑️ Clear Income
+            </button>
+        </form>
+    {% endif %}
+
 </div>
 
 <div class="card">
@@ -251,8 +259,13 @@
 
         {% for t in transactions %}
 
-            <div class="expense">
-                ${{ t.amount }} - {{ t.category }}
+            <div class="expense" style="display:flex; justify-content:space-between; align-items:center;">
+                <span>${{ t.amount }} - {{ t.category }}</span>
+                <form method="POST" action="/delete_expense/{{ t.id }}" style="margin:0;">
+                    <button type="submit" style="background:#ef4444; padding:5px 10px; font-size:13px;">
+                        🗑️
+                    </button>
+                </form>
             </div>
 
         {% endfor %}
@@ -302,15 +315,43 @@
 
             <div class="goal">
 
-                <strong>{{ goal.name }}</strong>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <strong>{{ goal.name }}</strong>
+                    <form method="POST" action="/delete_goal/{{ goal.id }}" style="margin:0;">
+                        <button type="submit" style="background:#ef4444; padding:5px 10px; font-size:13px;">
+                            🗑️
+                        </button>
+                    </form>
+                </div>
 
-                <br><br>
+                <br>
 
                 Saved: ${{ goal.saved }}
 
                 <br>
 
                 Target: ${{ goal.target }}
+
+                {% if goal.saved >= goal.target %}
+                    <p style="color:#22c55e; font-weight:bold; margin-top:8px;">🎉 Goal reached!</p>
+                {% else %}
+                    <div style="background:#1e293b; border-radius:8px; height:14px; margin-top:10px; overflow:hidden;">
+                        <div style="background:#22c55e; height:100%; width:{{ (goal.saved / goal.target * 100) if goal.target > 0 else 0 }}%;"></div>
+                    </div>
+
+                    <form method="POST" action="/add_to_goal/{{ goal.id }}" style="margin-top:10px; display:flex; gap:5px;">
+                        <input
+                            type="number"
+                            step="0.01"
+                            name="amount"
+                            placeholder="Add amount"
+                            required
+                            style="flex:1; margin:0;">
+                        <button type="submit" style="margin:0;">
+                            Add
+                        </button>
+                    </form>
+                {% endif %}
 
             </div>
 

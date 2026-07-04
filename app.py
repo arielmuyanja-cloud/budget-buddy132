@@ -174,7 +174,7 @@ def home():
 
     # transactions
     c.execute("""
-        SELECT amount, category
+        SELECT id, amount, category
         FROM transactions
         WHERE username=?
     """, (username,))
@@ -186,10 +186,11 @@ def home():
     category_totals = defaultdict(float)
 
     for r in rows:
-        amount = float(r[0])
-        category = r[1]
+        expense_id = r[0]
+        amount = float(r[1])
+        category = r[2]
 
-        transactions.append({"amount": amount, "category": category})
+        transactions.append({"id": expense_id, "amount": amount, "category": category})
         total += amount
         category_totals[category] += amount
 
@@ -487,6 +488,70 @@ def add_to_goal(goal_id):
     conn.close()
 
     return redirect('/')
+
+
+# ================= DELETE EXPENSE =================
+@app.route('/delete_expense/<int:expense_id>', methods=['POST'])
+def delete_expense(expense_id):
+    if 'user' not in session:
+        return redirect('/login')
+
+    username = session['user']
+
+    conn = sqlite3.connect('budget.db')
+    c = conn.cursor()
+
+    c.execute("""
+        DELETE FROM transactions
+        WHERE id=? AND username=?
+    """, (expense_id, username))
+
+    conn.commit()
+    conn.close()
+
+    return redirect('/')
+
+
+# ================= DELETE INCOME =================
+@app.route('/delete_income', methods=['POST'])
+def delete_income():
+    if 'user' not in session:
+        return redirect('/login')
+
+    username = session['user']
+
+    conn = sqlite3.connect('budget.db')
+    c = conn.cursor()
+
+    c.execute("DELETE FROM income WHERE username=?", (username,))
+
+    conn.commit()
+    conn.close()
+
+    return redirect('/')
+
+
+# ================= DELETE GOAL =================
+@app.route('/delete_goal/<int:goal_id>', methods=['POST'])
+def delete_goal(goal_id):
+    if 'user' not in session:
+        return redirect('/login')
+
+    username = session['user']
+
+    conn = sqlite3.connect('budget.db')
+    c = conn.cursor()
+
+    c.execute("""
+        DELETE FROM goals
+        WHERE id=? AND username=?
+    """, (goal_id, username))
+
+    conn.commit()
+    conn.close()
+
+    return redirect('/')
+
 # ================= RUN =================
 if __name__ == '__main__':
     app.run(debug=True)
