@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XHK5KLN2RM"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-XHK5KLN2RM');
+    </script>
+
+    <title>Pricing - Budget Buddy</title>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <style>
+        body{
+            font-family:Arial, sans-serif;
+            background:#0f172a;
+            color:white;
+            margin:0;
+            padding:20px;
+        }
+
+        .container{
+            max-width:1200px;
+            margin:auto;
+        }
+
+        .header{
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            margin-bottom:20px;
+        }
+
+        a{
+            color:#60a5fa;
+            text-decoration:none;
+        }
+
+        .intro{
+            text-align:center;
+            max-width:700px;
+            margin:0 auto 40px auto;
+        }
+
+        .intro h1{
+            margin-bottom:10px;
+        }
+
+        .intro p{
+            color:#94a3b8;
+        }
+
+        .toggle{
+            display:flex;
+            justify-content:center;
+            gap:10px;
+            margin-bottom:40px;
+        }
+
+        .toggle button{
+            padding:10px 24px;
+            border:none;
+            border-radius:8px;
+            background:#334155;
+            color:white;
+            cursor:pointer;
+            font-size:15px;
+        }
+
+        .toggle button.active{
+            background:#22c55e;
+        }
+
+        .plans{
+            display:grid;
+            grid-template-columns:repeat(auto-fit, minmax(250px, 1fr));
+            gap:20px;
+            margin-bottom:30px;
+        }
+
+        .plan{
+            background:#1e293b;
+            padding:25px;
+            border-radius:12px;
+            display:flex;
+            flex-direction:column;
+        }
+
+        .plan.featured{
+            border:2px solid #22c55e;
+            position:relative;
+        }
+
+        .badge{
+            position:absolute;
+            top:-12px;
+            right:20px;
+            background:#22c55e;
+            color:#0f172a;
+            font-size:12px;
+            font-weight:bold;
+            padding:4px 10px;
+            border-radius:6px;
+        }
+
+        .plan-icon{
+            font-size:28px;
+            margin-bottom:8px;
+        }
+
+        .plan h3{
+            margin:0 0 4px 0;
+        }
+
+        .tagline{
+            font-size:13px;
+            color:#94a3b8;
+            margin:0 0 10px 0;
+            min-height:32px;
+        }
+
+        .price{
+            font-size:32px;
+            font-weight:bold;
+            margin:10px 0;
+        }
+
+        .price span{
+            font-size:14px;
+            font-weight:normal;
+            color:#94a3b8;
+        }
+
+        .plan ul{
+            list-style:none;
+            padding:0;
+            margin:15px 0;
+            flex-grow:1;
+        }
+
+        .plan li{
+            padding:8px 0;
+            border-bottom:1px solid #334155;
+            font-size:14px;
+            color:#cbd5e1;
+            display:flex;
+            align-items:flex-start;
+            gap:8px;
+        }
+
+        .plan li:last-child{
+            border-bottom:none;
+        }
+
+        .check{
+            color:#22c55e;
+            flex-shrink:0;
+        }
+
+        .plan button{
+            padding:12px;
+            border:none;
+            border-radius:8px;
+            background:#334155;
+            color:white;
+            cursor:pointer;
+            font-size:15px;
+            margin-top:10px;
+            font-weight:bold;
+        }
+
+        .plan.featured button{
+            background:#22c55e;
+        }
+
+        .enterprise-btn{
+            background:#3b82f6 !important;
+        }
+
+        .faq{
+            max-width:700px;
+            margin:50px auto;
+        }
+
+        .faq h2{
+            text-align:center;
+            margin-bottom:20px;
+        }
+
+        .faq-item{
+            background:#1e293b;
+            padding:16px 20px;
+            border-radius:10px;
+            margin-bottom:12px;
+        }
+
+        .faq-item h4{
+            margin:0 0 6px 0;
+            color:#22c55e;
+        }
+
+        .faq-item p{
+            margin:0;
+            font-size:14px;
+            color:#cbd5e1;
+        }
+
+        .guarantee{
+            text-align:center;
+            color:#94a3b8;
+            font-size:14px;
+            margin-bottom:40px;
+        }
+
+        .hidden{
+            display:none;
+        }
+
+        @media (max-width:768px){
+            body{
+                padding:10px;
+            }
+
+            .header{
+                flex-direction:column;
+                text-align:center;
+                gap:10px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <div class="header">
+        <h1>💰 Budget Buddy</h1>
+        <div>
+            <a href="/">← Back to Dashboard</a>
+        </div>
+    </div>
+
+    <div class="intro">
+        <h1>Simple pricing, real value</h1>
+        <p>Budget Buddy's AI coach isn't a bolted-on extra — it's the core of every paid plan. Pick the tier that matches how deep you want to go.</p>
+    </div>
+
+    <div class="toggle">
+        <button id="personalBtn" class="active" onclick="showPersonal()">Personal</button>
+        <button id="businessBtn" onclick="showBusiness()">Business</button>
+    </div>
+
+    <!-- PERSONAL PLANS -->
+    <div id="personalPlans" class="plans">
+
+        <div class="plan">
+            <div class="plan-icon">🪙</div>
+            <h3>Starter</h3>
+            <p class="tagline">Your full financial picture, synced automatically, explained by AI</p>
+            <div class="price">$5<span>/month</span></div>
+            <ul>
+                <li><span class="check">✓</span> Bank account syncing</li>
+                <li><span class="check">✓</span> Unlimited AI coach</li>
+                <li><span class="check">✓</span> Savings goals</li>
+                <li><span class="check">✓</span> Basic AI meal prep suggestions</li>
+                <li><span class="check">✓</span> Spending analytics</li>
+            </ul>
+            <button onclick="subscribe('personal_starter')">Choose Starter</button>
+        </div>
+
+        <div class="plan">
+            <div class="plan-icon">📊</div>
+            <h3>Plus</h3>
+            <p class="tagline">The AI coach starts reaching out to you, instead of waiting to be asked</p>
+            <div class="price">$10<span>/month</span></div>
+            <ul>
+                <li><span class="check">✓</span> Everything in Starter</li>
+                <li><span class="check">✓</span> Weekly AI spending digest</li>
+                <li><span class="check">✓</span> Custom spending alerts</li>
+                <li><span class="check">✓</span> Personalized AI meal plans</li>
+                <li><span class="check">✓</span> Data export (CSV)</li>
+            </ul>
+            <button onclick="subscribe('personal_plus')">Choose Plus</button>
+        </div>
+
+        <div class="plan featured">
+            <span class="badge">MOST POPULAR</span>
+            <div class="plan-icon">⚡</div>
+            <h3>Pro</h3>
+            <p class="tagline">Structured, professional-grade money management</p>
+            <div class="price">$25<span>/month</span></div>
+            <ul>
+                <li><span class="check">✓</span> Everything in Plus</li>
+                <li><span class="check">✓</span> Proactive AI spending insights</li>
+                <li><span class="check">✓</span> Debt payoff planner</li>
+                <li><span class="check">✓</span> Custom spending categories &amp; tags</li>
+                <li><span class="check">✓</span> AI troubleshooting assistant</li>
+            </ul>
+            <button onclick="subscribe('personal_pro')">Choose Pro</button>
+        </div>
+
+        <div class="plan">
+            <div class="plan-icon">👑</div>
+            <h3>Premium</h3>
+            <p class="tagline">A deep, quarterly picture of your entire financial life</p>
+            <div class="price">$50<span>/month</span></div>
+            <ul>
+                <li><span class="check">✓</span> Everything in Pro</li>
+                <li><span class="check">✓</span> Deep quarterly AI financial report</li>
+                <li><span class="check">✓</span> Investment tracking (stocks, crypto, net worth)</li>
+                <li><span class="check">✓</span> Multiple budgets (personal, side hustle, etc.)</li>
+                <li><span class="check">✓</span> Early access to new features</li>
+            </ul>
+            <button onclick="subscribe('personal_premium')">Choose Premium</button>
+        </div>
+
+    </div>
+
+    <p class="guarantee" id="personalGuarantee">Cancel anytime. No long-term contracts.</p>
+
+    <!-- BUSINESS PLANS -->
+    <div id="businessPlans" class="plans hidden">
+
+        <div class="plan">
+            <div class="plan-icon">👥</div>
+            <h3>Team Starter</h3>
+            <p class="tagline">For small teams that just need everyone on the same page</p>
+            <div class="price">$100<span>/month</span></div>
+            <ul>
+                <li><span class="check">✓</span> Up to 5 team seats</li>
+                <li><span class="check">✓</span> 2 connected bank accounts</li>
+                <li><span class="check">✓</span> Shared dashboard</li>
+                <li><span class="check">✓</span> Basic expense approval flow</li>
+            </ul>
+            <button onclick="subscribe('team_starter')">Choose Team Starter</button>
+        </div>
+
+        <div class="plan">
+            <div class="plan-icon">📈</div>
+            <h3>Team Growth</h3>
+            <p class="tagline">For growing teams that need structure, not just visibility</p>
+            <div class="price">$200<span>/month</span></div>
+            <ul>
+                <li><span class="check">✓</span> Up to 15 team seats</li>
+                <li><span class="check">✓</span> 5 connected bank accounts</li>
+                <li><span class="check">✓</span> Role permissions</li>
+                <li><span class="check">✓</span> Exportable monthly reports</li>
+                <li><span class="check">✓</span> AI-flagged spending anomalies</li>
+            </ul>
+            <button onclick="subscribe('team_growth')">Choose Team Growth</button>
+        </div>
+
+        <div class="plan featured">
+            <span class="badge">MOST POPULAR</span>
+            <div class="plan-icon">🏢</div>
+            <h3>Business Pro</h3>
+            <p class="tagline">Real oversight across departments, without slowing anyone down</p>
+            <div class="price">$500<span>/month</span></div>
+            <ul>
+                <li><span class="check">✓</span> Up to 40 team seats</li>
+                <li><span class="check">✓</span> 15 connected bank accounts</li>
+                <li><span class="check">✓</span> Unlimited AI usage</li>
+                <li><span class="check">✓</span> Custom spending categories per department</li>
+                <li><span class="check">✓</span> Same-day priority support</li>
+            </ul>
+            <button onclick="subscribe('business_pro')">Choose Business Pro</button>
+        </div>
+
+        <div class="plan">
+            <div class="plan-icon">🏛️</div>
+            <h3>Enterprise</h3>
+            <p class="tagline">Built around your organization, not the other way around</p>
+            <div class="price">$1000<span>/month</span></div>
+            <ul>
+                <li><span class="check">✓</span> Unlimited team seats</li>
+                <li><span class="check">✓</span> Unlimited connected accounts</li>
+                <li><span class="check">✓</span> Dedicated account manager</li>
+                <li><span class="check">✓</span> Custom AI trained on your categories</li>
+                <li><span class="check">✓</span> API access</li>
+            </ul>
+            <button class="enterprise-btn" onclick="subscribe('enterprise')">Contact Sales</button>
+        </div>
+
+    </div>
+
+    <p class="guarantee hidden" id="businessGuarantee">Custom contracts available for Enterprise. All other plans billed monthly, cancel anytime.</p>
+
+    <div class="faq">
+        <h2>❓ Common questions</h2>
+
+        <div class="faq-item">
+            <h4>What makes the AI coach worth paying for?</h4>
+            <p>Every plan gets unlimited AI coach access — it's not a chatbot bolted onto a tracker. From Plus upward, it starts reaching out to you proactively instead of just answering questions when asked.</p>
+        </div>
+
+        <div class="faq-item">
+            <h4>Can I switch plans later?</h4>
+            <p>Yes. Upgrade or downgrade anytime — changes apply from your next billing cycle.</p>
+        </div>
+
+        <div class="faq-item">
+            <h4>Is my bank data safe?</h4>
+            <p>Bank connections never store your bank login — that's handled entirely by a secure third-party provider. Budget Buddy only ever sees transaction data, never your credentials.</p>
+        </div>
+
+        <div class="faq-item">
+            <h4>What happens if my team outgrows a plan?</h4>
+            <p>You'll get a heads-up before hitting your seat or account limit, with a one-click upgrade to the next tier.</p>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    function showPersonal(){
+        document.getElementById('personalPlans').classList.remove('hidden');
+        document.getElementById('businessPlans').classList.add('hidden');
+        document.getElementById('personalGuarantee').classList.remove('hidden');
+        document.getElementById('businessGuarantee').classList.add('hidden');
+        document.getElementById('personalBtn').classList.add('active');
+        document.getElementById('businessBtn').classList.remove('active');
+    }
+
+    function showBusiness(){
+        document.getElementById('businessPlans').classList.remove('hidden');
+        document.getElementById('personalPlans').classList.add('hidden');
+        document.getElementById('businessGuarantee').classList.remove('hidden');
+        document.getElementById('personalGuarantee').classList.add('hidden');
+        document.getElementById('businessBtn').classList.add('active');
+        document.getElementById('personalBtn').classList.remove('active');
+    }
+
+    function subscribe(plan){
+        window.location.href = '/subscribe?plan=' + plan;
+    }
+</script>
+
+</body>
+</html>
