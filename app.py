@@ -4,11 +4,15 @@ import sqlite3
 from collections import defaultdict
 import os
 from dotenv import load_dotenv
+import stripe
 
 load_dotenv()
 
 # ================= OPENAI =================
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+# ================= STRIPE =================
+stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 
 # ================= APP =================
 app = Flask(__name__)
@@ -292,7 +296,7 @@ def set_income():
     return redirect('/')
 
 
-# ================= CHECKOUT =================
+# ================= CHECKOUT (Stripe) =================
 @app.route('/checkout')
 def checkout():
     if 'user' not in session:
@@ -313,17 +317,49 @@ def checkout():
 
     details = plan_details.get(plan, {"name": "Starter", "price": 5})
 
-    return render_template('checkout.html', plan=plan, plan_name=details["name"], price=details["price"])
+    checkout_session = stripe.checkout.Session.create(
+        payment_method_types=['card'],
+        line_items=[{
+            'price_data': {
+                'currency': 'usd',
+                'product_data': {
+                    'name': f'Budget Buddy - {details["name"]}',
+                },
+                'unit_amount': details["price"] * 100,
+                'recurring': {
+                    'interval': 'month',
+                },
+            },
+            'quantity': 1,
+        }],
+        mode='subscription',
+        success_url=request.host_url + f'subscribe?plan={plan}&session_id={{CHECKOUT_SESSION_ID}}',
+        cancel_url=request.host_url + 'pricing',
+    )
+
+    return redirect(checkout_session.url, code=303)
 
 
-# ================= SUBSCRIBE (called after checkout form submit) =================
-@app.route('/subscribe', methods=['POST'])
+# ================= SUBSCRIBE (called after successful Stripe checkout) =================
+@app.route('/subscribe')
 def subscribe():
     if 'user' not in session:
         return redirect('/login')
 
     username = session['user']
-    plan = request.form.get('plan')
+    plan = request.args.get('plan')
+    stripe_session_id = request.args.get('session_id')
+
+    # Verify the payment actually succeeded with Stripe before granting the plan
+    if not stripe_session_id:
+        return redirect('/pricing')
+
+    try:
+        stripe_session = stripe.checkout.Session.retrieve(stripe_session_id)
+        if stripe_session.payment_status != 'paid':
+            return redirect('/pricing')
+    except Exception:
+        return redirect('/pricing')
 
     prices = {
         "personal_starter": 5,
