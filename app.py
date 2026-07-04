@@ -319,6 +319,12 @@ def subscribe():
     return redirect('/')
 
 
+# ================= PRICING PAGE =================
+@app.route('/pricing')
+def pricing():
+    return render_template('pricing.html')
+
+
 # ================= AI CHAT =================
 @app.route('/ai', methods=['GET', 'POST'])
 def ai():
