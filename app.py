@@ -287,18 +287,23 @@ def set_income():
 
 
 # ================= SUBSCRIPTIONS =================
-@app.route('/subscribe', methods=['POST'])
+@app.route('/subscribe', methods=['GET', 'POST'])
 def subscribe():
     if 'user' not in session:
         return redirect('/login')
 
     username = session['user']
-    plan = request.form['plan']
+    plan = request.values.get('plan')
 
     prices = {
-        "basic": 5,
-        "pro": 10,
-        "premium": 20
+        "personal_starter": 5,
+        "personal_plus": 10,
+        "personal_pro": 25,
+        "personal_premium": 50,
+        "team_starter": 100,
+        "team_growth": 200,
+        "business_pro": 500,
+        "enterprise": 1000
     }
 
     price = prices.get(plan, 5)
