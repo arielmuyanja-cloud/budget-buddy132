@@ -11,6 +11,9 @@
       gtag('config', 'G-XHK5KLN2RM');
     </script>
 
+    <!-- Paddle.js -->
+    <script src="https://cdn.paddle.com/paddle/v2/paddle.js"></script>
+
     <title>Pricing - Budget Buddy</title>
 
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -418,6 +421,18 @@
 </div>
 
 <script>
+    // ---- Data passed from Flask (app.py's /pricing route) ----
+    const PADDLE_CLIENT_TOKEN = {{ paddle_client_token | tojson }};
+    const PADDLE_ENV = {{ paddle_env | tojson }};
+    const PADDLE_PRICE_IDS = {{ paddle_price_ids | tojson }};
+    const CURRENT_USERNAME = {{ username | tojson }};
+
+    // ---- Initialize Paddle.js ----
+    if (PADDLE_ENV === 'sandbox') {
+        Paddle.Environment.set('sandbox');
+    }
+    Paddle.Setup({ token: PADDLE_CLIENT_TOKEN });
+
     function showPersonal(){
         document.getElementById('personalPlans').classList.remove('hidden');
         document.getElementById('businessPlans').classList.add('hidden');
@@ -437,7 +452,32 @@
     }
 
     function subscribe(plan){
-        window.location.href = '/checkout?plan=' + plan;
+        // Enterprise has no self-serve checkout - route to contact instead
+        if (plan === 'enterprise') {
+            window.location.href = 'mailto:amuyanja1314@gmail.com?subject=Enterprise%20Plan%20Inquiry';
+            return;
+        }
+
+        // Must be logged in so the webhook knows which user to upgrade
+        if (!CURRENT_USERNAME) {
+            window.location.href = '/login';
+            return;
+        }
+
+        const priceId = PADDLE_PRICE_IDS[plan];
+
+        if (!priceId) {
+            alert('This plan is not available yet. Please try again later.');
+            return;
+        }
+
+        Paddle.Checkout.open({
+            items: [{ priceId: priceId, quantity: 1 }],
+            customData: { username: CURRENT_USERNAME },
+            settings: {
+                successUrl: window.location.origin + '/'
+            }
+        });
     }
 </script>
 
