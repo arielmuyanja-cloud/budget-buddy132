@@ -511,6 +511,22 @@ def paddle_webhook():
     return jsonify({"status": "ok"}), 200
 
 
+# ================= LEGAL PAGES (required for Paddle domain approval) =================
+@app.route('/terms')
+def terms():
+    return render_template('terms.html')
+
+
+@app.route('/privacy')
+def privacy():
+    return render_template('privacy.html')
+
+
+@app.route('/refund-policy')
+def refund_policy():
+    return render_template('refund.html')
+
+
 # ================= PRICING PAGE =================
 @app.route('/pricing')
 def pricing():
