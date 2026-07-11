@@ -1,18 +1,55 @@
 from openai import OpenAI
-from flask import Flask, render_template, request, redirect, session
+from flask import Flask, render_template, request, redirect, session, jsonify
 import sqlite3
 from collections import defaultdict
 import os
+import hmac
+import hashlib
+import json
 from dotenv import load_dotenv
 import stripe
+import requests
 
 load_dotenv()
 
 # ================= OPENAI =================
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-# ================= STRIPE =================
+# ================= STRIPE (kept in place, no longer linked from pricing page) =================
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+
+# ================= PADDLE =================
+PADDLE_API_KEY = os.getenv("PADDLE_API_KEY")
+PADDLE_WEBHOOK_SECRET = os.getenv("PADDLE_WEBHOOK_SECRET")
+# Set to "sandbox" while testing, switch to "production" when you go live
+PADDLE_ENV = os.getenv("PADDLE_ENV", "sandbox")
+
+# Maps your plan keys to real Paddle Price IDs (from your sandbox dashboard)
+PADDLE_PRICE_IDS = {
+    "personal_starter": "pri_01kx6csjf90zmje1xac6cmta01",
+    "personal_plus": "pri_01kx6crwt4w6vpm667k063ttcc",
+    "personal_pro": "pri_01kx6cqzp8hfxy3pjssdsh2c8h",
+    "personal_premium": "pri_01kx6cq20c34grwqr8asmwrqv6",
+    "team_starter": "pri_01kx6cmjgfekem0ymchv43emqc",
+    "team_growth": "pri_01kx6ckm0y2tsy1k1z4vyprceb",
+    "business_pro": "pri_01kx514exdyyx28eswrqbmtbx8",
+    # "enterprise" intentionally has no Paddle price - it stays a "Contact Sales" flow
+}
+
+# Reverse lookup: Paddle price_id -> (plan_key, price)
+PLAN_PRICES = {
+    "personal_starter": 5,
+    "personal_plus": 10,
+    "personal_pro": 25,
+    "personal_premium": 50,
+    "team_starter": 100,
+    "team_growth": 200,
+    "business_pro": 500,
+    "enterprise": 1000
+}
+
+PRICE_ID_TO_PLAN = {v: k for k, v in PADDLE_PRICE_IDS.items()}
+
 
 # ================= APP =================
 app = Flask(__name__)
@@ -69,7 +106,10 @@ def init_db():
         CREATE TABLE IF NOT EXISTS subscriptions (
             username TEXT UNIQUE,
             plan TEXT,
-            price REAL
+            price REAL,
+            paddle_subscription_id TEXT,
+            paddle_customer_id TEXT,
+            status TEXT
         )
     """)
 
@@ -297,7 +337,7 @@ def set_income():
     return redirect('/')
 
 
-# ================= CHECKOUT (Stripe) =================
+# ================= STRIPE CHECKOUT (kept, unused - pricing page now uses Paddle) =================
 @app.route('/checkout')
 def checkout():
     if 'user' not in session:
@@ -341,7 +381,7 @@ def checkout():
     return redirect(checkout_session.url, code=303)
 
 
-# ================= SUBSCRIBE (called after successful Stripe checkout) =================
+# ================= STRIPE SUBSCRIBE (kept, unused - Paddle uses /webhook/paddle instead) =================
 @app.route('/subscribe')
 def subscribe():
     if 'user' not in session:
@@ -351,7 +391,6 @@ def subscribe():
     plan = request.args.get('plan')
     stripe_session_id = request.args.get('session_id')
 
-    # Verify the payment actually succeeded with Stripe before granting the plan
     if not stripe_session_id:
         return redirect('/pricing')
 
@@ -362,18 +401,7 @@ def subscribe():
     except Exception:
         return redirect('/pricing')
 
-    prices = {
-        "personal_starter": 5,
-        "personal_plus": 10,
-        "personal_pro": 25,
-        "personal_premium": 50,
-        "team_starter": 100,
-        "team_growth": 200,
-        "business_pro": 500,
-        "enterprise": 1000
-    }
-
-    price = prices.get(plan, 5)
+    price = PLAN_PRICES.get(plan, 5)
 
     conn = sqlite3.connect('budget.db')
     c = conn.cursor()
@@ -391,10 +419,108 @@ def subscribe():
     return redirect('/')
 
 
+# ================= PADDLE WEBHOOK =================
+def verify_paddle_signature(raw_body, paddle_signature_header):
+    """
+    Paddle sends a header like: 'ts=1234567890;h1=abcdef...'
+    We recompute the HMAC-SHA256 hash of 'timestamp:raw_body' using our
+    webhook secret, and compare it to the h1 value Paddle sent.
+    """
+    if not paddle_signature_header or not PADDLE_WEBHOOK_SECRET:
+        return False
+
+    try:
+        parts = dict(
+            item.split('=', 1) for item in paddle_signature_header.split(';')
+        )
+        timestamp = parts.get('ts')
+        signature = parts.get('h1')
+
+        if not timestamp or not signature:
+            return False
+
+        signed_payload = f"{timestamp}:{raw_body.decode('utf-8')}"
+
+        computed_signature = hmac.new(
+            PADDLE_WEBHOOK_SECRET.encode('utf-8'),
+            signed_payload.encode('utf-8'),
+            hashlib.sha256
+        ).hexdigest()
+
+        return hmac.compare_digest(computed_signature, signature)
+    except Exception:
+        return False
+
+
+@app.route('/webhook/paddle', methods=['POST'])
+def paddle_webhook():
+    raw_body = request.get_data()
+    signature_header = request.headers.get('Paddle-Signature')
+
+    if not verify_paddle_signature(raw_body, signature_header):
+        return jsonify({"error": "invalid signature"}), 401
+
+    event = json.loads(raw_body)
+    event_type = event.get('event_type')
+    data = event.get('data', {})
+
+    if event_type in ('subscription.activated', 'subscription.updated', 'subscription.trialing'):
+        custom_data = data.get('custom_data') or {}
+        username = custom_data.get('username')
+
+        items = data.get('items', [])
+        price_id = items[0]['price']['id'] if items else None
+        plan = PRICE_ID_TO_PLAN.get(price_id, 'unknown')
+        price = PLAN_PRICES.get(plan, 0)
+
+        subscription_id = data.get('id')
+        customer_id = data.get('customer_id')
+        status = data.get('status')
+
+        if username:
+            conn = sqlite3.connect('budget.db')
+            c = conn.cursor()
+            c.execute("""
+                INSERT INTO subscriptions (username, plan, price, paddle_subscription_id, paddle_customer_id, status)
+                VALUES (?, ?, ?, ?, ?, ?)
+                ON CONFLICT(username)
+                DO UPDATE SET
+                    plan=excluded.plan,
+                    price=excluded.price,
+                    paddle_subscription_id=excluded.paddle_subscription_id,
+                    paddle_customer_id=excluded.paddle_customer_id,
+                    status=excluded.status
+            """, (username, plan, price, subscription_id, customer_id, status))
+            conn.commit()
+            conn.close()
+
+    elif event_type in ('subscription.canceled', 'subscription.paused'):
+        subscription_id = data.get('id')
+        status = data.get('status')
+
+        conn = sqlite3.connect('budget.db')
+        c = conn.cursor()
+        c.execute("""
+            UPDATE subscriptions
+            SET plan='free', status=?
+            WHERE paddle_subscription_id=?
+        """, (status, subscription_id))
+        conn.commit()
+        conn.close()
+
+    return jsonify({"status": "ok"}), 200
+
+
 # ================= PRICING PAGE =================
 @app.route('/pricing')
 def pricing():
-    return render_template('pricing.html')
+    return render_template(
+        'pricing.html',
+        paddle_client_token=os.getenv("PADDLE_CLIENT_TOKEN"),
+        paddle_env=PADDLE_ENV,
+        paddle_price_ids=PADDLE_PRICE_IDS,
+        username=session.get('user', '')
+    )
 
 
 # ================= AI CHAT =================
