@@ -327,7 +327,7 @@
 
     <p class="guarantee" id="personalGuarantee">Cancel anytime. No long-term contracts.</p>
 
-    <!-- BUSINESS PLANS -->
+    <!-- BUSINESS PLANS (Redirected to Intake Modal) -->
     <div id="businessPlans" class="plans hidden">
 
         <div class="plan">
@@ -341,7 +341,7 @@
                 <li><span class="check">✓</span> Shared dashboard</li>
                 <li><span class="check">✓</span> Basic expense approval flow</li>
             </ul>
-            <button onclick="subscribe('team_starter')">Choose Team Starter</button>
+            <button onclick="openModal('Team Starter', 100)">Choose Team Starter</button>
         </div>
 
         <div class="plan">
@@ -356,7 +356,7 @@
                 <li><span class="check">✓</span> Exportable monthly reports</li>
                 <li><span class="check">✓</span> AI-flagged spending anomalies</li>
             </ul>
-            <button onclick="subscribe('team_growth')">Choose Team Growth</button>
+            <button onclick="openModal('Team Growth', 200)">Choose Team Growth</button>
         </div>
 
         <div class="plan featured">
@@ -372,7 +372,7 @@
                 <li><span class="check">✓</span> Custom spending categories per department</li>
                 <li><span class="check">✓</span> Same-day priority support</li>
             </ul>
-            <button onclick="subscribe('business_pro')">Choose Business Pro</button>
+            <button onclick="openModal('Business Pro', 500)">Choose Business Pro</button>
         </div>
 
         <div class="plan">
@@ -387,7 +387,7 @@
                 <li><span class="check">✓</span> Custom AI trained on your categories</li>
                 <li><span class="check">✓</span> API access</li>
             </ul>
-            <button class="enterprise-btn" onclick="subscribe('enterprise')">Contact Sales</button>
+            <button class="enterprise-btn" onclick="openModal('Enterprise', 1000)">Contact Sales</button>
         </div>
 
     </div>
@@ -426,8 +426,49 @@
 
 </div>
 
+<!-- FREE B2B INTAKE MODAL -->
+<div id="contactModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(4px); z-index: 1000; align-items: center; justify-content: center;">
+    <div style="background: #1e293b; border: 1px solid #334155; padding: 30px; border-radius: 12px; width: 90%; max-width: 450px; color: white; position: relative; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);">
+        
+        <h3 id="modalTitle" style="margin-top: 0; font-size: 1.5rem; color: #22c55e;">Upgrade</h3>
+        <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 20px;">Enter your details below. Our corporate sales team will configure your workspace and issue your direct deposit or secure invoice details immediately.</p>
+        
+        <!-- REPLACE "YOUR_FORMSPREE_ID" WITH YOUR FREE FORMSPREE ID FROM FORMSPREE.IO -->
+        <form action="https://formspree.io/f/YOUR_FORMSPREE_ID" method="POST">
+            <input type="hidden" name="selected_plan" id="hiddenPlanInput">
+            <input type="hidden" name="plan_price" id="hiddenPriceInput">
+            <input type="hidden" name="account_username" value="{{ username }}">
+            
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 5px; font-weight: bold;">Work Email</label>
+                <input type="email" name="email" required style="width: 100%; padding: 10px; background: #0f172a; border: 1px solid #334155; border-radius: 6px; color: white; box-sizing: border-box;">
+            </div>
+            
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 5px; font-weight: bold;">Company / Team Name</label>
+                <input type="text" name="company" required style="width: 100%; padding: 10px; background: #0f172a; border: 1px solid #334155; border-radius: 6px; color: white; box-sizing: border-box;">
+            </div>
+
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 5px; font-weight: bold;">Preferred Payment Method</label>
+                <select name="payment_method" style="width: 100%; padding: 10px; background: #0f172a; border: 1px solid #334155; border-radius: 6px; color: white; box-sizing: border-box; cursor: pointer;">
+                    <option value="Credit Card">US Credit / Debit Card (Secure Corporate Invoice)</option>
+                    <option value="Bank Wire">US Bank Transfer (ACH / Domestic Wire)</option>
+                    <option value="Crypto">USDC Stablecoin (Solana / Polygon)</option>
+                </select>
+            </div>
+            
+            <button type="submit" style="width: 100%; padding: 12px; background: #22c55e; border: none; border-radius: 6px; color: #0f172a; font-weight: bold; cursor: pointer; font-size: 15px;">
+                Request Invoice & Workspace Access
+            </button>
+        </form>
+        
+        <button onclick="closeModal()" style="position: absolute; top: 15px; right: 15px; background: none; border: none; color: #94a3b8; font-size: 1.5rem; cursor: pointer;">&times;</button>
+    </div>
+</div>
+
 <script>
-    // ---- Data passed from Flask (app.py's /pricing route) ----
+    // ---- Data passed from Flask ----
     const PADDLE_CLIENT_TOKEN = {{ paddle_client_token | tojson }};
     const PADDLE_ENV = {{ paddle_env | tojson }};
     const PADDLE_PRICE_IDS = {{ paddle_price_ids | tojson }};
@@ -457,14 +498,29 @@
         document.getElementById('personalBtn').classList.remove('active');
     }
 
+    // Modal Control Logic
+    function openModal(planName, price) {
+        // Enforce login validation even for enterprise leads so you track their username
+        if (!CURRENT_USERNAME) {
+            window.location.href = '/login';
+            return;
+        }
+        document.getElementById('contactModal').style.display = 'flex';
+        document.getElementById('modalTitle').innerText = 'Upgrade to ' + planName;
+        document.getElementById('hiddenPlanInput').value = planName;
+        document.getElementById('hiddenPriceInput').value = '$' + price + '/mo';
+    }
+
+    function closeModal() {
+        document.getElementById('contactModal').style.display = 'none';
+    }
+
     function subscribe(plan){
-        // Enterprise has no self-serve checkout - route to contact instead
         if (plan === 'enterprise') {
             window.location.href = 'mailto:amuyanja1314@gmail.com?subject=Enterprise%20Plan%20Inquiry';
             return;
         }
 
-        // Must be logged in so the webhook knows which user to upgrade
         if (!CURRENT_USERNAME) {
             window.location.href = '/login';
             return;
