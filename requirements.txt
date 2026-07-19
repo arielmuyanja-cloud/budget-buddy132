@@ -4,3 +4,4 @@ flask
    python-dotenv
    stripe
    requests
+psycopg2-binary==2.9.9
