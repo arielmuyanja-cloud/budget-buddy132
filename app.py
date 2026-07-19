@@ -58,14 +58,30 @@ app.secret_key = os.getenv("FLASK_SECRET_KEY", "budgetbuddy_secret")
 budget_limit = 200
 
 
-# ================= INIT DB =================
+# ================= INIT DB (Neon Postgres Migration) =================
+db_url = os.environ.get('DATABASE_URL')
+if db_url and db_url.startswith("postgres://"):
+    db_url = db_url.replace("postgres://", "postgresql://", 1)
+
+def get_db_connection():
+    # If DATABASE_URL exists in environment (Render), connect to Postgres via psycopg2
+    if db_url:
+        import psycopg2
+        return psycopg2.connect(db_url)
+    else:
+        # Fallback to local SQLite if testing locally on your computer
+        return sqlite3.connect('budget.db')
+
 def init_db():
-    conn = sqlite3.connect('budget.db')
+    conn = get_db_connection()
     c = conn.cursor()
 
-    c.execute("""
+    # Determine placeholders and types based on database engine
+    id_type = "SERIAL PRIMARY KEY" if db_url else "INTEGER PRIMARY KEY AUTOINCREMENT"
+
+    c.execute(f"""
         CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id {id_type},
             first_name TEXT,
             last_name TEXT,
             email TEXT,
@@ -75,26 +91,26 @@ def init_db():
         )
     """)
 
-    c.execute("""
+    c.execute(f"""
         CREATE TABLE IF NOT EXISTS transactions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id {id_type},
             username TEXT,
             amount REAL,
             category TEXT
         )
     """)
 
-    c.execute("""
+    c.execute(f"""
         CREATE TABLE IF NOT EXISTS income (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id {id_type},
             username TEXT UNIQUE,
             amount REAL
         )
     """)
 
-    c.execute("""
+    c.execute(f"""
         CREATE TABLE IF NOT EXISTS goals (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id {id_type},
             username TEXT,
             name TEXT,
             target REAL,
@@ -131,18 +147,21 @@ def register():
         password = request.form['password']
         profile_type = request.form['profile_type']
 
-        conn = sqlite3.connect('budget.db')
+        conn = get_db_connection()
         c = conn.cursor()
 
+        # Handle different parameter placeholders for SQLite vs Postgres
+        param = "%s" if db_url else "?"
+
         try:
-            c.execute("""
+            c.execute(f"""
                 INSERT INTO users
                 (first_name, last_name, email, username, password, profile_type)
-                VALUES (?, ?, ?, ?, ?, ?)
+                VALUES ({param}, {param}, {param}, {param}, {param}, {param})
             """, (first_name, last_name, email, username, password, profile_type))
 
             conn.commit()
-        except:
+        except Exception:
             conn.close()
             return "User already exists"
 
@@ -159,12 +178,13 @@ def login():
         username = request.form['username']
         password = request.form['password']
 
-        conn = sqlite3.connect('budget.db')
+        conn = get_db_connection()
         c = conn.cursor()
+        param = "%s" if db_url else "?"
 
-        c.execute("""
+        c.execute(f"""
             SELECT * FROM users
-            WHERE username=? AND password=?
+            WHERE username={param} AND password={param}
         """, (username, password))
 
         user = c.fetchone()
@@ -194,14 +214,15 @@ def home():
 
     username = session['user']
 
-    conn = sqlite3.connect('budget.db')
+    conn = get_db_connection()
     c = conn.cursor()
+    param = "%s" if db_url else "?"
 
     # user info
-    c.execute("""
+    c.execute(f"""
         SELECT first_name, last_name, profile_type
         FROM users
-        WHERE username=?
+        WHERE username={param}
     """, (username,))
 
     user = c.fetchone()
@@ -213,10 +234,10 @@ def home():
     initials = first_name[0].upper() + last_name[0].upper()
 
     # transactions
-    c.execute("""
+    c.execute(f"""
         SELECT id, amount, category
         FROM transactions
-        WHERE username=?
+        WHERE username={param}
     """, (username,))
 
     rows = c.fetchall()
@@ -235,15 +256,15 @@ def home():
         category_totals[category] += amount
 
     # income
-    c.execute("SELECT amount FROM income WHERE username=?", (username,))
+    c.execute(f"SELECT amount FROM income WHERE username={param}", (username,))
     income_row = c.fetchone()
     income = income_row[0] if income_row else 0
 
     # goals
-    c.execute("""
+    c.execute(f"""
         SELECT id, name, target, saved
         FROM goals
-        WHERE username=?
+        WHERE username={param}
     """, (username,))
 
     goals = [
@@ -252,7 +273,7 @@ def home():
     ]
 
     # current plan
-    c.execute("SELECT plan FROM subscriptions WHERE username=?", (username,))
+    c.execute(f"SELECT plan FROM subscriptions WHERE username={param}", (username,))
     plan_row = c.fetchone()
     current_plan = plan_row[0] if plan_row else "free"
 
@@ -299,12 +320,13 @@ def add():
     amount = float(request.form['amount'])
     category = request.form['category']
 
-    conn = sqlite3.connect('budget.db')
+    conn = get_db_connection()
     c = conn.cursor()
+    param = "%s" if db_url else "?"
 
-    c.execute("""
+    c.execute(f"""
         INSERT INTO transactions (username, amount, category)
-        VALUES (?, ?, ?)
+        VALUES ({param}, {param}, {param})
     """, (username, amount, category))
 
     conn.commit()
@@ -322,14 +344,24 @@ def set_income():
     username = session['user']
     amount = float(request.form['amount'])
 
-    conn = sqlite3.connect('budget.db')
+    conn = get_db_connection()
     c = conn.cursor()
+    param = "%s" if db_url else "?"
 
-    c.execute("""
-        INSERT INTO income (username, amount)
-        VALUES (?, ?)
-        ON CONFLICT(username) DO UPDATE SET amount=excluded.amount
-    """, (username, amount))
+    if db_url:
+        # Postgres UPSERT syntax
+        c.execute(f"""
+            INSERT INTO income (username, amount)
+            VALUES ({param}, {param})
+            ON CONFLICT(username) DO UPDATE SET amount=EXCLUDED.amount
+        """, (username, amount))
+    else:
+        # SQLite UPSERT syntax
+        c.execute(f"""
+            INSERT INTO income (username, amount)
+            VALUES ({param}, {param})
+            ON CONFLICT(username) DO UPDATE SET amount=excluded.amount
+        """, (username, amount))
 
     conn.commit()
     conn.close()
@@ -337,7 +369,7 @@ def set_income():
     return redirect('/')
 
 
-# ================= STRIPE CHECKOUT (kept, unused - pricing page now uses Paddle) =================
+# ================= STRIPE CHECKOUT (kept, unused) =================
 @app.route('/checkout')
 def checkout():
     if 'user' not in session:
@@ -381,7 +413,7 @@ def checkout():
     return redirect(checkout_session.url, code=303)
 
 
-# ================= STRIPE SUBSCRIBE (kept, unused - Paddle uses /webhook/paddle instead) =================
+# ================= STRIPE SUBSCRIBE (kept, unused) =================
 @app.route('/subscribe')
 def subscribe():
     if 'user' not in session:
@@ -403,15 +435,24 @@ def subscribe():
 
     price = PLAN_PRICES.get(plan, 5)
 
-    conn = sqlite3.connect('budget.db')
+    conn = get_db_connection()
     c = conn.cursor()
+    param = "%s" if db_url else "?"
 
-    c.execute("""
-        INSERT INTO subscriptions (username, plan, price)
-        VALUES (?, ?, ?)
-        ON CONFLICT(username)
-        DO UPDATE SET plan=excluded.plan, price=excluded.price
-    """, (username, plan, price))
+    if db_url:
+        c.execute(f"""
+            INSERT INTO subscriptions (username, plan, price)
+            VALUES ({param}, {param}, {param})
+            ON CONFLICT(username)
+            DO UPDATE SET plan=EXCLUDED.plan, price=EXCLUDED.price
+        """, (username, plan, price))
+    else:
+        c.execute(f"""
+            INSERT INTO subscriptions (username, plan, price)
+            VALUES ({param}, {param}, {param})
+            ON CONFLICT(username)
+            DO UPDATE SET plan=excluded.plan, price=excluded.price
+        """, (username, plan, price))
 
     conn.commit()
     conn.close()
@@ -421,11 +462,6 @@ def subscribe():
 
 # ================= PADDLE WEBHOOK =================
 def verify_paddle_signature(raw_body, paddle_signature_header):
-    """
-    Paddle sends a header like: 'ts=1234567890;h1=abcdef...'
-    We recompute the HMAC-SHA256 hash of 'timestamp:raw_body' using our
-    webhook secret, and compare it to the h1 value Paddle sent.
-    """
     if not paddle_signature_header or not PADDLE_WEBHOOK_SECRET:
         return False
 
@@ -478,11 +514,19 @@ def paddle_webhook():
         status = data.get('status')
 
         if username:
-            conn = sqlite3.connect('budget.db')
+            conn = get_db_connection()
             c = conn.cursor()
-            c.execute("""
-                INSERT INTO subscriptions (username, plan, price, paddle_subscription_id, paddle_customer_id, status)
-                VALUES (?, ?, ?, ?, ?, ?)
+            param = "%s" if db_url else "?"
+            
+            conflict_clause = """
+                ON CONFLICT(username)
+                DO UPDATE SET
+                    plan=EXCLUDED.plan,
+                    price=EXCLUDED.price,
+                    paddle_subscription_id=EXCLUDED.paddle_subscription_id,
+                    paddle_customer_id=EXCLUDED.paddle_customer_id,
+                    status=EXCLUDED.status
+            """ if db_url else """
                 ON CONFLICT(username)
                 DO UPDATE SET
                     plan=excluded.plan,
@@ -490,6 +534,12 @@ def paddle_webhook():
                     paddle_subscription_id=excluded.paddle_subscription_id,
                     paddle_customer_id=excluded.paddle_customer_id,
                     status=excluded.status
+            """
+
+            c.execute(f"""
+                INSERT INTO subscriptions (username, plan, price, paddle_subscription_id, paddle_customer_id, status)
+                VALUES ({param}, {param}, {param}, {param}, {param}, {param})
+                {conflict_clause}
             """, (username, plan, price, subscription_id, customer_id, status))
             conn.commit()
             conn.close()
@@ -498,12 +548,14 @@ def paddle_webhook():
         subscription_id = data.get('id')
         status = data.get('status')
 
-        conn = sqlite3.connect('budget.db')
+        conn = get_db_connection()
         c = conn.cursor()
-        c.execute("""
+        param = "%s" if db_url else "?"
+        
+        c.execute(f"""
             UPDATE subscriptions
-            SET plan='free', status=?
-            WHERE paddle_subscription_id=?
+            SET plan='free', status={param}
+            WHERE paddle_subscription_id={param}
         """, (status, subscription_id))
         conn.commit()
         conn.close()
@@ -525,6 +577,32 @@ def privacy():
 @app.route('/refund-policy')
 def refund_policy():
     return render_template('refund.html')
+
+
+# ================= CONTACT PAGE (Crawlable target for Paddle verification) =================
+@app.route('/contact')
+def contact():
+    return '''
+    <html>
+        <head>
+            <title>Contact Us - Budget Buddy</title>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+        </head>
+        <body style="background:#0f172a; color:white; font-family:sans-serif; text-align:center; padding:100px 20px;">
+            <div style="max-width:500px; margin:0 auto; background:#1e293b; padding:40px; border-radius:12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.5);">
+                <h1 style="margin-bottom:10px; color:#3b82f6;">Contact Budget Buddy Support</h1>
+                <p style="color:#94a3b8; line-height:1.6;">Have questions about our Enterprise plans, custom multi-seat setups, or need dedicated billing help?</p>
+                <div style="background:#0f172a; padding:15px; border-radius:8px; margin:25px 0; font-size:18px; border:1px solid #334155;">
+                    Email us at: <a href="mailto:arielmuyanja.cloud@gmail.com" style="color:#60a5fa; text-decoration:none; font-weight:bold;">arielmuyanja.cloud@gmail.com</a>
+                </div>
+                <p style="font-size:14px; color:#64748b;">Our average review and response window is within 24 business hours.</p>
+                <br>
+                <a href="/pricing" style="color:#94a3b8; text-decoration:underline;">Back to Pricing</a>
+            </div>
+        </body>
+    </html>
+    '''
 
 
 # ================= PRICING PAGE =================
@@ -551,18 +629,18 @@ def ai():
         question = request.form['question']
         username = session['user']
 
-        conn = sqlite3.connect('budget.db')
+        conn = get_db_connection()
         c = conn.cursor()
+        param = "%s" if db_url else "?"
 
-        c.execute("SELECT amount FROM income WHERE username=?", (username,))
+        c.execute(f"SELECT amount FROM income WHERE username={param}", (username,))
         income_row = c.fetchone()
         income = income_row[0] if income_row else 0
 
-        c.execute("SELECT amount FROM transactions WHERE username=?", (username,))
+        c.execute(f"SELECT amount FROM transactions WHERE username={param}", (username,))
         rows = c.fetchall()
 
         spent = sum(float(r[0]) for r in rows)
-
         conn.close()
 
         prompt = f"""
@@ -587,6 +665,7 @@ Give short financial advice.
 
     return render_template("ai.html", answer=answer)
 
+
 # ================= ADD GOAL =================
 @app.route('/add_goal', methods=['POST'])
 def add_goal():
@@ -597,19 +676,22 @@ def add_goal():
     name = request.form['name']
     target = float(request.form['target'])
 
-    conn = sqlite3.connect('budget.db')
+    conn = get_db_connection()
     c = conn.cursor()
+    param = "%s" if db_url else "?"
 
-    c.execute("""
+    c.execute(f"""
         INSERT INTO goals (username, name, target, saved)
-        VALUES (?, ?, ?, 0)
+        VALUES ({param}, {param}, {param}, 0)
     """, (username, name, target))
 
     conn.commit()
     conn.close()
 
     return redirect('/')
-    # ================= ADD MONEY TO GOAL =================
+
+
+# ================= ADD MONEY TO GOAL =================
 @app.route('/add_to_goal/<int:goal_id>', methods=['POST'])
 def add_to_goal(goal_id):
     if 'user' not in session:
@@ -617,13 +699,14 @@ def add_to_goal(goal_id):
 
     amount = float(request.form['amount'])
 
-    conn = sqlite3.connect('budget.db')
+    conn = get_db_connection()
     c = conn.cursor()
+    param = "%s" if db_url else "?"
 
-    c.execute("""
+    c.execute(f"""
         UPDATE goals
-        SET saved = saved + ?
-        WHERE id = ?
+        SET saved = saved + {param}
+        WHERE id = {param}
     """, (amount, goal_id))
 
     conn.commit()
@@ -640,12 +723,13 @@ def delete_expense(expense_id):
 
     username = session['user']
 
-    conn = sqlite3.connect('budget.db')
+    conn = get_db_connection()
     c = conn.cursor()
+    param = "%s" if db_url else "?"
 
-    c.execute("""
+    c.execute(f"""
         DELETE FROM transactions
-        WHERE id=? AND username=?
+        WHERE id={param} AND username={param}
     """, (expense_id, username))
 
     conn.commit()
@@ -662,10 +746,11 @@ def delete_income():
 
     username = session['user']
 
-    conn = sqlite3.connect('budget.db')
+    conn = get_db_connection()
     c = conn.cursor()
+    param = "%s" if db_url else "?"
 
-    c.execute("DELETE FROM income WHERE username=?", (username,))
+    c.execute(f"DELETE FROM income WHERE username={param}", (username,))
 
     conn.commit()
     conn.close()
@@ -681,18 +766,20 @@ def delete_goal(goal_id):
 
     username = session['user']
 
-    conn = sqlite3.connect('budget.db')
+    conn = get_db_connection()
     c = conn.cursor()
+    param = "%s" if db_url else "?"
 
-    c.execute("""
+    c.execute(f"""
         DELETE FROM goals
-        WHERE id=? AND username=?
+        WHERE id={param} AND username={param}
     """, (goal_id, username))
 
     conn.commit()
     conn.close()
 
     return redirect('/')
+
 
 # ================= RUN =================
 if __name__ == '__main__':
