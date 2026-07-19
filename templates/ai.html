@@ -1,9 +1,6 @@
 <!DOCTYPE html>
 <html>
 <head>
-<!DOCTYPE html>
-<html>
-<head>
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-XHK5KLN2RM"></script>
     <script>
       window.dataLayer = window.dataLayer || [];
@@ -13,7 +10,6 @@
       gtag('config', 'G-TGJSMVVB44');
     </script>
 
-    <title>Budget Buddy AI Coach</title>
     <title>Budget Buddy AI Coach</title>
 
     <style>
@@ -36,13 +32,25 @@
             margin-bottom:20px;
         }
 
-        textarea{
+        textarea, input[type="text"]{
             width:100%;
-            height:150px;
             padding:12px;
             border:none;
             border-radius:8px;
             margin-top:10px;
+            box-sizing: border-box;
+        }
+
+        textarea{
+            height:150px;
+        }
+
+        input[type="text"]{
+            background: #0f172a;
+            color: white;
+            border: 1px solid #334155;
+            font-family: monospace;
+            font-size: 0.9rem;
         }
 
         button{
@@ -53,6 +61,7 @@
             border:none;
             border-radius:8px;
             cursor:pointer;
+            font-weight: bold;
         }
 
         .answer{
@@ -66,6 +75,13 @@
             color:white;
             text-decoration:none;
         }
+
+        ol {
+            padding-left: 20px;
+            color: #cbd5e1;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
     </style>
 </head>
 
@@ -73,39 +89,51 @@
 
 <div class="container">
 
+    <!-- Header Card -->
     <div class="card">
         <h1>🤖 Budget Buddy AI Coach</h1>
-
         <a href="/">⬅ Back to Dashboard</a>
     </div>
 
+    <!-- Bank Link Card -->
     <div class="card">
+        <h3 style="color: #22c55e; margin-top: 0;">🔗 Link Your Bank Account</h3>
+        <p style="color: #94a3b8; font-size: 0.95rem;">
+            Connect your live bank feeds seamlessly using SimpleFIN:
+        </p>
+        <ol>
+            <li>Go to your SimpleFIN Bridge account.</li>
+            <li>Click <strong>"New app connection"</strong> and specify "Budget Buddy".</li>
+            <li>Copy the long string token they generate for you and paste it below.</li>
+        </ol>
 
+        <form action="/link-bank" method="POST">
+            <label style="font-size: 0.85rem; color: #94a3b8; font-weight: bold; display: block; margin-top: 15px;">
+                SimpleFIN Connection Token:
+            </label>
+            <input type="text" name="simplefin_token" required placeholder="aHR0cHM6Ly9icmlkZ2Uuc2ltcGxlZmluLm9yZy8...">
+            <button type="submit">Verify & Save Bank Connection</button>
+        </form>
+    </div>
+
+    <!-- AI Advice Card -->
+    <div class="card">
         <form method="POST">
-
             <h3>Ask your financial question</h3>
-
             <textarea
                 name="question"
                 placeholder="Example: How can I save more money this month?"
                 required></textarea>
-
             <br>
-
-            <button type="submit">
-                Get Advice
-            </button>
-
+            <button type="submit">Get Advice</button>
         </form>
 
         {% if answer %}
         <div class="answer">
             <h3>💡 AI Advice</h3>
             <p>{{ answer }}</p>
-        </
         </div>
-{% endif %}
-
+        {% endif %}
     </div>
 
 </div>
