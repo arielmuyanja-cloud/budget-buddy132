@@ -611,13 +611,12 @@ def link_bank():
         return redirect('/ai')
 
     try:
+        # FIXED: Reverted back to storing direct text response string (SimpleFIN returns pure raw URL text)
         claim_url = base64.b64decode(setup_token).decode('utf-8')
         response = requests.post(claim_url)
         
         if response.status_code == 200:
-            # FIX: Properly extract the URL string out of SimpleFIN's JSON object
-            data = response.json()
-            access_url = data.get('access_url')
+            access_url = response.text.strip()
 
             conn = get_db_connection()
             c = conn.cursor()
@@ -672,7 +671,15 @@ def fetch_bank_transactions():
     access_url = row[0]
 
     try:
-        response = requests.get(access_url)
+        # FIXED: Correctly parse the embedded credentials out of the Access URL string to access /accounts resource properly
+        scheme, rest = access_url.split('//', 1)
+        auth, rest = rest.split('@', 1)
+        
+        # Build clean target request URL with auth parsed out explicitly
+        target_url = scheme + '//' + rest + '/accounts'
+        bank_user, bank_pass = auth.split(':', 1)
+        
+        response = requests.get(target_url, auth=(bank_user, bank_pass))
         
         if response.status_code == 200:
             bank_data = response.json()
