@@ -608,7 +608,8 @@ def link_bank():
     setup_token = request.form.get('simplefin_token', '').strip()
 
     if not setup_token:
-        return "Token cannot be empty", 400
+        flash("Token cannot be empty!", "error")
+        return redirect('/ai')
 
     try:
         # 1. Decode base64 string to find raw claim url endpoint
@@ -641,12 +642,15 @@ def link_bank():
             conn.commit()
             conn.close()
             
+            flash("🏦 Bank connection linked successfully!", "success")
             return redirect('/ai')
         else:
-            return f"Failed to claim token from SimpleFIN. Code: {response.status_code}", 400
+            flash(f"SimpleFIN rejected token exchange. HTTP Status Code: {response.status_code}", "error")
+            return redirect('/ai')
             
     except Exception as e:
-        return f"Error processing token: {str(e)}", 500
+        flash(f"Error processing token: {str(e)}", "error")
+        return redirect('/ai')
 
 
 # ================= PRICING PAGE =================
