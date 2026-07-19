@@ -14,73 +14,90 @@
 
     <style>
         body{
-            font-family:Arial;
-            background:#0f172a;
-            color:white;
-            padding:20px;
+            font-family: Arial, sans-serif;
+            background: #0f172a;
+            color: white;
+            padding: 20px;
         }
 
         .container{
-            max-width:900px;
-            margin:auto;
+            max-width: 900px;
+            margin: auto;
         }
 
         .card{
-            background:#1e293b;
-            padding:20px;
-            border-radius:12px;
-            margin-bottom:20px;
+            background: #1e293b;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
         }
 
         textarea, input[type="text"]{
-            width:100%;
-            padding:12px;
-            border:none;
-            border-radius:8px;
-            margin-top:10px;
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            margin-top: 10px;
             box-sizing: border-box;
+            background: #0f172a;
+            color: white;
+            font-size: 0.95rem;
         }
 
         textarea{
-            height:150px;
+            height: 150px;
+            resize: vertical;
+            font-family: inherit;
         }
 
         input[type="text"]{
-            background: #0f172a;
-            color: white;
-            border: 1px solid #334155;
             font-family: monospace;
             font-size: 0.9rem;
         }
 
         button{
-            margin-top:10px;
-            padding:12px 20px;
-            background:#22c55e;
-            color:white;
-            border:none;
-            border-radius:8px;
-            cursor:pointer;
+            margin-top: 15px;
+            padding: 12px 20px;
+            background: #22c55e;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
             font-weight: bold;
+            transition: background 0.2s ease;
+        }
+
+        button:hover {
+            background: #16a34a;
         }
 
         .answer{
-            margin-top:20px;
-            background:#0f766e;
-            padding:15px;
-            border-radius:10px;
+            margin-top: 20px;
+            background: #0f766e;
+            padding: 15px;
+            border-radius: 10px;
+            line-height: 1.6;
         }
 
         a{
-            color:white;
-            text-decoration:none;
+            color: #60a5fa;
+            text-decoration: none;
+            font-size: 0.95rem;
+        }
+        
+        a:hover {
+            text-decoration: underline;
         }
 
         ol {
             padding-left: 20px;
             color: #cbd5e1;
-            font-size: 0.9rem;
-            line-height: 1.5;
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+        
+        ol li {
+            margin-bottom: 8px;
         }
     </style>
 </head>
@@ -90,14 +107,14 @@
 <div class="container">
 
     <!-- Header Card -->
-    <div class="card">
-        <h1>🤖 Budget Buddy AI Coach</h1>
+    <div class="card" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+        <h1 style="margin: 0; font-size: 1.8rem;">🤖 Budget Buddy AI Coach</h1>
         <a href="/">⬅ Back to Dashboard</a>
     </div>
 
     <!-- Bank Link Card -->
     <div class="card">
-        <h3 style="color: #22c55e; margin-top: 0;">🔗 Link Your Bank Account</h3>
+        <h3 style="color: #22c55e; margin-top: 0; font-size: 1.3rem;">🔗 Link Your Bank Account</h3>
         <p style="color: #94a3b8; font-size: 0.95rem;">
             Connect your live bank feeds seamlessly using SimpleFIN:
         </p>
@@ -108,7 +125,7 @@
         </ol>
 
         <form action="/link-bank" method="POST">
-            <label style="font-size: 0.85rem; color: #94a3b8; font-weight: bold; display: block; margin-top: 15px;">
+            <label style="font-size: 0.85rem; color: #cbd5e1; font-weight: bold; display: block; margin-top: 15px;">
                 SimpleFIN Connection Token:
             </label>
             <input type="text" name="simplefin_token" required placeholder="aHR0cHM6Ly9icmlkZ2Uuc2ltcGxlZmluLm9yZy8...">
@@ -119,19 +136,18 @@
     <!-- AI Advice Card -->
     <div class="card">
         <form method="POST">
-            <h3>Ask your financial question</h3>
+            <h3 style="margin-top: 0; font-size: 1.3rem;">Ask your financial question</h3>
             <textarea
                 name="question"
                 placeholder="Example: How can I save more money this month?"
                 required></textarea>
-            <br>
             <button type="submit">Get Advice</button>
         </form>
 
         {% if answer %}
         <div class="answer">
-            <h3>💡 AI Advice</h3>
-            <p>{{ answer }}</p>
+            <h3 style="margin-top: 0;">💡 AI Advice</h3>
+            <p style="margin-bottom: 0; white-space: pre-line;">{{ answer }}</p>
         </div>
         {% endif %}
     </div>
