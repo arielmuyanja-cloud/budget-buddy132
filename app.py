@@ -1,5 +1,5 @@
 from openai import OpenAI
-from flask import Flask, render_template, request, redirect, session, jsonify
+from flask import Flask, render_template, request, redirect, session, jsonify, flash
 import sqlite3
 from collections import defaultdict
 import os
@@ -9,6 +9,7 @@ import json
 from dotenv import load_dotenv
 import stripe
 import requests
+import base64
 
 load_dotenv()
 
@@ -21,10 +22,8 @@ stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 # ================= PADDLE =================
 PADDLE_API_KEY = os.getenv("PADDLE_API_KEY")
 PADDLE_WEBHOOK_SECRET = os.getenv("PADDLE_WEBHOOK_SECRET")
-# Set to "sandbox" while testing, switch to "production" when you go live
 PADDLE_ENV = os.getenv("PADDLE_ENV", "sandbox")
 
-# Maps your plan keys to real Paddle Price IDs (from your sandbox dashboard)
 PADDLE_PRICE_IDS = {
     "personal_starter": "pri_01kx6csjf90zmje1xac6cmta01",
     "personal_plus": "pri_01kx6crwt4w6vpm667k063ttcc",
@@ -33,10 +32,8 @@ PADDLE_PRICE_IDS = {
     "team_starter": "pri_01kx6cmjgfekem0ymchv43emqc",
     "team_growth": "pri_01kx6ckm0y2tsy1k1z4vyprceb",
     "business_pro": "pri_01kx514exdyyx28eswrqbmtbx8",
-    # "enterprise" intentionally has no Paddle price - it stays a "Contact Sales" flow
 }
 
-# Reverse lookup: Paddle price_id -> (plan_key, price)
 PLAN_PRICES = {
     "personal_starter": 5,
     "personal_plus": 10,
@@ -64,19 +61,16 @@ if db_url and db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql://", 1)
 
 def get_db_connection():
-    # If DATABASE_URL exists in environment (Render), connect to Postgres via psycopg2
     if db_url:
         import psycopg2
         return psycopg2.connect(db_url)
     else:
-        # Fallback to local SQLite if testing locally on your computer
         return sqlite3.connect('budget.db')
 
 def init_db():
     conn = get_db_connection()
     c = conn.cursor()
 
-    # Determine placeholders and types based on database engine
     id_type = "SERIAL PRIMARY KEY" if db_url else "INTEGER PRIMARY KEY AUTOINCREMENT"
 
     c.execute(f"""
@@ -129,6 +123,14 @@ def init_db():
         )
     """)
 
+    # Added bank connections table to store SimpleFIN access keys per user
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS bank_connections (
+            username TEXT UNIQUE,
+            access_url TEXT
+        )
+    """)
+
     conn.commit()
     conn.close()
 
@@ -149,8 +151,6 @@ def register():
 
         conn = get_db_connection()
         c = conn.cursor()
-
-        # Handle different parameter placeholders for SQLite vs Postgres
         param = "%s" if db_url else "?"
 
         try:
@@ -218,7 +218,6 @@ def home():
     c = conn.cursor()
     param = "%s" if db_url else "?"
 
-    # user info
     c.execute(f"""
         SELECT first_name, last_name, profile_type
         FROM users
@@ -233,7 +232,6 @@ def home():
     first_name, last_name, profile_type = user
     initials = first_name[0].upper() + last_name[0].upper()
 
-    # transactions
     c.execute(f"""
         SELECT id, amount, category
         FROM transactions
@@ -255,12 +253,10 @@ def home():
         total += amount
         category_totals[category] += amount
 
-    # income
     c.execute(f"SELECT amount FROM income WHERE username={param}", (username,))
     income_row = c.fetchone()
     income = income_row[0] if income_row else 0
 
-    # goals
     c.execute(f"""
         SELECT id, name, target, saved
         FROM goals
@@ -272,7 +268,6 @@ def home():
         for g in c.fetchall()
     ]
 
-    # current plan
     c.execute(f"SELECT plan FROM subscriptions WHERE username={param}", (username,))
     plan_row = c.fetchone()
     current_plan = plan_row[0] if plan_row else "free"
@@ -349,14 +344,12 @@ def set_income():
     param = "%s" if db_url else "?"
 
     if db_url:
-        # Postgres UPSERT syntax
         c.execute(f"""
             INSERT INTO income (username, amount)
             VALUES ({param}, {param})
             ON CONFLICT(username) DO UPDATE SET amount=EXCLUDED.amount
         """, (username, amount))
     else:
-        # SQLite UPSERT syntax
         c.execute(f"""
             INSERT INTO income (username, amount)
             VALUES ({param}, {param})
@@ -579,7 +572,7 @@ def refund_policy():
     return render_template('refund.html')
 
 
-# ================= CONTACT PAGE (Crawlable target for Paddle verification) =================
+# ================= CONTACT PAGE =================
 @app.route('/contact')
 def contact():
     return '''
@@ -603,6 +596,57 @@ def contact():
         </body>
     </html>
     '''
+
+
+# ================= SIMPLEFIN BANK LINKING =================
+@app.route('/link-bank', methods=['POST'])
+def link_bank():
+    if 'user' not in session:
+        return redirect('/login')
+
+    username = session['user']
+    setup_token = request.form.get('simplefin_token', '').strip()
+
+    if not setup_token:
+        return "Token cannot be empty", 400
+
+    try:
+        # 1. Decode base64 string to find raw claim url endpoint
+        claim_url = base64.b64decode(setup_token).decode('utf-8')
+        
+        # 2. Fire single-use POST to obtain production Access URL
+        response = requests.post(claim_url)
+        
+        if response.status_code == 200:
+            access_url = response.text
+            
+            # 3. Securely store inside database handling Postgres vs SQLite UPSERT syntax
+            conn = get_db_connection()
+            c = conn.cursor()
+            param = "%s" if db_url else "?"
+            
+            if db_url:
+                c.execute(f"""
+                    INSERT INTO bank_connections (username, access_url)
+                    VALUES ({param}, {param})
+                    ON CONFLICT(username) DO UPDATE SET access_url=EXCLUDED.access_url
+                """, (username, access_url))
+            else:
+                c.execute(f"""
+                    INSERT INTO bank_connections (username, access_url)
+                    VALUES ({param}, {param})
+                    ON CONFLICT(username) DO UPDATE SET access_url=excluded.access_url
+                """, (username, access_url))
+                
+            conn.commit()
+            conn.close()
+            
+            return redirect('/ai')
+        else:
+            return f"Failed to claim token from SimpleFIN. Code: {response.status_code}", 400
+            
+    except Exception as e:
+        return f"Error processing token: {str(e)}", 500
 
 
 # ================= PRICING PAGE =================
