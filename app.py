@@ -123,7 +123,6 @@ def init_db():
         )
     """)
 
-    # Added bank connections table to store SimpleFIN access keys per user
     c.execute("""
         CREATE TABLE IF NOT EXISTS bank_connections (
             username TEXT UNIQUE,
@@ -556,7 +555,7 @@ def paddle_webhook():
     return jsonify({"status": "ok"}), 200
 
 
-# ================= LEGAL PAGES (required for Paddle domain approval) =================
+# ================= LEGAL PAGES =================
 @app.route('/terms')
 def terms():
     return render_template('terms.html')
@@ -612,16 +611,11 @@ def link_bank():
         return redirect('/ai')
 
     try:
-        # 1. Decode base64 string to find raw claim url endpoint
         claim_url = base64.b64decode(setup_token).decode('utf-8')
-        
-        # 2. Fire single-use POST to obtain production Access URL
         response = requests.post(claim_url)
         
         if response.status_code == 200:
             access_url = response.text
-            
-            # 3. Securely store inside database handling Postgres vs SQLite UPSERT syntax
             conn = get_db_connection()
             c = conn.cursor()
             param = "%s" if db_url else "?"
@@ -650,6 +644,68 @@ def link_bank():
             
     except Exception as e:
         flash(f"Error processing token: {str(e)}", "error")
+        return redirect('/ai')
+
+
+# ================= FETCH BANK DATA =================
+@app.route('/fetch-bank-transactions')
+def fetch_bank_transactions():
+    if 'user' not in session:
+        return redirect('/login')
+
+    username = session['user']
+
+    conn = get_db_connection()
+    c = conn.cursor()
+    param = "%s" if db_url else "?"
+    c.execute(f"SELECT access_url FROM bank_connections WHERE username={param}", (username,))
+    row = c.fetchone()
+    conn.close()
+
+    if not row:
+        flash("No linked bank account found! Please link one first.", "error")
+        return redirect('/ai')
+
+    access_url = row[0]
+
+    try:
+        response = requests.get(access_url)
+        
+        if response.status_code == 200:
+            bank_data = response.json()
+            accounts = bank_data.get('accounts', [])
+            all_imported = 0
+            
+            for account in accounts:
+                transactions = account.get('transactions', [])
+                
+                conn = get_db_connection()
+                c = conn.cursor()
+                
+                for tx in transactions:
+                    raw_amount = float(tx.get('amount', 0))
+                    
+                    if raw_amount < 0:
+                        amount = abs(raw_amount)
+                        category = tx.get('description', 'Bank Transaction')
+                        
+                        c.execute(f"""
+                            INSERT INTO transactions (username, amount, category)
+                            VALUES ({param}, {param}, {param})
+                        """, (username, amount, category))
+                        all_imported += 1
+                        
+                conn.commit()
+                conn.close()
+
+            flash(f"Successfully synced! Imported {all_imported} new bank transactions.", "success")
+            return redirect('/')
+        else:
+            flash(f"Failed to fetch data from SimpleFIN. Code: {response.status_code}", "error")
+            return redirect('/ai')
+
+    except Exception as e:
+        flash(f"Error pulling bank data: {str(e)}", "error")
         return redirect('/ai')
 
 
