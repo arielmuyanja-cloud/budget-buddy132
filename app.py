@@ -615,7 +615,10 @@ def link_bank():
         response = requests.post(claim_url)
         
         if response.status_code == 200:
-            access_url = response.text
+            # FIX: Properly extract the URL string out of SimpleFIN's JSON object
+            data = response.json()
+            access_url = data.get('access_url')
+
             conn = get_db_connection()
             c = conn.cursor()
             param = "%s" if db_url else "?"
@@ -639,7 +642,7 @@ def link_bank():
             flash("🏦 Bank connection linked successfully!", "success")
             return redirect('/ai')
         else:
-            flash(f"SimpleFIN rejected token exchange. HTTP Status Code: {response.status_code}", "error")
+            flash(f"SimpleFIN rejected token exchange. Code: {response.status_code}", "error")
             return redirect('/ai')
             
     except Exception as e:
