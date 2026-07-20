@@ -1,4 +1,7 @@
 import os
+import csv
+import io
+import json
 import uuid
 import sqlite3
 import requests
@@ -10,7 +13,7 @@ import psycopg2.extras
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "budget_buddy_secret_key_12345")
 
-# Initialize OpenAI API
+# Initialize OpenAI
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
 # ================= PESAPAL V3 CONFIG =================
@@ -44,7 +47,8 @@ def init_db():
             CREATE TABLE IF NOT EXISTS users (
                 id SERIAL PRIMARY KEY,
                 username VARCHAR(255) UNIQUE NOT NULL,
-                password VARCHAR(255) NOT NULL
+                password VARCHAR(255) NOT NULL,
+                account_type VARCHAR(50) DEFAULT 'personal'
             );
         """)
         c.execute("""
@@ -68,11 +72,11 @@ def init_db():
         """)
 
         # FORCE SCHEMA MIGRATION IF COLUMNS ARE MISSING ON POSTGRES
+        c.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS account_type VARCHAR(50) DEFAULT 'personal';")
         c.execute("ALTER TABLE transactions ADD COLUMN IF NOT EXISTS description VARCHAR(255) DEFAULT '';")
         c.execute("ALTER TABLE transactions ADD COLUMN IF NOT EXISTS amount NUMERIC DEFAULT 0;")
         c.execute("ALTER TABLE transactions ADD COLUMN IF NOT EXISTS type VARCHAR(50) DEFAULT 'expense';")
         c.execute("ALTER TABLE transactions ADD COLUMN IF NOT EXISTS date VARCHAR(100) DEFAULT '';")
-        
         c.execute("ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS order_tracking_id VARCHAR(255);")
         c.execute("ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS plan VARCHAR(100) DEFAULT 'personal_pro';")
         c.execute("ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS price NUMERIC DEFAULT 0;")
@@ -84,7 +88,8 @@ def init_db():
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 username TEXT UNIQUE NOT NULL,
-                password TEXT NOT NULL
+                password TEXT NOT NULL,
+                account_type TEXT DEFAULT 'personal'
             );
         """)
         c.execute("""
@@ -127,11 +132,13 @@ def get_pesapal_token():
     headers = {"Accept": "application/json", "Content-Type": "application/json"}
     
     try:
-        response = requests.post(url, json=payload, headers=headers, timeout=5)
+        response = requests.post(url, json=payload, headers=headers, timeout=10)
         if response.status_code == 200:
             return response.json().get("token")
+        else:
+            print(f"Pesapal Token Error: {response.status_code} - {response.text}")
     except Exception as e:
-        print("Pesapal Auth Token Error:", e)
+        print("Pesapal Auth Token Request Exception:", e)
     return None
 
 def get_or_register_ipn_id(token):
@@ -153,14 +160,16 @@ def get_or_register_ipn_id(token):
     }
 
     try:
-        res = requests.post(url, json=payload, headers=headers, timeout=5)
+        res = requests.post(url, json=payload, headers=headers, timeout=10)
         if res.status_code == 200:
             ipn_id = res.json().get("ipn_id")
             if ipn_id:
                 REGISTERED_IPN_ID = ipn_id
                 return ipn_id
+        else:
+            print(f"Pesapal IPN Error: {res.status_code} - {res.text}")
     except Exception as e:
-        print("Pesapal Register IPN Error:", e)
+        print("Pesapal Register IPN Exception:", e)
 
     return None
 
@@ -172,15 +181,18 @@ def register():
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
+        account_type = request.form.get('account_type', 'personal')
 
         conn = get_db_connection()
         c = conn.cursor()
         param = "%s" if db_url else "?"
         
         try:
-            c.execute(f"INSERT INTO users (username, password) VALUES ({param}, {param})", (username, password))
+            c.execute(f"INSERT INTO users (username, password, account_type) VALUES ({param}, {param}, {param})", 
+                      (username, password, account_type))
             conn.commit()
             session['user'] = username
+            session['account_type'] = account_type
             flash("Account created successfully!", "success")
             return redirect('/')
         except Exception:
@@ -207,6 +219,7 @@ def login():
 
         if user:
             session['user'] = username
+            session['account_type'] = user['account_type'] if 'account_type' in user.keys() else 'personal'
             flash("Welcome back!", "success")
             return redirect('/')
         else:
@@ -230,6 +243,8 @@ def dashboard():
         return redirect('/login')
 
     username = session['user']
+    account_type = session.get('account_type', 'personal')
+
     conn = get_db_connection()
     c = conn.cursor()
     param = "%s" if db_url else "?"
@@ -251,7 +266,7 @@ def dashboard():
         elif income_amount:
             c.execute(
                 f"INSERT INTO transactions (username, description, amount, type, date) VALUES ({param}, {param}, {param}, {param}, {param})",
-                (username, "Monthly Salary/Income", float(income_amount), 'income', now)
+                (username, "Revenue/Income", float(income_amount), 'income', now)
             )
             conn.commit()
             flash("Income updated successfully!", "success")
@@ -270,9 +285,12 @@ def dashboard():
     total_expense = sum(t['amount'] if isinstance(t, dict) or hasattr(t, '__getitem__') else t[3] for t in transactions if (t['type'] if isinstance(t, dict) or hasattr(t, '__getitem__') else t[4]) == 'expense')
     balance = total_income - total_expense
 
+    template_name = 'business_dashboard.html' if account_type == 'business' else 'index.html'
+
     return render_template(
-        'index.html',
+        template_name,
         username=username,
+        account_type=account_type,
         transactions=transactions,
         total_income=total_income,
         total_expense=total_expense,
@@ -285,44 +303,151 @@ def dashboard():
     )
 
 
-@app.route('/connect_bank', methods=['POST'])
-def connect_bank():
+# ================= STATEMENT AUDITOR & AI LEAK DETECTION =================
+
+def extract_recurring_subscriptions(transactions):
+    ai_and_saas_keywords = [
+        'openai', 'chatgpt', 'anthropic', 'claude', 'midjourney', 'github', 'copilot',
+        'google one', 'notion', 'slack', 'zoom', 'adobe', 'canva', 'linkedin', 
+        'hubspot', 'salesforce', 'figma', 'zapier', 'aws', 'render', 'heroku',
+        'grammarly', 'jasper', 'descript', 'elevenlabs', 'perplexity'
+    ]
+
+    detected_subscriptions = []
+    total_monthly_spend = 0.0
+
+    for tx in transactions:
+        desc_lower = str(tx.get('description', '')).lower()
+        is_sub = any(keyword in desc_lower for keyword in ai_and_saas_keywords)
+        
+        if is_sub or 'sub' in desc_lower or 'membership' in desc_lower or 'recurring' in desc_lower:
+            amount = float(tx.get('amount', 0))
+            if tx.get('type') == 'expense' and amount > 0:
+                detected_subscriptions.append({
+                    "name": tx.get('description'),
+                    "amount": amount
+                })
+                total_monthly_spend += amount
+
+    annual_potential_savings = total_monthly_spend * 12
+
+    return {
+        "subscriptions": detected_subscriptions,
+        "monthly_total": round(total_monthly_spend, 2),
+        "annual_total": round(annual_potential_savings, 2)
+    }
+
+
+def analyze_statement_leaks(transactions, account_type):
+    sub_summary = extract_recurring_subscriptions(transactions)
+
+    if not os.getenv("OPENAI_API_KEY"):
+        return {
+            "insights": ["API key not set for AI insights. Configure OPENAI_API_KEY in Render."],
+            "monthly_savings": sub_summary['monthly_total'],
+            "annual_savings": sub_summary['annual_total'],
+            "subs": sub_summary['subscriptions']
+        }
+
+    prompt = f"""
+    You are an expert financial auditor analyzing a {account_type} bank statement.
+    
+    Recurring Subscriptions & AI Tool Debits Found:
+    {json.dumps(sub_summary['subscriptions'])}
+    Total Monthly Recurring Cost: ${sub_summary['monthly_total']}
+    Total Potential Annual Savings: ${sub_summary['annual_total']}
+
+    Examine the statement data:
+    1. Highlight redundant AI tools, software, or memberships.
+    2. Tell the user EXACTLY how much they save per year by cutting redundant tools.
+    3. Provide 2 actionable cost-cutting recommendations.
+
+    Transactions JSON:
+    {json.dumps(transactions[:40])}
+
+    Keep output concise, bold key dollar amounts, and use bullet points. Under 200 words.
+    """
+
+    try:
+        response = openai.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=350
+        )
+        return {
+            "insights": response.choices[0].message.content.split('\n'),
+            "monthly_savings": sub_summary['monthly_total'],
+            "annual_savings": sub_summary['annual_total'],
+            "subs": sub_summary['subscriptions']
+        }
+    except Exception as e:
+        print("OpenAI Audit Error:", e)
+        return {
+            "insights": ["Unable to run AI analysis right now."],
+            "monthly_savings": sub_summary['monthly_total'],
+            "annual_savings": sub_summary['annual_total'],
+            "subs": sub_summary['subscriptions']
+        }
+
+
+@app.route('/upload_statement', methods=['POST'])
+def upload_statement():
     if 'user' not in session:
         return jsonify({"success": False, "message": "Unauthorized"}), 401
 
-    try:
-        username = session['user']
-        data = request.get_json(silent=True) or {}
-        bank_name = data.get('bank_name', 'Bank')
+    if 'file' not in request.files:
+        flash("No file uploaded", "error")
+        return redirect('/')
 
-        demo_data = [
-            (f"{bank_name} Direct Deposit", 2500.00, "income"),
-            (f"{bank_name} Monthly Interest", 12.50, "income"),
-            ("Morning Coffee & Bakery", 8.45, "expense"),
-            ("Grocery Supermarket", 84.20, "expense")
-        ]
+    file = request.files['file']
+    if file.filename == '':
+        flash("No selected file", "error")
+        return redirect('/')
+
+    if file and file.filename.endswith('.csv'):
+        username = session['user']
+        stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
+        csv_input = list(csv.DictReader(stream))
 
         conn = get_db_connection()
         c = conn.cursor()
         param = "%s" if db_url else "?"
         now = datetime.now().strftime("%Y-%m-%d %H:%M")
 
-        for desc, amt, t_type in demo_data:
+        tx_list = []
+        for row in csv_input:
+            description = row.get('Description') or row.get('Narration') or row.get('Payee') or row.get('Memo') or 'Bank Transaction'
+            raw_amount = row.get('Amount') or row.get('Transaction Amount') or 0
+            
+            try:
+                amount = float(str(raw_amount).replace('$', '').replace(',', ''))
+            except ValueError:
+                continue
+
+            t_type = 'income' if amount > 0 else 'expense'
+            if 'Type' in row and row['Type'].lower() in ['credit', 'deposit']:
+                t_type = 'income'
+
             c.execute(
                 f"INSERT INTO transactions (username, description, amount, type, date) VALUES ({param}, {param}, {param}, {param}, {param})",
-                (username, desc, amt, t_type, now)
+                (username, description, abs(amount), t_type, now)
             )
+            tx_list.append({"description": description, "amount": abs(amount), "type": t_type})
 
         conn.commit()
         conn.close()
 
-        return jsonify({"success": True, "message": f"Successfully connected to {bank_name}!"})
-    except Exception as e:
-        print("Bank Connect Error:", e)
-        return jsonify({"success": False, "message": str(e)}), 500
+        audit_result = analyze_statement_leaks(tx_list, session.get('account_type', 'personal'))
+        session['last_audit'] = audit_result
+
+        flash(f"Successfully processed statement! Found {len(tx_list)} transactions.", "success")
+        return redirect('/')
+    else:
+        flash("Please upload a valid CSV bank statement.", "error")
+        return redirect('/')
 
 
-# ================= PRICING & PAYMENTS =================
+# ================= PRICING & PESAPAL PAYMENTS =================
 
 @app.route('/pricing')
 def pricing():
@@ -339,44 +464,61 @@ def checkout():
     username = session['user']
 
     plan_details = {
-        "personal_pro": {"name": "Pro Monthly", "price": 19},
-        "team_starter": {"name": "Team Monthly", "price": 99},
-        "business_pro": {"name": "Enterprise VIP", "price": 299}
+        "personal_pro": {"name": "Pro Monthly", "price": 19.00},
+        "team_starter": {"name": "Team Monthly", "price": 99.00},
+        "business_pro": {"name": "Enterprise VIP", "price": 299.00}
     }
     details = plan_details.get(plan, plan_details["personal_pro"])
 
     token = get_pesapal_token()
-    if token:
-        ipn_id = get_or_register_ipn_id(token)
-        if ipn_id:
-            merchant_reference = f"BB-{uuid.uuid4().hex[:8].upper()}"
-            payload = {
-                "id": merchant_reference,
-                "currency": "USD",
-                "amount": float(details["price"]),
-                "description": f"Budget Buddy Subscription - {details['name']}",
-                "callback_url": request.host_url.rstrip('/') + f"/pesapal_callback?plan={plan}",
-                "notification_id": ipn_id,
-                "billing_address": {
-                    "email_address": f"{username}@budgetbuddy.app",
-                    "first_name": username
-                }
-            }
-            headers = {
-                "Authorization": f"Bearer {token}",
-                "Content-Type": "application/json",
-                "Accept": "application/json"
-            }
-            try:
-                res = requests.post(f"{PESAPAL_BASE_URL}/api/Transactions/SubmitOrderRequest", json=payload, headers=headers, timeout=10)
-                if res.status_code == 200:
-                    redirect_url = res.json().get("redirect_url")
-                    if redirect_url:
-                        return redirect(redirect_url)
-            except Exception as e:
-                print("Pesapal Checkout Error:", e)
+    if not token:
+        flash("Failed to authenticate with Pesapal API. Check API credentials.", "error")
+        return redirect('/pricing')
 
-    return redirect(url_for('pesapal_callback', plan=plan, OrderTrackingId=f"DEMO-{uuid.uuid4().hex[:6].upper()}"))
+    ipn_id = get_or_register_ipn_id(token)
+    if not ipn_id:
+        flash("Failed to setup Pesapal IPN listener.", "error")
+        return redirect('/pricing')
+
+    merchant_reference = f"BB-{uuid.uuid4().hex[:8].upper()}"
+
+    payload = {
+        "id": merchant_reference,
+        "currency": "USD",
+        "amount": details["price"],
+        "description": f"Budget Buddy Subscription - {details['name']}",
+        "callback_url": request.host_url.rstrip('/') + f"/pesapal_callback?plan={plan}",
+        "notification_id": ipn_id,
+        "billing_address": {
+            "email_address": f"{username.lower().replace(' ', '')}@gmail.com",
+            "phone_number": "0700000000",
+            "first_name": username,
+            "last_name": "User",
+            "country_code": "UG"
+        }
+    }
+
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+    }
+
+    try:
+        res = requests.post(f"{PESAPAL_BASE_URL}/api/Transactions/SubmitOrderRequest", json=payload, headers=headers, timeout=12)
+        res_data = res.json() if res.headers.get("content-type") == "application/json" else {}
+
+        if res.status_code == 200 and "redirect_url" in res_data:
+            return redirect(res_data["redirect_url"])
+        else:
+            error_msg = res_data.get("error", {}).get("message") or res_data.get("message") or f"Status {res.status_code}"
+            flash(f"Pesapal Gateway Error: {error_msg}", "error")
+
+    except Exception as e:
+        print("Pesapal Checkout Exception:", e)
+        flash("Connection to Pesapal gateway timed out.", "error")
+
+    return redirect('/pricing')
 
 
 @app.route('/pesapal_callback')
@@ -386,7 +528,7 @@ def pesapal_callback():
 
     username = session['user']
     plan = request.args.get('plan', 'personal_pro')
-    order_tracking_id = request.args.get('OrderTrackingId', 'DIRECT-ACTIVATION')
+    order_tracking_id = request.args.get('OrderTrackingId', 'UNKNOWN')
 
     price_map = {"personal_pro": 19, "team_starter": 99, "business_pro": 299}
     price = price_map.get(plan, 19)
@@ -412,7 +554,7 @@ def pesapal_callback():
     conn.commit()
     conn.close()
 
-    flash(f"Payment successful! You are now subscribed to the {plan.replace('_', ' ').title()} plan.", "success")
+    flash(f"Payment successful! Subscribed to {plan.replace('_', ' ').title()} plan.", "success")
     return redirect('/')
 
 
