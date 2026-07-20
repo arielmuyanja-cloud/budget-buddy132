@@ -5,6 +5,7 @@ import requests
 from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
 import openai
+import psycopg2.extras
 
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "budget_buddy_secret_key_12345")
@@ -24,11 +25,12 @@ REGISTERED_IPN_ID = None
 db_url = os.getenv("DATABASE_URL")
 
 def get_db_connection():
-    """Connects to PostgreSQL if DATABASE_URL exists, otherwise uses SQLite."""
+    """Connects to PostgreSQL with DictCursor if DATABASE_URL exists, otherwise uses SQLite."""
     if db_url:
         import psycopg2
         cleaned_url = db_url.replace("postgres://", "postgresql://", 1)
-        return psycopg2.connect(cleaned_url)
+        conn = psycopg2.connect(cleaned_url, cursor_factory=psycopg2.extras.DictCursor)
+        return conn
     else:
         conn = sqlite3.connect("database.db")
         conn.row_factory = sqlite3.Row
@@ -235,8 +237,8 @@ def dashboard():
     sub = c.fetchone()
     conn.close()
 
-    total_income = sum(t['amount'] if isinstance(t, dict) else t[3] for t in transactions if (t['type'] if isinstance(t, dict) else t[4]) == 'income')
-    total_expense = sum(t['amount'] if isinstance(t, dict) else t[3] for t in transactions if (t['type'] if isinstance(t, dict) else t[4]) == 'expense')
+    total_income = sum(t['amount'] if isinstance(t, dict) or hasattr(t, '__getitem__') else t[3] for t in transactions if (t['type'] if isinstance(t, dict) or hasattr(t, '__getitem__') else t[4]) == 'income')
+    total_expense = sum(t['amount'] if isinstance(t, dict) or hasattr(t, '__getitem__') else t[3] for t in transactions if (t['type'] if isinstance(t, dict) or hasattr(t, '__getitem__') else t[4]) == 'expense')
     balance = total_income - total_expense
 
     return render_template(
@@ -245,8 +247,9 @@ def dashboard():
         transactions=transactions,
         total_income=total_income,
         total_expense=total_expense,
-        income=total_income,    # Fixed Jinja2 'income' undefined error
-        expense=total_expense,  # Fixed Jinja2 'expense' undefined error
+        income=total_income,     # Passed for index.html line 69
+        expense=total_expense,   # Passed for index.html expense references
+        total=total_expense,     # Passed for index.html line 70
         balance=balance,
         subscription=sub
     )
