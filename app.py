@@ -71,7 +71,7 @@ def init_db():
             );
         """)
 
-        # FORCE SCHEMA MIGRATION IF COLUMNS ARE MISSING ON POSTGRES
+        # FORCE SCHEMA MIGRATIONS IF COLUMNS ARE MISSING ON POSTGRES
         c.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS account_type VARCHAR(50) DEFAULT 'personal';")
         c.execute("ALTER TABLE transactions ADD COLUMN IF NOT EXISTS description VARCHAR(255) DEFAULT '';")
         c.execute("ALTER TABLE transactions ADD COLUMN IF NOT EXISTS amount NUMERIC DEFAULT 0;")
