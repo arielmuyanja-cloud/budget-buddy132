@@ -9,7 +9,7 @@ import openai
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "budget_buddy_secret_key_12345")
 
-# Initialize OpenAI
+# Initialize OpenAI API
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
 # ================= PESAPAL V3 CONFIG =================
@@ -38,60 +38,62 @@ def init_db():
     conn = get_db_connection()
     c = conn.cursor()
     
-    # User accounts table
-    c.execute("""
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT if not exists,
-            username TEXT UNIQUE NOT NULL,
-            password TEXT NOT NULL
-        )
-    """ if not db_url else """
-        CREATE TABLE IF NOT EXISTS users (
-            id SERIAL PRIMARY KEY,
-            username VARCHAR(255) UNIQUE NOT NULL,
-            password VARCHAR(255) NOT NULL
-        )
-    """)
-
-    # Subscriptions table
-    c.execute("""
-        CREATE TABLE IF NOT EXISTS subscriptions (
-            username TEXT PRIMARY KEY,
-            plan TEXT NOT NULL,
-            price REAL NOT NULL,
-            order_tracking_id TEXT,
-            status TEXT NOT NULL
-        )
-    """ if not db_url else """
-        CREATE TABLE IF NOT EXISTS subscriptions (
-            username VARCHAR(255) PRIMARY KEY,
-            plan VARCHAR(100) NOT NULL,
-            price NUMERIC NOT NULL,
-            order_tracking_id VARCHAR(255),
-            status VARCHAR(50) NOT NULL
-        )
-    """)
-
-    # Transactions table
-    c.execute("""
-        CREATE TABLE IF NOT EXISTS transactions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT if not exists,
-            username TEXT NOT NULL,
-            description TEXT NOT NULL,
-            amount REAL NOT NULL,
-            type TEXT NOT NULL,
-            date TEXT NOT NULL
-        )
-    """ if not db_url else """
-        CREATE TABLE IF NOT EXISTS transactions (
-            id SERIAL PRIMARY KEY,
-            username VARCHAR(255) NOT NULL,
-            description VARCHAR(255) NOT NULL,
-            amount NUMERIC NOT NULL,
-            type VARCHAR(50) NOT NULL,
-            date VARCHAR(100) NOT NULL
-        )
-    """)
+    if db_url:
+        # PostgreSQL syntax
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                username VARCHAR(255) UNIQUE NOT NULL,
+                password VARCHAR(255) NOT NULL
+            );
+        """)
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS subscriptions (
+                username VARCHAR(255) PRIMARY KEY,
+                plan VARCHAR(100) NOT NULL,
+                price NUMERIC NOT NULL,
+                order_tracking_id VARCHAR(255),
+                status VARCHAR(50) NOT NULL
+            );
+        """)
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS transactions (
+                id SERIAL PRIMARY KEY,
+                username VARCHAR(255) NOT NULL,
+                description VARCHAR(255) NOT NULL,
+                amount NUMERIC NOT NULL,
+                type VARCHAR(50) NOT NULL,
+                date VARCHAR(100) NOT NULL
+            );
+        """)
+    else:
+        # Valid SQLite syntax
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT UNIQUE NOT NULL,
+                password TEXT NOT NULL
+            );
+        """)
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS subscriptions (
+                username TEXT PRIMARY KEY,
+                plan TEXT NOT NULL,
+                price REAL NOT NULL,
+                order_tracking_id TEXT,
+                status TEXT NOT NULL
+            );
+        """)
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS transactions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT NOT NULL,
+                description TEXT NOT NULL,
+                amount REAL NOT NULL,
+                type TEXT NOT NULL,
+                date TEXT NOT NULL
+            );
+        """)
 
     conn.commit()
     conn.close()
@@ -100,13 +102,13 @@ def init_db():
 try:
     init_db()
 except Exception as e:
-    print("Database init error/warning:", e)
+    print("Database initialization warning:", e)
 
 
 # ================= PESAPAL HELPER FUNCTIONS =================
 
 def get_pesapal_token():
-    """Fetches a 5-minute Bearer Auth Token from Pesapal v3."""
+    """Fetches a Bearer Auth Token from Pesapal v3."""
     url = f"{PESAPAL_BASE_URL}/api/Auth/RequestToken"
     payload = {
         "consumer_key": PESAPAL_CONSUMER_KEY,
@@ -135,7 +137,6 @@ def get_or_register_ipn_id(token):
         "Content-Type": "application/json"
     }
     
-    # IPN Callback endpoint hosted on server
     ipn_callback = request.host_url.rstrip('/') + "/pesapal_ipn"
     payload = {
         "url": ipn_callback,
@@ -285,7 +286,7 @@ def connect_bank():
 
 @app.route('/ai_coach', methods=['POST'])
 def ai_coach():
-    """Receives financial question and queries OpenAI GPT model."""
+    """Receives financial question and queries OpenAI model."""
     if 'user' not in session:
         return jsonify({"response": "Please log in to consult your AI Coach."})
 
@@ -446,7 +447,6 @@ def pesapal_ipn():
     order_tracking_id = request.args.get('OrderTrackingId')
     merchant_reference = request.args.get('OrderMerchantReference')
     
-    # Send required Pesapal IPN response ACK
     return jsonify({
         "order_notification_type": "IPNCHANGE",
         "order_tracking_id": order_tracking_id,
