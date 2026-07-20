@@ -39,6 +39,7 @@ def init_db():
     c = conn.cursor()
     
     if db_url:
+        # PostgreSQL syntax
         c.execute("""
             CREATE TABLE IF NOT EXISTS users (
                 id SERIAL PRIMARY KEY,
@@ -65,7 +66,20 @@ def init_db():
                 date VARCHAR(100) NOT NULL
             );
         """)
+
+        # FORCE SCHEMA MIGRATION IF COLUMNS ARE MISSING ON POSTGRES
+        c.execute("ALTER TABLE transactions ADD COLUMN IF NOT EXISTS description VARCHAR(255) DEFAULT '';")
+        c.execute("ALTER TABLE transactions ADD COLUMN IF NOT EXISTS amount NUMERIC DEFAULT 0;")
+        c.execute("ALTER TABLE transactions ADD COLUMN IF NOT EXISTS type VARCHAR(50) DEFAULT 'expense';")
+        c.execute("ALTER TABLE transactions ADD COLUMN IF NOT EXISTS date VARCHAR(100) DEFAULT '';")
+        
+        c.execute("ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS order_tracking_id VARCHAR(255);")
+        c.execute("ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS plan VARCHAR(100) DEFAULT 'personal_pro';")
+        c.execute("ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS price NUMERIC DEFAULT 0;")
+        c.execute("ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'active';")
+
     else:
+        # SQLite syntax
         c.execute("""
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -220,7 +234,6 @@ def dashboard():
     c = conn.cursor()
     param = "%s" if db_url else "?"
 
-    # Handle Form Posts (Expenses & Monthly Income Updates)
     if request.method == 'POST':
         amount = request.form.get('amount')
         description = request.form.get('description')
@@ -246,7 +259,6 @@ def dashboard():
         conn.close()
         return redirect('/')
 
-    # Fetch User Data
     c.execute(f"SELECT * FROM transactions WHERE username={param} ORDER BY id DESC", (username,))
     transactions = c.fetchall()
 
@@ -275,7 +287,6 @@ def dashboard():
 
 @app.route('/connect_bank', methods=['POST'])
 def connect_bank():
-    """Simulates instant live bank linking by inserting initial demo transactions."""
     if 'user' not in session:
         return jsonify({"success": False, "message": "Unauthorized"}), 401
 
@@ -311,7 +322,7 @@ def connect_bank():
         return jsonify({"success": False, "message": str(e)}), 500
 
 
-# ================= PRICING & PESAPAL PAYMENTS =================
+# ================= PRICING & PAYMENTS =================
 
 @app.route('/pricing')
 def pricing():
@@ -365,7 +376,6 @@ def checkout():
             except Exception as e:
                 print("Pesapal Checkout Error:", e)
 
-    # Fallback Direct Activation if Pesapal API keys fail or aren't registered
     return redirect(url_for('pesapal_callback', plan=plan, OrderTrackingId=f"DEMO-{uuid.uuid4().hex[:6].upper()}"))
 
 
