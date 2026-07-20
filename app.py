@@ -16,7 +16,7 @@ load_dotenv()
 # ================= OPENAI =================
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-# ================= STRIPE (kept in place, no longer linked from pricing page) =================
+# ================= STRIPE =================
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 
 # ================= PADDLE =================
@@ -361,7 +361,7 @@ def set_income():
     return redirect('/')
 
 
-# ================= STRIPE CHECKOUT (kept, unused) =================
+# ================= STRIPE CHECKOUT =================
 @app.route('/checkout')
 def checkout():
     if 'user' not in session:
@@ -405,7 +405,7 @@ def checkout():
     return redirect(checkout_session.url, code=303)
 
 
-# ================= STRIPE SUBSCRIBE (kept, unused) =================
+# ================= STRIPE SUBSCRIBE =================
 @app.route('/subscribe')
 def subscribe():
     if 'user' not in session:
@@ -611,7 +611,6 @@ def link_bank():
         return redirect('/ai')
 
     try:
-        # FIXED: Reverted back to storing direct text response string (SimpleFIN returns pure raw URL text)
         claim_url = base64.b64decode(setup_token).decode('utf-8')
         response = requests.post(claim_url)
         
@@ -639,7 +638,7 @@ def link_bank():
             conn.close()
             
             flash("🏦 Bank connection linked successfully!", "success")
-            return redirect('/ai')
+            return redirect('/')
         else:
             flash(f"SimpleFIN rejected token exchange. Code: {response.status_code}", "error")
             return redirect('/ai')
@@ -671,11 +670,9 @@ def fetch_bank_transactions():
     access_url = row[0]
 
     try:
-        # FIXED: Correctly parse the embedded credentials out of the Access URL string to access /accounts resource properly
         scheme, rest = access_url.split('//', 1)
         auth, rest = rest.split('@', 1)
         
-        # Build clean target request URL with auth parsed out explicitly
         target_url = scheme + '//' + rest + '/accounts'
         bank_user, bank_pass = auth.split(':', 1)
         
