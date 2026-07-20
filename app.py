@@ -27,7 +27,8 @@ def get_db_connection():
     """Connects to PostgreSQL if DATABASE_URL exists, otherwise uses SQLite."""
     if db_url:
         import psycopg2
-        return psycopg2.connect(db_url)
+        cleaned_url = db_url.replace("postgres://", "postgresql://", 1)
+        return psycopg2.connect(cleaned_url)
     else:
         conn = sqlite3.connect("database.db")
         conn.row_factory = sqlite3.Row
@@ -244,6 +245,8 @@ def dashboard():
         transactions=transactions,
         total_income=total_income,
         total_expense=total_expense,
+        income=total_income,    # Fixed Jinja2 'income' undefined error
+        expense=total_expense,  # Fixed Jinja2 'expense' undefined error
         balance=balance,
         subscription=sub
     )
