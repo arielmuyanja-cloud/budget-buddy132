@@ -1,80 +1,95 @@
 <!DOCTYPE html>
-<html>
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-TGJSMVVB44"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'G-TGJSMVVB44');
-</script>
+<html lang="en">
 <head>
-    <title>Savings Plan</title>
-
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Budget Buddy - Simple Monthly Pricing</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: #0f172a;
-            color: white;
-            text-align: center;
-            padding: 20px;
-        }
-
-        .card {
-            background: #1e293b;
-            padding: 20px;
-            border-radius: 10px;
-            max-width: 500px;
-            margin: auto;
-        }
-
-        h1 {
-            margin-bottom: 20px;
-        }
-
-        .good {
-            color: #22c55e;
-        }
-
-        .bad {
-            color: #ef4444;
-        }
-
-        a {
-            color: #60a5fa;
-            text-decoration: none;
-        }
-
-        a:hover {
-            text-decoration: underline;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: #0f172a; color: #f8fafc; padding: 40px 20px; }
+        .container { max-width: 1100px; margin: 0 auto; text-align: center; }
+        h1 { font-size: 38px; font-weight: 800; margin-bottom: 10px; }
+        p.subtitle { color: #94a3b8; font-size: 18px; margin-bottom: 40px; }
+        
+        .pricing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; margin-top: 20px; }
+        .card { background-color: #1e293b; border-radius: 16px; border: 1px solid #334155; padding: 35px 25px; text-align: left; position: relative; display: flex; flex-direction: column; justify-content: space-between; transition: transform 0.2s, border-color 0.2s; }
+        .card:hover { border-color: #3b82f6; transform: translateY(-5px); }
+        .card.popular { border: 2px solid #10b981; background: #1a2e3b; }
+        .popular-badge { position: absolute; top: -12px; right: 20px; background: #10b981; color: #0f172a; font-weight: 700; font-size: 12px; padding: 4px 12px; border-radius: 12px; text-transform: uppercase; }
+        
+        .plan-name { font-size: 22px; font-weight: 700; margin-bottom: 10px; }
+        .price { font-size: 42px; font-weight: 800; color: #f8fafc; margin-bottom: 20px; }
+        .price span { font-size: 16px; color: #94a3b8; font-weight: 400; }
+        
+        .features { list-style: none; margin-bottom: 30px; }
+        .features li { margin-bottom: 12px; color: #cbd5e1; font-size: 15px; display: flex; align-items: center; gap: 8px; }
+        .features li::before { content: "✓"; color: #10b981; font-weight: bold; }
+        
+        .btn { display: block; text-align: center; width: 100%; padding: 14px; border-radius: 8px; font-weight: 700; text-decoration: none; border: none; cursor: pointer; transition: background 0.2s; }
+        .btn-green { background-color: #10b981; color: white; }
+        .btn-green:hover { background-color: #059669; }
+        .btn-blue { background-color: #3b82f6; color: white; }
+        .btn-blue:hover { background-color: #2563eb; }
+        .btn-outline { background-color: transparent; border: 1px solid #475569; color: white; }
+        .btn-outline:hover { background-color: #334155; }
     </style>
 </head>
-
 <body>
 
-    <h1>📊 Your Savings Plan</h1>
+    <div class="container">
+        <h1>Pick Your Monthly Plan</h1>
+        <p class="subtitle">Automate your finances, track spending, and build real wealth with AI.</p>
 
-    <div class="card">
+        <div class="pricing-grid">
+            <!-- PRO PLAN -->
+            <div class="card popular">
+                <span class="popular-badge">Most Popular</span>
+                <div>
+                    <div class="plan-name">Pro Monthly</div>
+                    <div class="price">$19 <span>/ month</span></div>
+                    <ul class="features">
+                        <li>Unlimited In-App Bank Linking</li>
+                        <li>24/7 AI Financial Coach</li>
+                        <li>Automated Monthly Expense Analytics</li>
+                        <li>Custom Spending Warnings & Limits</li>
+                        <li>Cancel Anytime</li>
+                    </ul>
+                </div>
+                <a href="/checkout?plan=personal_pro" class="btn btn-green">Subscribe Now ($19/mo)</a>
+            </div>
 
-        <p><strong>Income:</strong> ${{ income }}</p>
-        <p><strong>Goal:</strong> ${{ goal }}</p>
-        <p><strong>Time:</strong> {{ months }} months</p>
+            <!-- TEAM / BUSINESS -->
+            <div class="card">
+                <div>
+                    <div class="plan-name">Team & Business</div>
+                    <div class="price">$99 <span>/ month</span></div>
+                    <ul class="features">
+                        <li>Includes Everything in Pro</li>
+                        <li>Multi-User Accounts (Up to 5 Users)</li>
+                        <li>Team Expense Tracking & Exporting</li>
+                        <li>Priority AI Response Speed</li>
+                        <li>Dedicated Email Support</li>
+                    </ul>
+                </div>
+                <a href="/checkout?plan=team_starter" class="btn btn-blue">Subscribe Team ($99/mo)</a>
+            </div>
 
-        <hr>
-
-        <h2>💰 Monthly Save: ${{ monthly_save }}</h2>
-        <h2>📅 Weekly Save: ${{ weekly_save }}</h2>
-
-        <h3 class="{{ 'bad' if '⚠️' in suggestion else 'good' }}">
-            {{ suggestion }}
-        </h3>
-
-        <br>
-
-        <a href="/">← Back to Budget Buddy</a>
-
+            <!-- ENTERPRISE VIP -->
+            <div class="card">
+                <div>
+                    <div class="plan-name">Enterprise VIP</div>
+                    <div class="price">$299 <span>/ month</span></div>
+                    <ul class="features">
+                        <li>Custom Dashboard Integration</li>
+                        <li>Unlimited Multi-User Seats</li>
+                        <li>Dedicated AI Model Tailored to Business</li>
+                        <li>1-on-1 Monthly Onboarding Call</li>
+                        <li>24/7 Priority Support</li>
+                    </ul>
+                </div>
+                <a href="/checkout?plan=business_pro" class="btn btn-outline">Subscribe VIP ($299/mo)</a>
+            </div>
+        </div>
     </div>
 
 </body>
