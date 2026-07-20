@@ -5,46 +5,186 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Budget Buddy Dashboard</title>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { background-color: #0f172a; color: #f8fafc; padding: 30px; }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
-        .header h1 { font-size: 28px; font-weight: 700; }
-        .nav-btns { display: flex; gap: 15px; align-items: center; }
-        .btn { padding: 10px 18px; border-radius: 8px; font-weight: 600; text-decoration: none; cursor: pointer; border: none; transition: background 0.2s; }
-        .btn-blue { background-color: #3b82f6; color: white; }
-        .btn-blue:hover { background-color: #2563eb; }
-        .btn-purple { background-color: #8b5cf6; color: white; }
-        .btn-purple:hover { background-color: #7c3aed; }
-        .btn-red { color: #ef4444; background: transparent; font-weight: 600; }
-        .btn-green { background-color: #10b981; color: white; width: 100%; margin-top: 10px; }
-        .btn-green:hover { background-color: #059669; }
-        
-        .alert { padding: 15px; border-radius: 8px; margin-bottom: 25px; font-weight: 600; }
-        .alert-success { background-color: #065f46; color: #a7f3d0; border: 1px solid #059669; }
-        .alert-error { background-color: #991b1b; color: #fecaca; border: 1px solid #dc2626; }
-        
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; }
-        .card { background-color: #1e293b; padding: 25px; border-radius: 12px; border: 1px solid #334155; }
-        .card h2 { margin-bottom: 15px; font-size: 20px; color: #f1f5f9; }
-        .stat { font-size: 16px; margin-bottom: 10px; color: #94a3b8; }
-        .stat span { color: #f8fafc; font-weight: 600; }
-        
-        input { width: 100%; padding: 12px; margin-bottom: 15px; background-color: #0f172a; border: 1px solid #334155; border-radius: 6px; color: white; }
-        .tx-list { list-style: none; }
-        .tx-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #334155; }
-
-        /* MODAL STYLES */
-        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center; }
-        .modal-card { background: #1e293b; width: 450px; padding: 30px; border-radius: 12px; border: 1px solid #334155; position: relative; }
-        .modal-close { position: absolute; top: 15px; right: 20px; color: #94a3b8; cursor: pointer; font-size: 22px; }
-        .bank-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; }
-        .bank-btn { background: #0f172a; border: 1px solid #334155; padding: 15px; border-radius: 8px; color: white; font-weight: 600; cursor: pointer; text-align: center; transition: all 0.2s; }
-        .bank-btn:hover { border-color: #10b981; background: #1e293b; }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        body {
+            background-color: #0f172a;
+            color: #f8fafc;
+            padding: 24px;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 32px;
+        }
+        .user-welcome {
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .nav-buttons {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+        .btn {
+            padding: 10px 18px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            border: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+        }
+        .btn-upgrade {
+            background-color: #f59e0b;
+            color: #0f172a;
+        }
+        .btn-upgrade:hover {
+            background-color: #d97706;
+        }
+        .btn-bank {
+            background-color: #2563eb;
+            color: #ffffff;
+        }
+        .btn-bank:hover {
+            background-color: #1d4ed8;
+        }
+        .btn-ai {
+            background-color: #8b5cf6;
+            color: #ffffff;
+        }
+        .btn-ai:hover {
+            background-color: #7c3aed;
+        }
+        .btn-logout {
+            color: #ef4444;
+            text-decoration: none;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+        .grid-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+        .card {
+            background-color: #1e293b;
+            border-radius: 12px;
+            padding: 24px;
+            border: 1px solid #334155;
+        }
+        .card h2 {
+            margin-bottom: 16px;
+            font-size: 20px;
+            color: #cbd5e1;
+        }
+        .stat {
+            font-size: 16px;
+            margin-bottom: 12px;
+            color: #94a3b8;
+        }
+        .stat span {
+            color: #f8fafc;
+            font-weight: bold;
+        }
+        .input-group {
+            margin-bottom: 16px;
+        }
+        .input-group input {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #334155;
+            background-color: #0f172a;
+            color: #fff;
+            margin-bottom: 12px;
+        }
+        .btn-submit {
+            width: 100%;
+            background-color: #10b981;
+            color: #fff;
+            padding: 12px;
+            border-radius: 8px;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .btn-submit:hover {
+            background-color: #059669;
+        }
+        /* Modal Overlay */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(4px);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-card {
+            background-color: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 16px;
+            padding: 32px;
+            width: 440px;
+            position: relative;
+        }
+        .modal-close {
+            position: absolute;
+            top: 16px; right: 20px;
+            color: #94a3b8;
+            cursor: pointer;
+            font-size: 20px;
+        }
+        .bank-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 20px;
+        }
+        .bank-btn {
+            background-color: #0f172a;
+            border: 1px solid #334155;
+            color: #fff;
+            padding: 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: border-color 0.2s;
+        }
+        .bank-btn:hover {
+            border-color: #3b82f6;
+            background-color: #1e293b;
+        }
+        /* Alert Messages */
+        .alert {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-weight: 500;
+        }
+        .alert-success { background-color: #065f46; color: #a7f3d0; }
+        .alert-error { background-color: #991b1b; color: #fecaca; }
     </style>
 </head>
 <body>
 
-    <!-- FLASH MESSAGES -->
+    <!-- Flash Messages -->
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         {% for category, message in messages %}
@@ -53,46 +193,66 @@
       {% endif %}
     {% endwith %}
 
+    <!-- Top Navigation Header -->
     <div class="header">
-        <h1>Welcome, {{ first_name }}! ({{ initials }})</h1>
-        <div class="nav-btns">
-            <button onclick="openModal()" class="btn btn-blue">🏦 Connect Bank Account</button>
-            <a href="/ai" class="btn btn-purple">🤖 Ask AI Coach</a>
-            <a href="/logout" class="btn btn-red">Logout</a>
+        <div class="user-welcome">
+            Welcome, {{ username }}!
+        </div>
+        <div class="nav-buttons">
+            <!-- ⚡ Upgrade Plan Button -->
+            <a href="/pricing" class="btn btn-upgrade">
+                ⚡ Upgrade Plan
+            </a>
+
+            <!-- 🏦 Connect Bank Account Button -->
+            <button class="btn btn-bank" onclick="openBankModal()">
+                🏦 Connect Bank Account
+            </button>
+
+            <!-- 🤖 Ask AI Coach Button -->
+            <button class="btn btn-ai" onclick="alert('Consulting AI Financial Coach...')">
+                🤖 Ask AI Coach
+            </button>
+
+            <a href="/logout" class="btn-logout">Logout</a>
         </div>
     </div>
 
-    <div class="grid">
-        <!-- FINANCIAL SUMMARY -->
+    <!-- Main Content Dashboard Grid -->
+    <div class="grid-container">
+        <!-- Financial Summary -->
         <div class="card">
             <h2>Financial Summary</h2>
-            <div class="stat">Total Income Stored: <span>${{ "%.2f"|format(income) }}</span></div>
-            <div class="stat">Total Expenses Logged: <span>${{ "%.2f"|format(total) }}</span></div>
-            <div class="stat">Remaining Capital: <span>${{ "%.2f"|format(remaining) }}</span></div>
-            {% if warning %}
-                <div style="margin-top: 15px; font-weight: bold; color: #f59e0b;">{{ warning }}</div>
-            {% endif %}
+            <div class="stat">Total Income Stored: <span>${{ "%.2f"|format(total_income|default(0)) }}</span></div>
+            <div class="stat">Total Expenses Logged: <span>${{ "%.2f"|format(total_expense|default(0)) }}</span></div>
+            <div class="stat">Remaining Capital: <span>${{ "%.2f"|format(balance|default(0)) }}</span></div>
         </div>
 
-        <!-- LOG EXPENSE -->
+        <!-- Log Expense -->
         <div class="card">
             <h2>Log New Expense</h2>
-            <form action="/add" method="POST">
-                <input type="number" step="0.01" name="amount" placeholder="Amount ($)" required>
-                <input type="text" name="category" placeholder="Description/Category" required>
-                <button type="submit" class="btn btn-green">Add Item</button>
+            <form action="/" method="POST">
+                <div class="input-group">
+                    <input type="number" step="0.01" name="amount" placeholder="Amount ($)" required>
+                    <input type="text" name="description" placeholder="Description/Category" required>
+                </div>
+                <button type="submit" class="btn-submit">Add Item</button>
             </form>
         </div>
+    </div>
 
-        <!-- TRANSACTION HISTORY -->
+    <div class="grid-container">
+        <!-- Transaction History -->
         <div class="card">
             <h2>Transaction History</h2>
             {% if transactions %}
-                <ul class="tx-list">
-                    {% for tx in transactions %}
-                        <li class="tx-item">
-                            <span>{{ tx.category }}</span>
-                            <span>${{ "%.2f"|format(tx.amount) }}</span>
+                <ul style="list-style: none;">
+                    {% for t in transactions %}
+                        <li style="padding: 10px 0; border-bottom: 1px solid #334155; display: flex; justify-content: space-between;">
+                            <span>{{ t['description'] if t['description'] else t[2] }}</span>
+                            <span style="color: {% if (t['type'] if t['type'] else t[4]) == 'income' %}#10b981{% else %}#ef4444{% endif %}; font-weight: bold;">
+                                {% if (t['type'] if t['type'] else t[4]) == 'income' %}+{% else %}-{% endif %}${{ "%.2f"|format(t['amount'] if t['amount'] else t[3]) }}
+                            </span>
                         </li>
                     {% endfor %}
                 </ul>
@@ -101,47 +261,65 @@
             {% endif %}
         </div>
 
-        <!-- CONFIGURE MONTHLY INCOME -->
+        <!-- Configure Monthly Income -->
         <div class="card">
             <h2>Configure Monthly Income</h2>
-            <form action="/set_income" method="POST">
-                <input type="number" step="0.01" name="amount" placeholder="Income Amount ($)" required>
-                <button type="submit" class="btn btn-green">Update Income</button>
+            <form action="/" method="POST">
+                <div class="input-group">
+                    <input type="number" step="0.01" name="income_amount" placeholder="Income Amount ($)" required>
+                </div>
+                <button type="submit" class="btn-submit">Update Income</button>
             </form>
         </div>
     </div>
 
-    <!-- BANK CONNECTION MODAL -->
-    <div id="bankModal" class="modal-overlay">
+    <!-- Link Bank Modal -->
+    <div class="modal-overlay" id="bankModal">
         <div class="modal-card">
-            <span class="modal-close" onclick="closeModal()">&times;</span>
-            <h2 style="margin-bottom: 8px;">Link Your Bank Account</h2>
+            <span class="modal-close" onclick="closeBankModal()">&times;</span>
+            <h2 style="font-size: 22px; margin-bottom: 8px;">Link Your Bank Account</h2>
             <p style="color: #94a3b8; font-size: 14px;">Select your financial institution to connect your feed to Budget Buddy:</p>
             
             <div class="bank-grid">
-                <div class="bank-btn" onclick="connectBank('Chase Bank')">🏛️ Chase</div>
-                <div class="bank-btn" onclick="connectBank('Bank of America')">🏛️ Bank of America</div>
-                <div class="bank-btn" onclick="connectBank('Wells Fargo')">🏛️ Wells Fargo</div>
-                <div class="bank-btn" onclick="connectBank('Capital One')">🏛️ Capital One</div>
+                <button class="bank-btn" onclick="selectBank('Chase')">🏛️ Chase</button>
+                <button class="bank-btn" onclick="selectBank('Bank of America')">🏛️ Bank of America</button>
+                <button class="bank-btn" onclick="selectBank('Wells Fargo')">🏛️ Wells Fargo</button>
+                <button class="bank-btn" onclick="selectBank('Capital One')">🏛️ Capital One</button>
             </div>
         </div>
     </div>
 
+    <!-- JavaScript Handlers -->
     <script>
-        function openModal() { document.getElementById('bankModal').style.display = 'flex'; }
-        function closeModal() { document.getElementById('bankModal').style.display = 'none'; }
-        
-        async function connectBank(bankName) {
-            const response = await fetch('/sync_custom_bank', {
+        function openBankModal() {
+            document.getElementById('bankModal').style.display = 'flex';
+        }
+
+        function closeBankModal() {
+            document.getElementById('bankModal').style.display = 'none';
+        }
+
+        function selectBank(bankName) {
+            fetch('/connect_bank', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json'
+                },
                 body: JSON.stringify({ bank_name: bankName })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.reload();
+                } else {
+                    alert("Error linking bank: " + data.message);
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert("Failed to connect to " + bankName);
             });
-            if (response.ok) {
-                window.location.reload();
-            }
         }
     </script>
-
 </body>
-</html>
+</html> 
