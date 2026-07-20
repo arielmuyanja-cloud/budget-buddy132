@@ -247,10 +247,11 @@ def dashboard():
         transactions=transactions,
         total_income=total_income,
         total_expense=total_expense,
-        income=total_income,     # Passed for index.html line 69
-        expense=total_expense,   # Passed for index.html expense references
-        total=total_expense,     # Passed for index.html line 70
+        income=total_income,     # Fixed index.html line 69
+        expense=total_expense,   # Fixed expense references
+        total=total_expense,     # Fixed index.html line 70
         balance=balance,
+        remaining=balance,       # Fixed index.html line 71
         subscription=sub
     )
 
