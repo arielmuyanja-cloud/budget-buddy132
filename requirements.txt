@@ -1,7 +1,7 @@
 flask
-   openai
-   gunicorn
-   python-dotenv
-   stripe
-   requests
-psycopg2-binary==2.9.12
+openai
+gunicorn
+python-dotenv
+stripe
+requests
+psycopg2-binary
