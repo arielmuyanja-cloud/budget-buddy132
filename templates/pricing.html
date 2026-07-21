@@ -3,186 +3,278 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Upgrade Your Plan - Budget Buddy</title>
+    <title>Plans & Enterprise Pricing - Budget Buddy AI</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
         body {
-            background-color: #0f172a;
-            color: #f8fafc;
-            padding: 40px 20px;
-        }
-        .container {
-            max-width: 1000px;
-            margin: 0 auto;
-            text-align: center;
-        }
-        h1 {
-            font-size: 36px;
-            margin-bottom: 12px;
-        }
-        p.subtitle {
-            color: #94a3b8;
-            font-size: 18px;
-            margin-bottom: 40px;
-        }
-        .pricing-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 24px;
-        }
-        .plan-card {
-            background-color: #1e293b;
-            border: 1px solid #334155;
-            border-radius: 16px;
-            padding: 32px;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            position: relative;
-            transition: transform 0.2s, border-color 0.2s;
-        }
-        .plan-card:hover {
-            transform: translateY(-4px);
-            border-color: #3b82f6;
-        }
-        .plan-card.featured {
-            border: 2px solid #f59e0b;
-        }
-        .badge {
-            position: absolute;
-            top: -12px;
-            left: 50%;
-            transform: translateX(-50%);
-            background-color: #f59e0b;
-            color: #0f172a;
-            font-size: 12px;
-            font-weight: bold;
-            padding: 4px 12px;
-            border-radius: 12px;
-            text-transform: uppercase;
-        }
-        .plan-title {
-            font-size: 22px;
-            font-weight: bold;
-            margin-bottom: 8px;
-        }
-        .price {
-            font-size: 42px;
-            font-weight: 800;
-            margin: 16px 0;
-            color: #10b981;
-        }
-        .price span {
-            font-size: 16px;
-            color: #94a3b8;
-            font-weight: normal;
-        }
-        .features {
-            list-style: none;
-            margin-bottom: 24px;
-            text-align: left;
-        }
-        .features li {
-            margin-bottom: 12px;
-            color: #cbd5e1;
-            font-size: 15px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .btn-checkout {
-            display: block;
-            width: 100%;
-            padding: 14px;
-            background-color: #2563eb;
-            color: white;
-            text-decoration: none;
-            border-radius: 8px;
-            font-weight: bold;
-            transition: background-color 0.2s;
-        }
-        .btn-checkout:hover {
-            background-color: #1d4ed8;
-        }
-        .btn-featured {
-            background-color: #f59e0b;
-            color: #0f172a;
-        }
-        .btn-featured:hover {
-            background-color: #d97706;
-        }
-        .back-link {
-            display: inline-block;
-            margin-top: 32px;
-            color: #94a3b8;
-            text-decoration: none;
-        }
-        .back-link:hover {
+            background-color: #0b132b;
             color: #ffffff;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            min-height: 100vh;
+            padding-bottom: 60px;
+        }
+        .text-subtle {
+            color: #94a3b8 !important;
+        }
+        .text-light-silver {
+            color: #e2e8f0 !important;
+        }
+        .pricing-card {
+            background-color: #1c2541;
+            border: 1px solid #3a506b;
+            border-radius: 16px;
+            transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+        }
+        .pricing-card:hover {
+            transform: translateY(-6px);
+            border-color: #38bdf8;
+            box-shadow: 0 12px 30px rgba(56, 189, 248, 0.15);
+        }
+        .pricing-card.featured {
+            border: 2px solid #38bdf8;
+            background-color: #1e2a4a;
+        }
+        .checkout-box {
+            background: #1c2541;
+            border: 2px solid #38bdf8;
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 40px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+        }
+        .feature-list li {
+            color: #e2e8f0;
+            font-size: 0.95rem;
+            margin-bottom: 0.6rem;
+        }
+        .form-control-dark {
+            background-color: #0f172a;
+            border: 1px solid #334155;
+            color: #ffffff;
+            border-radius: 8px;
+        }
+        .form-control-dark:focus {
+            background-color: #0f172a;
+            border-color: #38bdf8;
+            color: #ffffff;
+            box-shadow: 0 0 0 0.25rem rgba(56, 189, 248, 0.25);
+        }
+        .form-control-dark::placeholder {
+            color: #64748b;
+        }
+        .btn-glow {
+            background: linear-gradient(135deg, #0284c7, #0369a1);
+            color: white;
+            font-weight: 600;
+            border: none;
+            border-radius: 8px;
+        }
+        .btn-glow:hover {
+            background: linear-gradient(135deg, #0369a1, #075985);
+            color: white;
         }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <h1>Choose Your Subscription Plan</h1>
-        <p class="subtitle">Unlock powerful AI coaching, instant bank feeds, and deep financial analytics.</p>
+<div class="container mt-5">
+    
+    <!-- Top Header -->
+    <div class="text-center mb-4">
+        <h1 class="fw-bold text-white">Choose Your Plan</h1>
+        <p class="text-subtle fs-5">Scalable AI financial auditing for individuals, growing teams, and enterprises.</p>
+        <a href="/" class="btn btn-outline-light btn-sm mt-1">&larr; Return to Dashboard</a>
+    </div>
 
-        <div class="pricing-grid">
-            <!-- Pro Monthly -->
-            <div class="plan-card featured">
-                <div class="badge">Most Popular</div>
-                <div>
-                    <div class="plan-title">Pro Monthly</div>
-                    <div class="price">$19 <span>/ month</span></div>
-                    <ul class="features">
-                        <li>⚡ Instant Bank Syncing</li>
-                        <li>🤖 Unlimited AI Coaching</li>
-                        <li>📊 Advanced Analytics</li>
-                        <li>🔒 Priority Support</li>
-                    </ul>
-                </div>
-                <a href="/checkout?plan=personal_pro" class="btn-checkout btn-featured">Subscribe Now</a>
+    <!-- Alert Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show border-0 shadow-lg mb-4" role="alert">
+            <div class="d-flex align-items-center">
+                <strong>{{ message }}</strong>
             </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
 
-            <!-- Team Monthly -->
-            <div class="plan-card">
-                <div>
-                    <div class="plan-title">Team Starter</div>
-                    <div class="price">$99 <span>/ month</span></div>
-                    <ul class="features">
-                        <li>👥 Up to 5 Team Members</li>
-                        <li>⚡ Instant Bank Syncing</li>
-                        <li>🤖 Dedicated AI Coach</li>
-                        <li>📈 Custom Export Reports</li>
-                    </ul>
+    <!-- CHECKOUT SECTION (Appears when a plan is selected) -->
+    {% if selected_plan %}
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-8">
+            <div class="checkout-box">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h3 class="text-info fw-bold mb-0">Complete Your Order</h3>
+                    <span class="badge bg-primary text-white fs-6 px-3 py-2">{{ plan_display }}</span>
                 </div>
-                <a href="/checkout?plan=team_starter" class="btn-checkout">Subscribe Now</a>
+                
+                <div class="p-3 mb-4 rounded-3" style="background-color: #0f172a; border: 1px solid #334155;">
+                    <div class="row text-center text-md-start">
+                        <div class="col-12 col-md-6 mb-2 mb-md-0">
+                            <span class="text-subtle small d-block">Selected Plan</span>
+                            <strong class="text-white fs-5">{{ plan_display }}</strong>
+                        </div>
+                        <div class="col-12 col-md-6 text-md-end">
+                            <span class="text-subtle small d-block">Billing Amount</span>
+                            <strong class="text-info fs-5">${{ plan_price }} / month</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <h6 class="text-white fw-bold">Payment Instructions:</h6>
+                    <p class="text-light-silver small mb-1">Send payment via your manual transfer method for <strong>${{ plan_price }}</strong>, then enter your Payment Reference / Transaction ID below.</p>
+                </div>
+                
+                <form action="/confirm_manual_payment" method="POST">
+                    <input type="hidden" name="plan" value="{{ selected_plan }}">
+                    
+                    <div class="mb-3">
+                        <label for="reference" class="form-label text-white fw-semibold">Payment Reference / Transaction ID *</label>
+                        <input type="text" id="reference" name="reference" required class="form-control form-control-dark py-2" placeholder="e.g. TXN-987654321">
+                    </div>
+                    
+                    <div class="d-flex flex-column flex-sm-row gap-2 mt-4">
+                        <button type="submit" class="btn btn-success fw-bold py-2 px-4 flex-grow-1">Submit Payment</button>
+                        <a href="/pricing" class="btn btn-outline-secondary">Cancel</a>
+                    </div>
+                </form>
+
+                <div class="mt-3 pt-3 border-top border-secondary text-center text-md-start">
+                    <small class="text-subtle d-block">🔒 Security Note: All manual payments are queued for instant administrative verification.</small>
+                    <small class="text-subtle d-block">⚡ Verification Note: Access will be updated automatically upon payment check.</small>
+                </div>
             </div>
+        </div>
+    </div>
+    {% endif %}
 
-            <!-- Enterprise VIP -->
-            <div class="plan-card">
-                <div>
-                    <div class="plan-title">Enterprise VIP</div>
-                    <div class="price">$299 <span>/ month</span></div>
-                    <ul class="features">
-                        <li>🏢 Unlimited Accounts</li>
-                        <li>⚡ Live Multi-Bank Feeds</li>
-                        <li>🤖 Custom AI Financial Models</li>
-                        <li>📞 24/7 VIP Phone Support</li>
+    <!-- PRICING TIERS GRID -->
+    <div class="row g-4 align-items-stretch">
+        
+        <!-- Personal Pro Tier -->
+        <div class="col-12 col-md-6 col-lg-3">
+            <div class="card pricing-card featured h-100 p-3 text-center">
+                <div class="card-body d-flex flex-column">
+                    <span class="badge bg-info text-dark align-self-center mb-2 fw-bold">Most Popular</span>
+                    <h3 class="card-title text-white fw-bold">Personal Pro</h3>
+                    <h2 class="my-3 text-info fw-bold">$19 <small class="fs-6 text-subtle">/ month</small></h2>
+                    <ul class="list-unstyled text-start my-3 flex-grow-1 feature-list">
+                        <li>✔ AI Subscription Leak Detector</li>
+                        <li>✔ Bank Statement CSV Audits</li>
+                        <li>✔ Automated Expense Tracking</li>
+                        <li>✔ Standard Email Support</li>
                     </ul>
+                    <a href="/checkout?plan=personal_pro" class="btn btn-glow w-100 mt-auto py-2">Select Personal Pro</a>
                 </div>
-                <a href="/checkout?plan=business_pro" class="btn-checkout">Subscribe Now</a>
             </div>
         </div>
 
-        <a href="/" class="back-link">← Back to Dashboard</a>
+        <!-- Team Starter Tier -->
+        <div class="col-12 col-md-6 col-lg-3">
+            <div class="card pricing-card h-100 p-3 text-center">
+                <div class="card-body d-flex flex-column">
+                    <h3 class="card-title text-white fw-bold">Team Starter</h3>
+                    <h2 class="my-3 text-info fw-bold">$99 <small class="fs-6 text-subtle">/ month</small></h2>
+                    <ul class="list-unstyled text-start my-3 flex-grow-1 feature-list">
+                        <li>✔ Everything in Personal Pro</li>
+                        <li>✔ Up to 5 Team Members</li>
+                        <li>✔ Business Cashflow Dashboard</li>
+                        <li>✔ Priority AI Audits</li>
+                    </ul>
+                    <a href="/checkout?plan=team_starter" class="btn btn-outline-info w-100 mt-auto py-2 fw-semibold">Select Team Starter</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Business VIP Tier -->
+        <div class="col-12 col-md-6 col-lg-3">
+            <div class="card pricing-card h-100 p-3 text-center">
+                <div class="card-body d-flex flex-column">
+                    <h3 class="card-title text-white fw-bold">Business VIP</h3>
+                    <h2 class="my-3 text-info fw-bold">$299 <small class="fs-6 text-subtle">/ month</small></h2>
+                    <ul class="list-unstyled text-start my-3 flex-grow-1 feature-list">
+                        <li>✔ Everything in Team Starter</li>
+                        <li>✔ Unlimited Transactions</li>
+                        <li>✔ Custom AI Financial Rules</li>
+                        <li>✔ 1-on-1 Dedicated Support</li>
+                    </ul>
+                    <a href="/checkout?plan=business_pro" class="btn btn-outline-info w-100 mt-auto py-2 fw-semibold">Select Business VIP</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Enterprise Build Tier -->
+        <div class="col-12 col-md-6 col-lg-3">
+            <div class="card pricing-card h-100 p-3 text-center border-warning">
+                <div class="card-body d-flex flex-column">
+                    <span class="badge bg-warning text-dark align-self-center mb-2 fw-bold">Custom Build</span>
+                    <h3 class="card-title text-white fw-bold">Custom Enterprise</h3>
+                    <h2 class="my-3 text-warning fw-bold fs-4">$2,500–$5,000 <small class="fs-6 text-subtle">Setup</small></h2>
+                    <ul class="list-unstyled text-start my-3 flex-grow-1 feature-list">
+                        <li>✔ Custom AI integrations</li>
+                        <li>✔ Custom dashboards & White-label</li>
+                        <li>✔ Custom CSV parser rules</li>
+                        <li>✔ Multi-user workflows</li>
+                        <li>✔ Dedicated onboarding</li>
+                        <li>✔ Priority engineering support</li>
+                    </ul>
+                    <a href="#enterprise-consultation" class="btn btn-warning w-100 mt-auto py-2 fw-bold text-dark">Request Consultation</a>
+                </div>
+            </div>
+        </div>
+
     </div>
 
+    <!-- ENTERPRISE CONSULTATION FORM SECTION -->
+    <div id="enterprise-consultation" class="row justify-content-center mt-5 pt-4">
+        <div class="col-12 col-lg-10">
+            <div class="card pricing-card p-4 p-md-5 border-warning">
+                <div class="text-center mb-4">
+                    <h2 class="text-white fw-bold">Enterprise Consultation Request</h2>
+                    <p class="text-subtle">Looking for a custom version tailored to your enterprise architecture? Send us your requirements.</p>
+                </div>
+
+                <form action="/enterprise_request" method="POST">
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            <label for="name" class="form-label text-white fw-semibold">Full Name *</label>
+                            <input type="text" id="name" name="name" required class="form-control form-control-dark" placeholder="John Doe">
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label for="email" class="form-label text-white fw-semibold">Business Email *</label>
+                            <input type="email" id="email" name="email" required class="form-control form-control-dark" placeholder="john@company.com">
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label for="company" class="form-label text-white fw-semibold">Company / Organization *</label>
+                            <input type="text" id="company" name="company" required class="form-control form-control-dark" placeholder="Acme Financial Corp">
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label for="phone" class="form-label text-white fw-semibold">Phone Number (Optional)</label>
+                            <input type="text" id="phone" name="phone" class="form-control form-control-dark" placeholder="+1 (555) 000-0000">
+                        </div>
+
+                        <div class="col-12">
+                            <label for="requirements" class="form-label text-white fw-semibold">Feature Requirements & Specifications *</label>
+                            <textarea id="requirements" name="requirements" rows="4" required class="form-control form-control-dark" placeholder="Describe your custom CSV parsers, multi-tenant workflows, white-label requirements, or API integrations..."></textarea>
+                        </div>
+
+                        <div class="col-12 mt-4 text-center">
+                            <button type="submit" class="btn btn-warning btn-lg px-5 fw-bold text-dark">Submit Enterprise Consultation Request</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
