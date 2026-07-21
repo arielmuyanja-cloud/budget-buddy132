@@ -2,181 +2,158 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Personal Dashboard - Budget Buddy</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pricing Plans - Budget Buddy AI</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body { background-color: #0f172a; color: #f8fafc; font-family: sans-serif; }
-        .card { background-color: #1e293b; border: 1px solid #334155; border-radius: 12px; }
-        .metric-title { color: #94a3b8; font-size: 0.85rem; text-transform: uppercase; }
-        .audit-box { background: #0284c715; border: 1px solid #0284c7; border-radius: 8px; padding: 15px; }
+        body {
+            background-color: #0f172a;
+            color: #f8fafc;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            padding-bottom: 50px;
+        }
+        .pricing-card {
+            background-color: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+        .pricing-card:hover {
+            transform: translateY(-5px);
+            border-color: #38bdf8;
+        }
+        .checkout-box {
+            background: #1e293b;
+            border: 2px solid #38bdf8;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 40px;
+        }
+        .btn-custom {
+            background-color: #0284c7;
+            color: white;
+            font-weight: 600;
+        }
+        .btn-custom:hover {
+            background-color: #0369a1;
+            color: white;
+        }
     </style>
 </head>
-<body class="p-4">
+<body>
 
-<div class="container">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>👤 {{ username }} <span class="badge bg-secondary fs-6">Personal Dashboard</span></h2>
-        <div>
-            <a href="/pricing" class="btn btn-warning text-dark fw-bold me-2">Upgrade Plan</a>
-            <a href="/logout" class="btn btn-outline-danger">Logout</a>
-        </div>
-    </div>
-
+<div class="container mt-5">
+    
+    <!-- Flash Messages Section -->
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         {% for category, message in messages %}
-          <div class="alert alert-info">{{ message }}</div>
+          <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
         {% endfor %}
       {% endif %}
     {% endwith %}
 
-    <!-- METRICS OVERVIEW -->
-    <div class="row g-3 mb-4">
-        <div class="col-md-4">
-            <div class="card p-3">
-                <div class="metric-title">Total Income</div>
-                <h3 class="text-success">${{ "%.2f"|format(total_income) }}</h3>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card p-3">
-                <div class="metric-title">Total Expenses</div>
-                <h3 class="text-danger">${{ "%.2f"|format(total_expense) }}</h3>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card p-3">
-                <div class="metric-title">Remaining Balance</div>
-                <h3 class="text-info">${{ "%.2f"|format(balance) }}</h3>
-            </div>
-        </div>
+    <div class="text-center mb-5">
+        <h1 class="fw-bold">Choose Your Plan</h1>
+        <p class="text-muted">Unlock AI subscription leak auditing and financial coaching.</p>
+        <a href="/" class="btn btn-outline-light btn-sm mt-2">&larr; Back to Dashboard</a>
     </div>
 
-    <!-- AI & SUBSCRIPTION SAVINGS AUDIT -->
-    <div class="row g-3 mb-4">
-        <div class="col-md-12">
-            <div class="card p-4 border-warning">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h4 class="text-warning mb-0">🤖 AI & Membership Drain Audit</h4>
-                    {% if session.get('last_audit') %}
-                    <span class="badge bg-danger fs-6">
-                        Potential Savings: ${{ "%.2f"|format(session['last_audit']['annual_savings']) }}/yr
-                    </span>
+    <!-- MANUAL CHECKOUT BOX (Displays when a user clicks ANY plan tier) -->
+    {% if selected_plan %}
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="checkout-box shadow-lg">
+                <h3 class="text-info fw-bold mb-3">
+                    Complete Order: 
+                    {% if selected_plan == 'personal_pro' %} Personal Pro ($19)
+                    {% elif selected_plan == 'team_starter' %} Team Starter ($99)
+                    {% elif selected_plan == 'business_pro' %} Business VIP ($299)
+                    {% else %} {{ selected_plan }}
                     {% endif %}
-                </div>
-
-                {% if session.get('last_audit') and session['last_audit']['subs'] %}
-                <div class="row mb-3 text-center">
-                    <div class="col-md-6">
-                        <div class="p-3 rounded" style="background: #ef444420; border: 1px solid #ef4444;">
-                            <small class="text-secondary text-uppercase">Monthly Subscriptions</small>
-                            <h2 class="text-danger mb-0">${{ "%.2f"|format(session['last_audit']['monthly_savings']) }}</h2>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="p-3 rounded" style="background: #22c55e20; border: 1px solid #22c55e;">
-                            <small class="text-secondary text-uppercase">Potential Yearly Savings</small>
-                            <h2 class="text-success mb-0">${{ "%.2f"|format(session['last_audit']['annual_savings']) }}</h2>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="audit-box">
-                    <h6 class="text-info fw-bold">Detected Subscriptions & AI Tools:</h6>
-                    <ul class="mb-3">
-                        {% for sub in session['last_audit']['subs'] %}
-                            <li class="text-light">
-                                <strong>{{ sub.name }}</strong> — ${{ "%.2f"|format(sub.amount) }}/mo
-                            </li>
-                        {% endfor %}
-                    </ul>
-
-                    <h6 class="text-warning fw-bold">AI Financial Recommendations:</h6>
-                    {% for line in session['last_audit']['insights'] %}
-                        <p class="mb-1 text-light">{{ line }}</p>
-                    {% endfor %}
-                </div>
-
-                {% else %}
-                <div class="text-center py-3">
-                    <p class="text-secondary mb-0">Upload a CSV bank statement below to analyze monthly subscriptions, AI memberships, and potential savings.</p>
-                </div>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-
-    <!-- QUICK MANUAL ADD & STATEMENT UPLOAD -->
-    <div class="row g-3 mb-4">
-        <div class="col-md-6">
-            <div class="card p-4">
-                <h4>➕ Log Expense / Income</h4>
-                <form action="/" method="POST" class="mt-3">
-                    <div class="mb-2">
-                        <input type="text" name="description" placeholder="Description (e.g. Netflix, Rent)" class="form-control bg-dark text-white border-secondary">
-                    </div>
-                    <div class="mb-3">
-                        <input type="number" step="0.01" name="amount" placeholder="Expense Amount ($)" class="form-control bg-dark text-white border-secondary">
-                    </div>
-                    <button type="submit" class="btn btn-danger w-100 fw-bold mb-3">Add Expense</button>
-                </form>
-                <hr class="border-secondary">
-                <form action="/" method="POST">
-                    <div class="mb-2">
-                        <input type="number" step="0.01" name="income_amount" placeholder="Income / Salary Amount ($)" class="form-control bg-dark text-white border-secondary">
-                    </div>
-                    <button type="submit" class="btn btn-success w-100 fw-bold">Add Income</button>
-                </form>
-            </div>
-        </div>
-
-        <div class="col-md-6">
-            <div class="card p-4 h-100">
-                <h4>📄 Import Bank Statement (CSV)</h4>
-                <p class="text-secondary small">Upload your bank statement to instantly parse transactions and run the AI Leak Detector.</p>
+                </h3>
+                <p>Send payment via your manual transfer method, then enter your transaction reference below to activate your account:</p>
                 
-                <form action="/upload_statement" method="POST" enctype="multipart/form-data" class="mt-auto">
-                    <input type="file" name="file" accept=".csv" class="form-control bg-dark text-white border-secondary mb-3" required>
-                    <button type="submit" class="btn btn-primary w-100 fw-bold">Upload & Audit</button>
+                <form action="/confirm_manual_payment" method="POST">
+                    <input type="hidden" name="plan" value="{{ selected_plan }}">
+                    
+                    <div class="mb-3">
+                        <label for="reference" class="form-label font-weight-bold">Payment Reference / Transaction ID:</label>
+                        <input type="text" id="reference" name="reference" required class="form-control bg-dark text-white border-secondary" placeholder="e.g. TXN-987654321">
+                    </div>
+                    
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-success fw-bold">Submit Payment Confirmation</button>
+                        <a href="/pricing" class="btn btn-secondary">Cancel</a>
+                    </div>
                 </form>
             </div>
         </div>
     </div>
+    {% endif %}
 
-    <!-- TRANSACTIONS TABLE -->
-    <div class="card p-4">
-        <h4>Recent Transactions</h4>
-        <table class="table table-dark table-hover mt-3">
-            <thead>
-                <tr>
-                    <th>Date</th>
-                    <th>Description</th>
-                    <th>Type</th>
-                    <th>Amount</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for t in transactions %}
-                <tr>
-                    <td>{{ t.date }}</td>
-                    <td>{{ t.description }}</td>
-                    <td>
-                        <span class="badge {% if t.type == 'income' %}bg-success{% else %}bg-danger{% endif %}">
-                            {{ t.type|upper }}
-                        </span>
-                    </td>
-                    <td>${{ "%.2f"|format(t.amount) }}</td>
-                </tr>
-                {% else %}
-                <tr>
-                    <td colspan="4" class="text-center text-secondary">No transactions logged yet. Log an expense or upload a CSV statement above.</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <!-- PRICING TIERS GRID -->
+    <div class="row g-4">
+        
+        <!-- Personal Pro Tier -->
+        <div class="col-md-4">
+            <div class="card pricing-card h-100 p-4 text-center">
+                <div class="card-body d-flex flex-column">
+                    <h3 class="card-title text-white fw-bold">Personal Pro</h3>
+                    <h2 class="my-3 text-info">$19 <small class="fs-6 text-muted">/ month</small></h2>
+                    <ul class="list-unstyled text-start my-4 flex-grow-1">
+                        <li class="mb-2">✔ AI Subscription Leak Detector</li>
+                        <li class="mb-2">✔ Bank Statement CSV Audits</li>
+                        <li class="mb-2">✔ Automated Expense Tracking</li>
+                        <li class="mb-2">✔ Email Support</li>
+                    </ul>
+                    <a href="/checkout?plan=personal_pro" class="btn btn-custom w-100 mt-auto">Select Personal Pro</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Team Starter Tier -->
+        <div class="col-md-4">
+            <div class="card pricing-card h-100 p-4 text-center border-info">
+                <div class="card-body d-flex flex-column">
+                    <span class="badge bg-info text-dark align-self-center mb-2">Most Popular</span>
+                    <h3 class="card-title text-white fw-bold">Team Starter</h3>
+                    <h2 class="my-3 text-info">$99 <small class="fs-6 text-muted">/ month</small></h2>
+                    <ul class="list-unstyled text-start my-4 flex-grow-1">
+                        <li class="mb-2">✔ Everything in Personal Pro</li>
+                        <li class="mb-2">✔ Up to 5 Team Members</li>
+                        <li class="mb-2">✔ Business Cashflow Dashboard</li>
+                        <li class="mb-2">✔ Priority AI Audits</li>
+                    </ul>
+                    <a href="/checkout?plan=team_starter" class="btn btn-info fw-bold w-100 mt-auto">Select Team Starter</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Business VIP Tier -->
+        <div class="col-md-4">
+            <div class="card pricing-card h-100 p-4 text-center">
+                <div class="card-body d-flex flex-column">
+                    <h3 class="card-title text-white fw-bold">Business VIP</h3>
+                    <h2 class="my-3 text-info">$299 <small class="fs-6 text-muted">/ month</small></h2>
+                    <ul class="list-unstyled text-start my-4 flex-grow-1">
+                        <li class="mb-2">✔ Everything in Team Starter</li>
+                        <li class="mb-2">✔ Unlimited Transactions</li>
+                        <li class="mb-2">✔ Custom AI Financial Rules</li>
+                        <li class="mb-2">✔ 1-on-1 Dedicated Support</li>
+                    </ul>
+                    <a href="/checkout?plan=business_pro" class="btn btn-custom w-100 mt-auto">Select Business VIP</a>
+                </div>
+            </div>
+        </div>
+
     </div>
-
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
