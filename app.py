@@ -3,9 +3,10 @@ import csv
 import io
 import json
 import sqlite3
-import psycopg2.extras
 from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
+import psycopg2
+import psycopg2.extras
 import openai
 
 app = Flask(__name__)
@@ -17,9 +18,22 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 # ================= DATABASE SETUP =================
 db_url = os.getenv("DATABASE_URL")
 
+PLAN_DISPLAY_NAMES = {
+    "personal_pro": "Personal Pro",
+    "team_starter": "Team Starter",
+    "business_pro": "Business VIP",
+    "enterprise": "Custom Enterprise Build"
+}
+
+PLAN_PRICES = {
+    "personal_pro": 19,
+    "team_starter": 99,
+    "business_pro": 299,
+    "enterprise": 2500
+}
+
 def get_db_connection():
     if db_url:
-        import psycopg2
         cleaned_url = db_url.replace("postgres://", "postgresql://", 1)
         conn = psycopg2.connect(cleaned_url, cursor_factory=psycopg2.extras.DictCursor)
         return conn
@@ -62,6 +76,17 @@ def init_db():
                 date VARCHAR(100) NOT NULL
             );
         """)
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS enterprise_requests (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(255) NOT NULL,
+                email VARCHAR(255) NOT NULL,
+                company VARCHAR(255) NOT NULL,
+                phone VARCHAR(100),
+                requirements TEXT NOT NULL,
+                created_at VARCHAR(100) NOT NULL
+            );
+        """)
 
         # Migrations
         c.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS account_type VARCHAR(50) DEFAULT 'personal';")
@@ -100,6 +125,17 @@ def init_db():
                 date TEXT NOT NULL
             );
         """)
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS enterprise_requests (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                email TEXT NOT NULL,
+                company TEXT NOT NULL,
+                phone TEXT,
+                requirements TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            );
+        """)
 
     conn.commit()
     conn.close()
@@ -115,9 +151,13 @@ except Exception as e:
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '').strip()
         account_type = request.form.get('account_type', 'personal')
+
+        if not username or not password:
+            flash("Username and password are required.", "error")
+            return render_template('register.html')
 
         conn = get_db_connection()
         c = conn.cursor()
@@ -150,8 +190,8 @@ def register():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '').strip()
 
         conn = get_db_connection()
         c = conn.cursor()
@@ -201,20 +241,26 @@ def dashboard():
         now = datetime.now().strftime("%Y-%m-%d %H:%M")
 
         if amount and description:
-            c.execute(
-                f"INSERT INTO transactions (username, description, amount, type, date) VALUES ({param}, {param}, {param}, {param}, {param})",
-                (username, description, float(amount), 'expense', now)
-            )
-            conn.commit()
-            flash("Expense logged successfully!", "success")
+            try:
+                c.execute(
+                    f"INSERT INTO transactions (username, description, amount, type, date) VALUES ({param}, {param}, {param}, {param}, {param})",
+                    (username, description, float(amount), 'expense', now)
+                )
+                conn.commit()
+                flash("Expense logged successfully!", "success")
+            except ValueError:
+                flash("Please enter a valid expense amount.", "error")
 
         elif income_amount:
-            c.execute(
-                f"INSERT INTO transactions (username, description, amount, type, date) VALUES ({param}, {param}, {param}, {param}, {param})",
-                (username, "Revenue/Income", float(income_amount), 'income', now)
-            )
-            conn.commit()
-            flash("Income updated successfully!", "success")
+            try:
+                c.execute(
+                    f"INSERT INTO transactions (username, description, amount, type, date) VALUES ({param}, {param}, {param}, {param}, {param})",
+                    (username, "Revenue/Income", float(income_amount), 'income', now)
+                )
+                conn.commit()
+                flash("Income updated successfully!", "success")
+            except ValueError:
+                flash("Please enter a valid income amount.", "error")
 
         conn.close()
         return redirect('/')
@@ -226,11 +272,28 @@ def dashboard():
     sub = c.fetchone()
     conn.close()
 
-    total_income = sum(t['amount'] if isinstance(t, dict) or hasattr(t, '__getitem__') else t[3] for t in transactions if (t['type'] if isinstance(t, dict) or hasattr(t, '__getitem__') else t[4]) == 'income')
-    total_expense = sum(t['amount'] if isinstance(t, dict) or hasattr(t, '__getitem__') else t[3] for t in transactions if (t['type'] if isinstance(t, dict) or hasattr(t, '__getitem__') else t[4]) == 'expense')
+    total_income = sum(
+        t['amount'] if isinstance(t, dict) or hasattr(t, '__getitem__') else t[3] 
+        for t in transactions 
+        if (t['type'] if isinstance(t, dict) or hasattr(t, '__getitem__') else t[4]) == 'income'
+    )
+    total_expense = sum(
+        t['amount'] if isinstance(t, dict) or hasattr(t, '__getitem__') else t[3] 
+        for t in transactions 
+        if (t['type'] if isinstance(t, dict) or hasattr(t, '__getitem__') else t[4]) == 'expense'
+    )
     balance = total_income - total_expense
 
     template_name = 'business_dashboard.html' if account_type == 'business' else 'index.html'
+
+    formatted_sub = None
+    if sub:
+        plan_raw = sub['plan'] if isinstance(sub, dict) or hasattr(sub, '__getitem__') else sub[1]
+        status_raw = sub['status'] if isinstance(sub, dict) or hasattr(sub, '__getitem__') else sub[4]
+        formatted_sub = {
+            'plan': PLAN_DISPLAY_NAMES.get(plan_raw, plan_raw.title()),
+            'status': status_raw
+        }
 
     return render_template(
         template_name,
@@ -244,7 +307,7 @@ def dashboard():
         total=total_expense,
         balance=balance,
         remaining=balance,
-        subscription=sub
+        subscription=formatted_sub
     )
 
 
@@ -392,11 +455,20 @@ def upload_statement():
         return redirect('/')
 
 
-# ================= PRICING & CHECKOUT ROUTES =================
+# ================= PRICING, CHECKOUT & ENTERPRISE =================
 
 @app.route('/pricing')
 def pricing():
-    return render_template('pricing.html')
+    selected_plan = request.args.get('plan')
+    plan_display = PLAN_DISPLAY_NAMES.get(selected_plan, selected_plan) if selected_plan else None
+    plan_price = PLAN_PRICES.get(selected_plan, 19) if selected_plan else None
+
+    return render_template(
+        'pricing.html', 
+        selected_plan=selected_plan,
+        plan_display=plan_display,
+        plan_price=plan_price
+    )
 
 
 @app.route('/checkout', methods=['GET', 'POST'])
@@ -406,41 +478,100 @@ def checkout():
         return redirect('/login')
 
     plan = request.args.get('plan', 'personal_pro')
-    return render_template('pricing.html', selected_plan=plan)
+    if plan not in PLAN_PRICES:
+        flash("Invalid plan selected.", "error")
+        return redirect('/pricing')
+
+    return redirect(url_for('pricing', plan=plan))
 
 
 @app.route('/confirm_manual_payment', methods=['POST'])
 def confirm_manual_payment():
     if 'user' not in session:
+        flash("Please log in to submit a payment verification.", "error")
         return redirect('/login')
 
     username = session['user']
-    plan = request.form.get('plan', 'personal_pro')
-    reference = request.form.get('reference', '')
+    plan = request.form.get('plan', '').strip()
+    reference = request.form.get('reference', '').strip()
 
-    price_map = {"personal_pro": 19, "team_starter": 99, "business_pro": 299}
-    price = price_map.get(plan, 19)
+    if not plan or plan not in PLAN_PRICES:
+        flash("Invalid or missing subscription plan.", "error")
+        return redirect('/pricing')
+
+    if not reference:
+        flash("Please provide a valid transaction reference or ID.", "error")
+        return redirect(url_for('pricing', plan=plan))
+
+    price = PLAN_PRICES.get(plan, 19)
 
     conn = get_db_connection()
     c = conn.cursor()
     param = "%s" if db_url else "?"
 
-    conflict_clause = """
-        ON CONFLICT(username)
-        DO UPDATE SET plan=EXCLUDED.plan, price=EXCLUDED.price, order_tracking_id=EXCLUDED.order_tracking_id, status='pending_verification'
-    """
+    try:
+        if db_url:
+            conflict_clause = """
+                ON CONFLICT(username)
+                DO UPDATE SET plan=EXCLUDED.plan, price=EXCLUDED.price, order_tracking_id=EXCLUDED.order_tracking_id, status='pending_verification'
+            """
+            c.execute(f"""
+                INSERT INTO subscriptions (username, plan, price, order_tracking_id, status)
+                VALUES ({param}, {param}, {param}, {param}, 'pending_verification')
+                {conflict_clause}
+            """, (username, plan, price, f"MANUAL-{reference}"))
+        else:
+            c.execute(f"""
+                INSERT INTO subscriptions (username, plan, price, order_tracking_id, status)
+                VALUES ({param}, {param}, {param}, {param}, 'pending_verification')
+                ON CONFLICT(username) DO UPDATE SET
+                plan=excluded.plan, price=excluded.price, order_tracking_id=excluded.order_tracking_id, status='pending_verification'
+            """, (username, plan, price, f"MANUAL-{reference}"))
 
-    c.execute(f"""
-        INSERT INTO subscriptions (username, plan, price, order_tracking_id, status)
-        VALUES ({param}, {param}, {param}, {param}, 'pending_verification')
-        {conflict_clause}
-    """, (username, plan, price, f"MANUAL-{reference}"))
+        conn.commit()
+        flash("Your payment has been submitted for manual verification.", "success")
+    except Exception as e:
+        print("Payment submission error:", e)
+        conn.rollback()
+        flash("There was an error saving your payment verification. Please try again.", "error")
+    finally:
+        conn.close()
 
-    conn.commit()
-    conn.close()
-
-    flash("Payment notification submitted! Admin is verifying your payment reference now.", "info")
     return redirect('/')
+
+
+@app.route('/enterprise_request', methods=['POST'])
+def enterprise_request():
+    name = request.form.get('name', '').strip()
+    email = request.form.get('email', '').strip()
+    company = request.form.get('company', '').strip()
+    phone = request.form.get('phone', '').strip()
+    requirements = request.form.get('requirements', '').strip()
+
+    if not name or not email or not company or not requirements:
+        flash("Please fill in all required fields for the enterprise consultation request.", "error")
+        return redirect('/pricing#enterprise-consultation')
+
+    conn = get_db_connection()
+    c = conn.cursor()
+    param = "%s" if db_url else "?"
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    try:
+        c.execute(
+            f"INSERT INTO enterprise_requests (name, email, company, phone, requirements, created_at) VALUES ({param}, {param}, {param}, {param}, {param}, {param})",
+            (name, email, company, phone, requirements, now)
+        )
+        conn.commit()
+        flash("Thank you. We'll contact you within 24 hours.", "success")
+    except Exception as e:
+        print("Enterprise request DB error:", e)
+        conn.rollback()
+        flash("Failed to submit request. Please try again.", "error")
+    finally:
+        conn.close()
+
+    return redirect('/pricing')
 
 
 # ================= ADMIN MANUAL APPROVAL =================
@@ -456,9 +587,13 @@ def admin_dashboard():
     
     c.execute("SELECT * FROM subscriptions")
     subs = c.fetchall()
+
+    c.execute("SELECT * FROM enterprise_requests ORDER BY id DESC")
+    enterprise_reqs = c.fetchall()
+
     conn.close()
 
-    return render_template('admin.html', subscriptions=subs)
+    return render_template('admin.html', subscriptions=subs, enterprise_requests=enterprise_reqs)
 
 
 @app.route('/admin/approve/<username>/<plan>')
@@ -467,28 +602,40 @@ def admin_approve(username, plan):
         flash("Unauthorized action.", "error")
         return redirect('/')
 
-    price_map = {"personal_pro": 19, "team_starter": 99, "business_pro": 299}
-    price = price_map.get(plan, 19)
+    price = PLAN_PRICES.get(plan, 19)
 
     conn = get_db_connection()
     c = conn.cursor()
     param = "%s" if db_url else "?"
 
-    conflict_clause = """
-        ON CONFLICT(username)
-        DO UPDATE SET plan=EXCLUDED.plan, price=EXCLUDED.price, status='active'
-    """
+    try:
+        if db_url:
+            conflict_clause = """
+                ON CONFLICT(username)
+                DO UPDATE SET plan=EXCLUDED.plan, price=EXCLUDED.price, status='active'
+            """
+            c.execute(f"""
+                INSERT INTO subscriptions (username, plan, price, status)
+                VALUES ({param}, {param}, {param}, 'active')
+                {conflict_clause}
+            """, (username, plan, price))
+        else:
+            c.execute(f"""
+                INSERT INTO subscriptions (username, plan, price, status)
+                VALUES ({param}, {param}, {param}, 'active')
+                ON CONFLICT(username) DO UPDATE SET
+                plan=excluded.plan, price=excluded.price, status='active'
+            """, (username, plan, price))
 
-    c.execute(f"""
-        INSERT INTO subscriptions (username, plan, price, status)
-        VALUES ({param}, {param}, {param}, 'active')
-        {conflict_clause}
-    """, (username, plan, price))
+        conn.commit()
+        flash(f"Successfully activated {username} on {PLAN_DISPLAY_NAMES.get(plan, plan)} plan!", "success")
+    except Exception as e:
+        print("Admin approval error:", e)
+        conn.rollback()
+        flash("Failed to approve user subscription.", "error")
+    finally:
+        conn.close()
 
-    conn.commit()
-    conn.close()
-
-    flash(f"Successfully activated {username} on {plan} plan!", "success")
     return redirect('/admin')
 
 
