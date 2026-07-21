@@ -17,9 +17,17 @@ app.secret_key = os.getenv("SECRET_KEY", "budget_buddy_secret_key_12345")
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
 # ================= PESAPAL V3 CONFIG =================
-PESAPAL_CONSUMER_KEY = os.getenv("PESAPAL_CONSUMER_KEY", "Sv2tW8D590MCjiidrl1B5bi1IpdiMliK")
-PESAPAL_CONSUMER_SECRET = os.getenv("PESAPAL_CONSUMER_SECRET", "oHzgryVGHku+FuBhavFcb5NgxLw=")
-PESAPAL_BASE_URL = "https://pay.pesapal.com/v3"
+PESAPAL_CONSUMER_KEY = os.getenv("PESAPAL_CONSUMER_KEY", "qk6AA2TC32RBrR3aW1MqW33A2G36I3")
+PESAPAL_CONSUMER_SECRET = os.getenv("PESAPAL_CONSUMER_SECRET", "vL930o9R38rN3I2y2f2H0M0O")
+
+# Set PESAPAL_ENV in Render to 'sandbox' or 'live'
+PESAPAL_ENV = os.getenv("PESAPAL_ENV", "sandbox").lower()
+
+if PESAPAL_ENV == "live":
+    PESAPAL_BASE_URL = "https://pay.pesapal.com/v3"
+else:
+    # Official Pesapal Sandbox / QA Endpoint
+    PESAPAL_BASE_URL = "https://cybqa.pesapal.com/pesapalv3"
 
 REGISTERED_IPN_ID = None
 
@@ -71,7 +79,7 @@ def init_db():
             );
         """)
 
-        # FORCE SCHEMA MIGRATIONS IF COLUMNS ARE MISSING ON POSTGRES
+        # Schema migrations for PostgreSQL
         c.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS account_type VARCHAR(50) DEFAULT 'personal';")
         c.execute("ALTER TABLE transactions ADD COLUMN IF NOT EXISTS description VARCHAR(255) DEFAULT '';")
         c.execute("ALTER TABLE transactions ADD COLUMN IF NOT EXISTS amount NUMERIC DEFAULT 0;")
@@ -136,7 +144,7 @@ def get_pesapal_token():
         if response.status_code == 200:
             return response.json().get("token")
         else:
-            print(f"Pesapal Token Error: {response.status_code} - {response.text}")
+            print(f"Pesapal Token Error [{response.status_code}]: {response.text}")
     except Exception as e:
         print("Pesapal Auth Token Request Exception:", e)
     return None
@@ -167,7 +175,7 @@ def get_or_register_ipn_id(token):
                 REGISTERED_IPN_ID = ipn_id
                 return ipn_id
         else:
-            print(f"Pesapal IPN Error: {res.status_code} - {res.text}")
+            print(f"Pesapal IPN Error [{res.status_code}]: {res.text}")
     except Exception as e:
         print("Pesapal Register IPN Exception:", e)
 
@@ -195,7 +203,8 @@ def register():
             session['account_type'] = account_type
             flash("Account created successfully!", "success")
             return redirect('/')
-        except Exception:
+        except Exception as e:
+            print("Register error:", e)
             flash("Username already exists. Please login.", "error")
         finally:
             conn.close()
@@ -470,9 +479,10 @@ def checkout():
     }
     details = plan_details.get(plan, plan_details["personal_pro"])
 
+    # Token requested on-demand when user clicks checkout
     token = get_pesapal_token()
     if not token:
-        flash("Failed to authenticate with Pesapal API. Check API credentials.", "error")
+        flash("Failed to authenticate with Pesapal API. Check API credentials or PESAPAL_ENV.", "error")
         return redirect('/pricing')
 
     ipn_id = get_or_register_ipn_id(token)
