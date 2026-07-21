@@ -135,6 +135,7 @@ def register():
 
             session['user'] = username
             session['account_type'] = account_type
+            session['is_admin'] = False
             flash("Account created successfully!", "success")
             return redirect('/')
         except Exception as e:
@@ -163,7 +164,7 @@ def login():
         if user:
             session['user'] = username
             session['account_type'] = user['account_type'] if 'account_type' in user.keys() else 'personal'
-            session['is_admin'] = user['is_admin'] if 'is_admin' in user.keys() else False
+            session['is_admin'] = bool(user['is_admin']) if 'is_admin' in user.keys() else False
             flash("Welcome back!", "success")
             return redirect('/')
         else:
@@ -391,11 +392,21 @@ def upload_statement():
         return redirect('/')
 
 
-# ================= PRICING & DIRECT MANUAL CHECKOUT =================
+# ================= PRICING & CHECKOUT ROUTES =================
 
 @app.route('/pricing')
 def pricing():
     return render_template('pricing.html')
+
+
+@app.route('/checkout', methods=['GET', 'POST'])
+def checkout():
+    if 'user' not in session:
+        flash("Please log in first to purchase or upgrade a plan.", "error")
+        return redirect('/login')
+
+    plan = request.args.get('plan', 'personal_pro')
+    return render_template('pricing.html', selected_plan=plan)
 
 
 @app.route('/confirm_manual_payment', methods=['POST'])
@@ -417,9 +428,6 @@ def confirm_manual_payment():
     conflict_clause = """
         ON CONFLICT(username)
         DO UPDATE SET plan=EXCLUDED.plan, price=EXCLUDED.price, order_tracking_id=EXCLUDED.order_tracking_id, status='pending_verification'
-    """ if db_url else """
-        ON CONFLICT(username)
-        DO UPDATE SET plan=excluded.plan, price=excluded.price, order_tracking_id=excluded.order_tracking_id, status='pending_verification'
     """
 
     c.execute(f"""
@@ -439,8 +447,9 @@ def confirm_manual_payment():
 
 @app.route('/admin')
 def admin_dashboard():
-    if 'user' not in session:
-        return redirect('/login')
+    if 'user' not in session or not session.get('is_admin'):
+        flash("Unauthorized access. Admin privileges required.", "error")
+        return redirect('/')
 
     conn = get_db_connection()
     c = conn.cursor()
@@ -454,6 +463,10 @@ def admin_dashboard():
 
 @app.route('/admin/approve/<username>/<plan>')
 def admin_approve(username, plan):
+    if 'user' not in session or not session.get('is_admin'):
+        flash("Unauthorized action.", "error")
+        return redirect('/')
+
     price_map = {"personal_pro": 19, "team_starter": 99, "business_pro": 299}
     price = price_map.get(plan, 19)
 
@@ -464,9 +477,6 @@ def admin_approve(username, plan):
     conflict_clause = """
         ON CONFLICT(username)
         DO UPDATE SET plan=EXCLUDED.plan, price=EXCLUDED.price, status='active'
-    """ if db_url else """
-        ON CONFLICT(username)
-        DO UPDATE SET plan=excluded.plan, price=excluded.price, status='active'
     """
 
     c.execute(f"""
