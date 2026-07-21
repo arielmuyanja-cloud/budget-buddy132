@@ -2,34 +2,17 @@ import os
 import csv
 import io
 import json
-import uuid
 import sqlite3
-import requests
+import psycopg2.extras
 from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
 import openai
-import psycopg2.extras
 
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "budget_buddy_secret_key_12345")
 
 # Initialize OpenAI
 openai.api_key = os.getenv("OPENAI_API_KEY")
-
-# ================= PESAPAL V3 CONFIG =================
-PESAPAL_CONSUMER_KEY = os.getenv("PESAPAL_CONSUMER_KEY", "qk6AA2TC32RBrR3aW1MqW33A2G36I3")
-PESAPAL_CONSUMER_SECRET = os.getenv("PESAPAL_CONSUMER_SECRET", "vL930o9R38rN3I2y2f2H0M0O")
-
-# Set PESAPAL_ENV in Render to 'sandbox' or 'live'
-PESAPAL_ENV = os.getenv("PESAPAL_ENV", "sandbox").lower()
-
-if PESAPAL_ENV == "live":
-    PESAPAL_BASE_URL = "https://pay.pesapal.com/v3"
-else:
-    # Official Pesapal Sandbox / QA Endpoint
-    PESAPAL_BASE_URL = "https://cybqa.pesapal.com/pesapalv3"
-
-REGISTERED_IPN_ID = None
 
 # ================= DATABASE SETUP =================
 db_url = os.getenv("DATABASE_URL")
@@ -56,7 +39,8 @@ def init_db():
                 id SERIAL PRIMARY KEY,
                 username VARCHAR(255) UNIQUE NOT NULL,
                 password VARCHAR(255) NOT NULL,
-                account_type VARCHAR(50) DEFAULT 'personal'
+                account_type VARCHAR(50) DEFAULT 'personal',
+                is_admin BOOLEAN DEFAULT FALSE
             );
         """)
         c.execute("""
@@ -79,14 +63,10 @@ def init_db():
             );
         """)
 
-        # Schema migrations for PostgreSQL
+        # Migrations
         c.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS account_type VARCHAR(50) DEFAULT 'personal';")
-        c.execute("ALTER TABLE transactions ADD COLUMN IF NOT EXISTS description VARCHAR(255) DEFAULT '';")
-        c.execute("ALTER TABLE transactions ADD COLUMN IF NOT EXISTS amount NUMERIC DEFAULT 0;")
-        c.execute("ALTER TABLE transactions ADD COLUMN IF NOT EXISTS type VARCHAR(50) DEFAULT 'expense';")
-        c.execute("ALTER TABLE transactions ADD COLUMN IF NOT EXISTS date VARCHAR(100) DEFAULT '';")
-        c.execute("ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS order_tracking_id VARCHAR(255);")
-        c.execute("ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS plan VARCHAR(100) DEFAULT 'personal_pro';")
+        c.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT FALSE;")
+        c.execute("ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS plan VARCHAR(100) DEFAULT 'free';")
         c.execute("ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS price NUMERIC DEFAULT 0;")
         c.execute("ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'active';")
 
@@ -97,7 +77,8 @@ def init_db():
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 username TEXT UNIQUE NOT NULL,
                 password TEXT NOT NULL,
-                account_type TEXT DEFAULT 'personal'
+                account_type TEXT DEFAULT 'personal',
+                is_admin INTEGER DEFAULT 0
             );
         """)
         c.execute("""
@@ -129,59 +110,6 @@ except Exception as e:
     print("Database initialization warning:", e)
 
 
-# ================= PESAPAL HELPER FUNCTIONS =================
-
-def get_pesapal_token():
-    url = f"{PESAPAL_BASE_URL}/api/Auth/RequestToken"
-    payload = {
-        "consumer_key": PESAPAL_CONSUMER_KEY,
-        "consumer_secret": PESAPAL_CONSUMER_SECRET
-    }
-    headers = {"Accept": "application/json", "Content-Type": "application/json"}
-    
-    try:
-        response = requests.post(url, json=payload, headers=headers, timeout=10)
-        if response.status_code == 200:
-            return response.json().get("token")
-        else:
-            print(f"Pesapal Token Error [{response.status_code}]: {response.text}")
-    except Exception as e:
-        print("Pesapal Auth Token Request Exception:", e)
-    return None
-
-def get_or_register_ipn_id(token):
-    global REGISTERED_IPN_ID
-    if REGISTERED_IPN_ID:
-        return REGISTERED_IPN_ID
-
-    url = f"{PESAPAL_BASE_URL}/api/URLSetup/RegisterIPN"
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Accept": "application/json",
-        "Content-Type": "application/json"
-    }
-    
-    ipn_callback = request.host_url.rstrip('/') + "/pesapal_ipn"
-    payload = {
-        "url": ipn_callback,
-        "ipn_notification_type": "GET"
-    }
-
-    try:
-        res = requests.post(url, json=payload, headers=headers, timeout=10)
-        if res.status_code == 200:
-            ipn_id = res.json().get("ipn_id")
-            if ipn_id:
-                REGISTERED_IPN_ID = ipn_id
-                return ipn_id
-        else:
-            print(f"Pesapal IPN Error [{res.status_code}]: {res.text}")
-    except Exception as e:
-        print("Pesapal Register IPN Exception:", e)
-
-    return None
-
-
 # ================= AUTH ROUTES =================
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -199,6 +127,12 @@ def register():
             c.execute(f"INSERT INTO users (username, password, account_type) VALUES ({param}, {param}, {param})", 
                       (username, password, account_type))
             conn.commit()
+
+            # Set initial free subscription status
+            c.execute(f"INSERT INTO subscriptions (username, plan, price, status) VALUES ({param}, 'free', 0, 'active')",
+                      (username,))
+            conn.commit()
+
             session['user'] = username
             session['account_type'] = account_type
             flash("Account created successfully!", "success")
@@ -229,6 +163,7 @@ def login():
         if user:
             session['user'] = username
             session['account_type'] = user['account_type'] if 'account_type' in user.keys() else 'personal'
+            session['is_admin'] = user['is_admin'] if 'is_admin' in user.keys() else False
             flash("Welcome back!", "success")
             return redirect('/')
         else:
@@ -312,7 +247,7 @@ def dashboard():
     )
 
 
-# ================= STATEMENT AUDITOR & AI LEAK DETECTION =================
+# ================= AI LEAK DETECTION =================
 
 def extract_recurring_subscriptions(transactions):
     ai_and_saas_keywords = [
@@ -456,89 +391,21 @@ def upload_statement():
         return redirect('/')
 
 
-# ================= PRICING & PESAPAL PAYMENTS =================
+# ================= PRICING & DIRECT MANUAL CHECKOUT =================
 
 @app.route('/pricing')
 def pricing():
     return render_template('pricing.html')
 
 
-@app.route('/checkout')
-def checkout():
-    if 'user' not in session:
-        flash("Please log in to choose a subscription plan.", "error")
-        return redirect('/login')
-
-    plan = request.args.get('plan', 'personal_pro')
-    username = session['user']
-
-    plan_details = {
-        "personal_pro": {"name": "Pro Monthly", "price": 19.00},
-        "team_starter": {"name": "Team Monthly", "price": 99.00},
-        "business_pro": {"name": "Enterprise VIP", "price": 299.00}
-    }
-    details = plan_details.get(plan, plan_details["personal_pro"])
-
-    # Token requested on-demand when user clicks checkout
-    token = get_pesapal_token()
-    if not token:
-        flash("Failed to authenticate with Pesapal API. Check API credentials or PESAPAL_ENV.", "error")
-        return redirect('/pricing')
-
-    ipn_id = get_or_register_ipn_id(token)
-    if not ipn_id:
-        flash("Failed to setup Pesapal IPN listener.", "error")
-        return redirect('/pricing')
-
-    merchant_reference = f"BB-{uuid.uuid4().hex[:8].upper()}"
-
-    payload = {
-        "id": merchant_reference,
-        "currency": "USD",
-        "amount": details["price"],
-        "description": f"Budget Buddy Subscription - {details['name']}",
-        "callback_url": request.host_url.rstrip('/') + f"/pesapal_callback?plan={plan}",
-        "notification_id": ipn_id,
-        "billing_address": {
-            "email_address": f"{username.lower().replace(' ', '')}@gmail.com",
-            "phone_number": "0700000000",
-            "first_name": username,
-            "last_name": "User",
-            "country_code": "UG"
-        }
-    }
-
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Content-Type": "application/json",
-        "Accept": "application/json"
-    }
-
-    try:
-        res = requests.post(f"{PESAPAL_BASE_URL}/api/Transactions/SubmitOrderRequest", json=payload, headers=headers, timeout=12)
-        res_data = res.json() if res.headers.get("content-type") == "application/json" else {}
-
-        if res.status_code == 200 and "redirect_url" in res_data:
-            return redirect(res_data["redirect_url"])
-        else:
-            error_msg = res_data.get("error", {}).get("message") or res_data.get("message") or f"Status {res.status_code}"
-            flash(f"Pesapal Gateway Error: {error_msg}", "error")
-
-    except Exception as e:
-        print("Pesapal Checkout Exception:", e)
-        flash("Connection to Pesapal gateway timed out.", "error")
-
-    return redirect('/pricing')
-
-
-@app.route('/pesapal_callback')
-def pesapal_callback():
+@app.route('/confirm_manual_payment', methods=['POST'])
+def confirm_manual_payment():
     if 'user' not in session:
         return redirect('/login')
 
     username = session['user']
-    plan = request.args.get('plan', 'personal_pro')
-    order_tracking_id = request.args.get('OrderTrackingId', 'UNKNOWN')
+    plan = request.form.get('plan', 'personal_pro')
+    reference = request.form.get('reference', '')
 
     price_map = {"personal_pro": 19, "team_starter": 99, "business_pro": 299}
     price = price_map.get(plan, 19)
@@ -549,35 +416,70 @@ def pesapal_callback():
 
     conflict_clause = """
         ON CONFLICT(username)
-        DO UPDATE SET plan=EXCLUDED.plan, price=EXCLUDED.price, order_tracking_id=EXCLUDED.order_tracking_id, status='active'
+        DO UPDATE SET plan=EXCLUDED.plan, price=EXCLUDED.price, order_tracking_id=EXCLUDED.order_tracking_id, status='pending_verification'
     """ if db_url else """
         ON CONFLICT(username)
-        DO UPDATE SET plan=excluded.plan, price=excluded.price, order_tracking_id=excluded.order_tracking_id, status='active'
+        DO UPDATE SET plan=excluded.plan, price=excluded.price, order_tracking_id=excluded.order_tracking_id, status='pending_verification'
     """
 
     c.execute(f"""
         INSERT INTO subscriptions (username, plan, price, order_tracking_id, status)
-        VALUES ({param}, {param}, {param}, {param}, 'active')
+        VALUES ({param}, {param}, {param}, {param}, 'pending_verification')
         {conflict_clause}
-    """, (username, plan, price, order_tracking_id))
+    """, (username, plan, price, f"MANUAL-{reference}"))
 
     conn.commit()
     conn.close()
 
-    flash(f"Payment successful! Subscribed to {plan.replace('_', ' ').title()} plan.", "success")
+    flash("Payment notification submitted! Admin is verifying your payment reference now.", "info")
     return redirect('/')
 
 
-@app.route('/pesapal_ipn')
-def pesapal_ipn():
-    order_tracking_id = request.args.get('OrderTrackingId')
-    merchant_reference = request.args.get('OrderMerchantReference')
-    return jsonify({
-        "order_notification_type": "IPNCHANGE",
-        "order_tracking_id": order_tracking_id,
-        "order_merchant_reference": merchant_reference,
-        "status": 200
-    })
+# ================= ADMIN MANUAL APPROVAL =================
+
+@app.route('/admin')
+def admin_dashboard():
+    if 'user' not in session:
+        return redirect('/login')
+
+    conn = get_db_connection()
+    c = conn.cursor()
+    
+    c.execute("SELECT * FROM subscriptions")
+    subs = c.fetchall()
+    conn.close()
+
+    return render_template('admin.html', subscriptions=subs)
+
+
+@app.route('/admin/approve/<username>/<plan>')
+def admin_approve(username, plan):
+    price_map = {"personal_pro": 19, "team_starter": 99, "business_pro": 299}
+    price = price_map.get(plan, 19)
+
+    conn = get_db_connection()
+    c = conn.cursor()
+    param = "%s" if db_url else "?"
+
+    conflict_clause = """
+        ON CONFLICT(username)
+        DO UPDATE SET plan=EXCLUDED.plan, price=EXCLUDED.price, status='active'
+    """ if db_url else """
+        ON CONFLICT(username)
+        DO UPDATE SET plan=excluded.plan, price=excluded.price, status='active'
+    """
+
+    c.execute(f"""
+        INSERT INTO subscriptions (username, plan, price, status)
+        VALUES ({param}, {param}, {param}, 'active')
+        {conflict_clause}
+    """, (username, plan, price))
+
+    conn.commit()
+    conn.close()
+
+    flash(f"Successfully activated {username} on {plan} plan!", "success")
+    return redirect('/admin')
 
 
 if __name__ == '__main__':
