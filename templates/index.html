@@ -3,49 +3,51 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pricing Plans - Budget Buddy AI</title>
+    <title>Dashboard - Budget Buddy AI</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body {
-            background-color: #0f172a;
-            color: #f8fafc;
+            background-color: #0b132b;
+            color: #ffffff;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             min-height: 100vh;
             padding-bottom: 50px;
         }
-        .pricing-card {
-            background-color: #1e293b;
-            border: 1px solid #334155;
+        .text-muted-custom {
+            color: #94a3b8 !important;
+        }
+        .card-custom {
+            background-color: #1c2541;
+            border: 1px solid #3a506b;
             border-radius: 12px;
-            transition: transform 0.2s ease, border-color 0.2s ease;
         }
-        .pricing-card:hover {
-            transform: translateY(-5px);
-            border-color: #38bdf8;
+        .table-custom {
+            color: #ffffff;
+            background-color: #1c2541;
         }
-        .checkout-box {
-            background: #1e293b;
-            border: 2px solid #38bdf8;
-            border-radius: 12px;
-            padding: 25px;
-            margin-bottom: 40px;
-        }
-        .btn-custom {
-            background-color: #0284c7;
-            color: white;
-            font-weight: 600;
-        }
-        .btn-custom:hover {
-            background-color: #0369a1;
-            color: white;
+        .table-custom th, .table-custom td {
+            border-color: #3a506b;
+            color: #f8fafc;
         }
     </style>
 </head>
 <body>
 
-<div class="container mt-5">
+<div class="container mt-4">
     
-    <!-- Flash Messages Section -->
+    <!-- Header / Navbar -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold text-white mb-0">Welcome, {{ username }}!</h2>
+            <small class="text-muted-custom">Account Type: <span class="badge bg-info text-dark">{{ account_type.upper() }}</span></small>
+        </div>
+        <div>
+            <a href="/pricing" class="btn btn-outline-info me-2">Upgrade Plan</a>
+            <a href="/logout" class="btn btn-outline-danger">Logout</a>
+        </div>
+    </div>
+
+    <!-- Flash Messages -->
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         {% for category, message in messages %}
@@ -57,101 +59,135 @@
       {% endif %}
     {% endwith %}
 
-    <div class="text-center mb-5">
-        <h1 class="fw-bold">Choose Your Plan</h1>
-        <p class="text-muted">Unlock AI subscription leak auditing and financial coaching.</p>
-        <a href="/" class="btn btn-outline-light btn-sm mt-2">&larr; Back to Dashboard</a>
-    </div>
-
-    <!-- MANUAL CHECKOUT BOX (Displays when a user clicks ANY plan tier) -->
-    {% if selected_plan %}
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="checkout-box shadow-lg">
-                <h3 class="text-info fw-bold mb-3">
-                    Complete Order: 
-                    {% if selected_plan == 'personal_pro' %} Personal Pro ($19)
-                    {% elif selected_plan == 'team_starter' %} Team Starter ($99)
-                    {% elif selected_plan == 'business_pro' %} Business VIP ($299)
-                    {% else %} {{ selected_plan }}
-                    {% endif %}
-                </h3>
-                <p>Send payment via your manual transfer method, then enter your transaction reference below to activate your account:</p>
-                
-                <form action="/confirm_manual_payment" method="POST">
-                    <input type="hidden" name="plan" value="{{ selected_plan }}">
-                    
-                    <div class="mb-3">
-                        <label for="reference" class="form-label font-weight-bold">Payment Reference / Transaction ID:</label>
-                        <input type="text" id="reference" name="reference" required class="form-control bg-dark text-white border-secondary" placeholder="e.g. TXN-987654321">
-                    </div>
-                    
-                    <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-success fw-bold">Submit Payment Confirmation</button>
-                        <a href="/pricing" class="btn btn-secondary">Cancel</a>
-                    </div>
-                </form>
+    <!-- Subscription Status Banner -->
+    {% if subscription %}
+    <div class="card card-custom mb-4 border-info">
+        <div class="card-body d-flex justify-content-between align-items-center py-2">
+            <div>
+                <span class="text-white font-weight-bold">Active Plan: </span>
+                <span class="badge bg-success">{{ subscription['plan'].upper() }}</span>
+            </div>
+            <div>
+                <small class="text-muted-custom">Status: {{ subscription['status'] }}</small>
             </div>
         </div>
     </div>
     {% endif %}
 
-    <!-- PRICING TIERS GRID -->
-    <div class="row g-4">
-        
-        <!-- Personal Pro Tier -->
+    <!-- Metrics Overview Cards -->
+    <div class="row g-3 mb-4">
         <div class="col-md-4">
-            <div class="card pricing-card h-100 p-4 text-center">
-                <div class="card-body d-flex flex-column">
-                    <h3 class="card-title text-white fw-bold">Personal Pro</h3>
-                    <h2 class="my-3 text-info">$19 <small class="fs-6 text-muted">/ month</small></h2>
-                    <ul class="list-unstyled text-start my-4 flex-grow-1">
-                        <li class="mb-2">✔ AI Subscription Leak Detector</li>
-                        <li class="mb-2">✔ Bank Statement CSV Audits</li>
-                        <li class="mb-2">✔ Automated Expense Tracking</li>
-                        <li class="mb-2">✔ Email Support</li>
-                    </ul>
-                    <a href="/checkout?plan=personal_pro" class="btn btn-custom w-100 mt-auto">Select Personal Pro</a>
-                </div>
+            <div class="card card-custom p-3 text-center">
+                <span class="text-muted-custom small">Total Income</span>
+                <h3 class="text-success fw-bold my-1">${{ "%.2f"|format(total_income) }}</h3>
             </div>
         </div>
-
-        <!-- Team Starter Tier -->
         <div class="col-md-4">
-            <div class="card pricing-card h-100 p-4 text-center border-info">
-                <div class="card-body d-flex flex-column">
-                    <span class="badge bg-info text-dark align-self-center mb-2">Most Popular</span>
-                    <h3 class="card-title text-white fw-bold">Team Starter</h3>
-                    <h2 class="my-3 text-info">$99 <small class="fs-6 text-muted">/ month</small></h2>
-                    <ul class="list-unstyled text-start my-4 flex-grow-1">
-                        <li class="mb-2">✔ Everything in Personal Pro</li>
-                        <li class="mb-2">✔ Up to 5 Team Members</li>
-                        <li class="mb-2">✔ Business Cashflow Dashboard</li>
-                        <li class="mb-2">✔ Priority AI Audits</li>
-                    </ul>
-                    <a href="/checkout?plan=team_starter" class="btn btn-info fw-bold w-100 mt-auto">Select Team Starter</a>
-                </div>
+            <div class="card card-custom p-3 text-center">
+                <span class="text-muted-custom small">Total Expenses</span>
+                <h3 class="text-danger fw-bold my-1">${{ "%.2f"|format(total_expense) }}</h3>
             </div>
         </div>
-
-        <!-- Business VIP Tier -->
         <div class="col-md-4">
-            <div class="card pricing-card h-100 p-4 text-center">
-                <div class="card-body d-flex flex-column">
-                    <h3 class="card-title text-white fw-bold">Business VIP</h3>
-                    <h2 class="my-3 text-info">$299 <small class="fs-6 text-muted">/ month</small></h2>
-                    <ul class="list-unstyled text-start my-4 flex-grow-1">
-                        <li class="mb-2">✔ Everything in Team Starter</li>
-                        <li class="mb-2">✔ Unlimited Transactions</li>
-                        <li class="mb-2">✔ Custom AI Financial Rules</li>
-                        <li class="mb-2">✔ 1-on-1 Dedicated Support</li>
-                    </ul>
-                    <a href="/checkout?plan=business_pro" class="btn btn-custom w-100 mt-auto">Select Business VIP</a>
-                </div>
+            <div class="card card-custom p-3 text-center">
+                <span class="text-muted-custom small">Net Balance</span>
+                <h3 class="text-info fw-bold my-1">${{ "%.2f"|format(balance) }}</h3>
             </div>
         </div>
-
     </div>
+
+    <div class="row g-4">
+        <!-- Add Transaction Form -->
+        <div class="col-md-6">
+            <div class="card card-custom p-4 h-100">
+                <h4 class="text-white fw-bold mb-3">Log Transaction</h4>
+                
+                <form action="/" method="POST" class="mb-4">
+                    <h6 class="text-info">Add Expense</h6>
+                    <div class="input-group mb-2">
+                        <input type="text" name="description" placeholder="Description (e.g. OpenAI Subscription)" class="form-control bg-dark text-white border-secondary" required>
+                        <input type="number" step="0.01" name="amount" placeholder="Amount ($)" class="form-control bg-dark text-white border-secondary" required>
+                        <button type="submit" class="btn btn-danger">Log Expense</button>
+                    </div>
+                </form>
+
+                <hr class="border-secondary">
+
+                <form action="/" method="POST">
+                    <h6 class="text-info">Add Income</h6>
+                    <div class="input-group mb-2">
+                        <input type="number" step="0.01" name="income_amount" placeholder="Income Amount ($)" class="form-control bg-dark text-white border-secondary" required>
+                        <button type="submit" class="btn btn-success">Add Income</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Bank Statement CSV Upload & AI Leak Detector -->
+        <div class="col-md-6">
+            <div class="card card-custom p-4 h-100">
+                <h4 class="text-white fw-bold mb-3">AI Statement Leak Detector</h4>
+                <p class="text-muted-custom small">Upload a bank statement CSV to automatically flag recurring subscriptions and software leaks.</p>
+                
+                <form action="/upload_statement" method="POST" enctype="multipart/form-data" class="mb-3">
+                    <div class="mb-3">
+                        <input type="file" name="file" accept=".csv" class="form-control bg-dark text-white border-secondary" required>
+                    </div>
+                    <button type="submit" class="btn btn-info w-100 fw-bold">Upload & Audit Statement</button>
+                </form>
+
+                {% if session.get('last_audit') %}
+                <div class="mt-3 p-3 bg-dark rounded border border-info">
+                    <h6 class="text-info fw-bold">Audit Insights</h6>
+                    <ul class="mb-1 ps-3 text-white small">
+                        {% for insight in session['last_audit']['insights'] %}
+                            <li>{{ insight }}</li>
+                        {% endfor %}
+                    </ul>
+                    <div class="mt-2 text-warning small fw-bold">
+                        Potential Annual Savings: ${{ session['last_audit']['annual_savings'] }}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Transactions Table -->
+    <div class="card card-custom mt-4 p-4">
+        <h4 class="text-white fw-bold mb-3">Recent Transactions</h4>
+        {% if transactions %}
+        <div class="table-responsive">
+            <table class="table table-custom align-middle">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Description</th>
+                        <th>Type</th>
+                        <th>Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in transactions %}
+                    <tr>
+                        <td class="text-muted-custom">{{ t['date'] if t['date'] else 'N/A' }}</td>
+                        <td>{{ t['description'] }}</td>
+                        <td>
+                            <span class="badge {{ 'bg-success' if t['type'] == 'income' else 'bg-danger' }}">{{ t['type'].upper() }}</span>
+                        </td>
+                        <td class="{{ 'text-success' if t['type'] == 'income' else 'text-danger' }} fw-bold">
+                            {{ '+' if t['type'] == 'income' else '-' }}${{ "%.2f"|format(t['amount']) }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted-custom">No transactions recorded yet.</p>
+        {% endif %}
+    </div>
+
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
