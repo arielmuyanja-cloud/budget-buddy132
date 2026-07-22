@@ -213,9 +213,28 @@ def export_report():
     )
 
 
+# ---------------------------------------------------------------------------
+# PRICING & PAYMENT HANDLING
+# ---------------------------------------------------------------------------
 @app.route('/pricing')
 def pricing():
-    return "Pricing Page Coming Soon!"
+    return render_template('pricing.html')
+
+
+@app.route('/submit-payment', methods=['POST'])
+def submit_payment():
+    plan_name = request.form.get('plan_name')
+    plan_price = request.form.get('plan_price')
+    transaction_id = request.form.get('transaction_id')
+    
+    # Log payment attempt to Render console
+    print(f"--- PAYMENT SUBMITTED ---")
+    print(f"Plan: {plan_name} (${plan_price})")
+    print(f"Ref/Txn ID: {transaction_id}")
+    print(f"-------------------------")
+    
+    flash(f'Payment submitted successfully for {plan_name}! We are verifying Reference: {transaction_id}', 'success')
+    return redirect(url_for('index'))
 
 
 @app.route('/logout')
