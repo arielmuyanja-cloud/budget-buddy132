@@ -18,6 +18,7 @@
             background-color: #1e293b;
             border: 1px solid #334155;
             transition: transform 0.2s ease, border-color 0.2s ease;
+            cursor: pointer;
         }
         .card-plan:hover, .card-plan.active {
             border-color: #38bdf8;
@@ -27,7 +28,7 @@
 </head>
 <body class="py-5">
 
-<div class="container" style="max-width: 900px;">
+<div class="container" style="max-width: 1100px;">
     
     <!-- Header -->
     <div class="text-center mb-5">
@@ -35,11 +36,11 @@
         <p class="text-secondary">Select a plan below to unlock Budget Buddy AI features.</p>
     </div>
 
-    <!-- Plan Selection Cards -->
+    <!-- Plan Selection Cards (4 Columns) -->
     <div class="row g-4 mb-5">
         
         <!-- Starter Plan -->
-        <div class="col-md-4">
+        <div class="col-lg-3 col-md-6">
             <div class="card card-plan h-100 p-4 rounded-4 text-center text-white" onclick="selectPlan('Starter', 9)">
                 <h4 class="fw-bold mb-1">Starter</h4>
                 <p class="text-secondary small mb-3">Basic Budgeting</p>
@@ -54,9 +55,9 @@
         </div>
 
         <!-- Personal Pro Plan (Default) -->
-        <div class="col-md-4">
-            <div class="card card-plan active h-100 p-4 rounded-4 text-center text-white border-info shadow-lg" onclick="selectPlan('Personal Pro', 19)">
-                <span class="badge bg-info text-dark fw-bold position-absolute top-0 start-50 translate-middle px-3 py-1 rounded-pill">MOST POPULAR</span>
+        <div class="col-lg-3 col-md-6">
+            <div class="card card-plan active h-100 p-4 rounded-4 text-center text-white border-info shadow-lg position-relative" onclick="selectPlan('Personal Pro', 19)">
+                <span class="badge bg-info text-dark fw-bold position-absolute top-0 start-50 translate-middle px-3 py-1 rounded-pill">POPULAR</span>
                 <h4 class="fw-bold mb-1 mt-2">Personal Pro</h4>
                 <p class="text-secondary small mb-3">Advanced AI Coach</p>
                 <div class="fs-2 fw-bold text-info mb-3">$19 <span class="fs-6 text-secondary">/mo</span></div>
@@ -70,7 +71,7 @@
         </div>
 
         <!-- Business Pro Plan -->
-        <div class="col-md-4">
+        <div class="col-lg-3 col-md-6">
             <div class="card card-plan h-100 p-4 rounded-4 text-center text-white" onclick="selectPlan('Business Pro', 49)">
                 <h4 class="fw-bold mb-1">Business Pro</h4>
                 <p class="text-secondary small mb-3">For Teams & Small Biz</p>
@@ -78,9 +79,24 @@
                 <ul class="list-unstyled text-start small mb-4">
                     <li class="mb-2"><i class="bi bi-check2 text-success me-2"></i>Everything in Pro</li>
                     <li class="mb-2"><i class="bi bi-check2 text-success me-2"></i>Multi-user Access</li>
-                    <li class="mb-2"><i class="bi bi-check2 text-success me-2"></i>Priority Admin Support</li>
+                    <li class="mb-2"><i class="bi bi-check2 text-success me-2"></i>Priority Support</li>
                 </ul>
                 <button type="button" id="btn-Business Pro" class="btn btn-outline-info w-100 fw-bold">Select Plan</button>
+            </div>
+        </div>
+
+        <!-- Custom App Option -->
+        <div class="col-lg-3 col-md-6">
+            <div class="card card-plan h-100 p-4 rounded-4 text-center text-white" onclick="selectPlan('Custom App', 499)">
+                <h4 class="fw-bold mb-1 text-warning">Custom App</h4>
+                <p class="text-secondary small mb-3">Tailored / White-Label</p>
+                <div class="fs-2 fw-bold text-warning mb-3">$499 <span class="fs-6 text-secondary">one-time</span></div>
+                <ul class="list-unstyled text-start small mb-4">
+                    <li class="mb-2"><i class="bi bi-check2 text-warning me-2"></i>Custom Feature Build</li>
+                    <li class="mb-2"><i class="bi bi-check2 text-warning me-2"></i>Dedicated Database/Server</li>
+                    <li class="mb-2"><i class="bi bi-check2 text-warning me-2"></i>1-on-1 Consultation</li>
+                </ul>
+                <button type="button" id="btn-Custom App" class="btn btn-outline-warning w-100 fw-bold">Select Plan</button>
             </div>
         </div>
 
@@ -161,7 +177,9 @@
         // Update payment details box
         document.getElementById('selected-plan-badge').innerText = planName;
         document.getElementById('selected-plan-text').innerText = planName;
-        document.getElementById('selected-plan-price').innerText = '$' + price + ' / month';
+        
+        const priceLabel = (planName === 'Custom App') ? '$' + price + ' one-time' : '$' + price + ' / month';
+        document.getElementById('selected-plan-price').innerText = priceLabel;
         document.getElementById('usd-transfer-amount').innerText = '$' + price + ' USD';
         
         // Update hidden form inputs
@@ -169,14 +187,14 @@
         document.getElementById('hidden-plan-price').value = price;
 
         // Toggle UI button states
-        const plans = ['Starter', 'Personal Pro', 'Business Pro'];
+        const plans = ['Starter', 'Personal Pro', 'Business Pro', 'Custom App'];
         plans.forEach(p => {
             const btn = document.getElementById('btn-' + p);
             if (p === planName) {
-                btn.className = 'btn btn-info w-100 fw-bold';
+                btn.className = (p === 'Custom App') ? 'btn btn-warning w-100 fw-bold' : 'btn btn-info w-100 fw-bold';
                 btn.innerText = 'Selected';
             } else {
-                btn.className = 'btn btn-outline-info w-100 fw-bold';
+                btn.className = (p === 'Custom App') ? 'btn btn-outline-warning w-100 fw-bold' : 'btn btn-outline-info w-100 fw-bold';
                 btn.innerText = 'Select Plan';
             }
         });
