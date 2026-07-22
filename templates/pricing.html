@@ -1,68 +1,187 @@
-<!-- Complete Order Card Container -->
-<div class="card bg-dark text-white border-info shadow-lg p-4 rounded-4" style="max-width: 600px; margin: 0 auto;">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h3 class="fw-bold text-info mb-0">Complete Your Order</h3>
-        <span class="badge bg-primary fs-6 px-3 py-2">Personal Pro</span>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pricing & Plans | Budget Buddy</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #0b0f19;
+            color: #f8fafc;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+        .card-plan {
+            background-color: #1e293b;
+            border: 1px solid #334155;
+            transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+        .card-plan:hover, .card-plan.active {
+            border-color: #38bdf8;
+            transform: translateY(-4px);
+        }
+    </style>
+</head>
+<body class="py-5">
+
+<div class="container" style="max-width: 900px;">
+    
+    <!-- Header -->
+    <div class="text-center mb-5">
+        <h1 class="fw-bold text-white mb-2">Choose Your Plan</h1>
+        <p class="text-secondary">Select a plan below to unlock Budget Buddy AI features.</p>
     </div>
 
-    <div class="p-3 mb-4 rounded-3" style="background-color: #1e293b;">
-        <div class="d-flex justify-content-between align-items-center">
-            <span class="text-light-silver">Selected Plan: <strong class="text-white">Personal Pro</strong></span>
-            <span class="fs-4 fw-bold text-info">$19 / month</span>
-        </div>
-    </div>
-
-    <!-- Payment Instructions Section -->
-    <div class="mb-4">
-        <h6 class="text-white fw-bold mb-3"><i class="bi bi-credit-card-fill text-info me-2"></i>How to Complete Payment:</h6>
-
-        <!-- US & International Clients Box -->
-        <div class="p-3 mb-3 rounded-3" style="background-color: #0f172a; border: 1px solid #38bdf8;">
-            <div class="d-flex align-items-center mb-2">
-                <span class="badge bg-info text-dark fw-bold me-2">US & International Clients</span>
-                <small class="text-subtle">Pay with US Card</small>
+    <!-- Plan Selection Cards -->
+    <div class="row g-4 mb-5">
+        
+        <!-- Starter Plan -->
+        <div class="col-md-4">
+            <div class="card card-plan h-100 p-4 rounded-4 text-center text-white" onclick="selectPlan('Starter', 9)">
+                <h4 class="fw-bold mb-1">Starter</h4>
+                <p class="text-secondary small mb-3">Basic Budgeting</p>
+                <div class="fs-2 fw-bold text-info mb-3">$9 <span class="fs-6 text-secondary">/mo</span></div>
+                <ul class="list-unstyled text-start small mb-4">
+                    <li class="mb-2"><i class="bi bi-check2 text-success me-2"></i>Expense Tracking</li>
+                    <li class="mb-2"><i class="bi bi-check2 text-success me-2"></i>Basic AI Insights</li>
+                    <li class="mb-2"><i class="bi bi-check2 text-success me-2"></i>Monthly Reports</li>
+                </ul>
+                <button type="button" id="btn-Starter" class="btn btn-outline-info w-100 fw-bold">Select Plan</button>
             </div>
-            <p class="text-light-silver small mb-2">
-                Use <strong>Sendwave</strong>, <strong>WorldRemit</strong>, or <strong>Remitly</strong> to transfer <strong>$19 USD</strong> directly:
+        </div>
+
+        <!-- Personal Pro Plan (Default) -->
+        <div class="col-md-4">
+            <div class="card card-plan active h-100 p-4 rounded-4 text-center text-white border-info shadow-lg" onclick="selectPlan('Personal Pro', 19)">
+                <span class="badge bg-info text-dark fw-bold position-absolute top-0 start-50 translate-middle px-3 py-1 rounded-pill">MOST POPULAR</span>
+                <h4 class="fw-bold mb-1 mt-2">Personal Pro</h4>
+                <p class="text-secondary small mb-3">Advanced AI Coach</p>
+                <div class="fs-2 fw-bold text-info mb-3">$19 <span class="fs-6 text-secondary">/mo</span></div>
+                <ul class="list-unstyled text-start small mb-4">
+                    <li class="mb-2"><i class="bi bi-check2 text-success me-2"></i>Everything in Starter</li>
+                    <li class="mb-2"><i class="bi bi-check2 text-success me-2"></i>24/7 Unlimited AI Coach</li>
+                    <li class="mb-2"><i class="bi bi-check2 text-success me-2"></i>Bank & Mobile Money Sync</li>
+                </ul>
+                <button type="button" id="btn-Personal Pro" class="btn btn-info w-100 fw-bold">Selected</button>
+            </div>
+        </div>
+
+        <!-- Business Pro Plan -->
+        <div class="col-md-4">
+            <div class="card card-plan h-100 p-4 rounded-4 text-center text-white" onclick="selectPlan('Business Pro', 49)">
+                <h4 class="fw-bold mb-1">Business Pro</h4>
+                <p class="text-secondary small mb-3">For Teams & Small Biz</p>
+                <div class="fs-2 fw-bold text-info mb-3">$49 <span class="fs-6 text-secondary">/mo</span></div>
+                <ul class="list-unstyled text-start small mb-4">
+                    <li class="mb-2"><i class="bi bi-check2 text-success me-2"></i>Everything in Pro</li>
+                    <li class="mb-2"><i class="bi bi-check2 text-success me-2"></i>Multi-user Access</li>
+                    <li class="mb-2"><i class="bi bi-check2 text-success me-2"></i>Priority Admin Support</li>
+                </ul>
+                <button type="button" id="btn-Business Pro" class="btn btn-outline-info w-100 fw-bold">Select Plan</button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Complete Order Container -->
+    <div class="card bg-dark text-white border-info shadow-lg p-4 rounded-4 mx-auto" style="max-width: 600px;">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3 class="fw-bold text-info mb-0">Complete Your Order</h3>
+            <span class="badge bg-primary fs-6 px-3 py-2" id="selected-plan-badge">Personal Pro</span>
+        </div>
+
+        <div class="p-3 mb-4 rounded-3" style="background-color: #1e293b;">
+            <div class="d-flex justify-content-between align-items-center">
+                <span class="text-secondary">Selected Plan: <strong class="text-white" id="selected-plan-text">Personal Pro</strong></span>
+                <span class="fs-4 fw-bold text-info" id="selected-plan-price">$19 / month</span>
+            </div>
+        </div>
+
+        <!-- Payment Instructions Section -->
+        <div class="mb-4">
+            <h6 class="text-white fw-bold mb-3"><i class="bi bi-credit-card-fill text-info me-2"></i>How to Complete Payment:</h6>
+
+            <!-- US & International Clients Box -->
+            <div class="p-3 mb-3 rounded-3" style="background-color: #0f172a; border: 1px solid #38bdf8;">
+                <div class="d-flex align-items-center mb-2">
+                    <span class="badge bg-info text-dark fw-bold me-2">US & International Clients</span>
+                    <small class="text-secondary">Pay with US Card</small>
+                </div>
+                <p class="text-secondary small mb-2">
+                    Use <strong>Sendwave</strong>, <strong>WorldRemit</strong>, or <strong>Remitly</strong> to transfer <strong class="text-warning" id="usd-transfer-amount">$19 USD</strong> directly:
+                </p>
+                <div class="p-2 rounded bg-dark border border-secondary text-monospace small">
+                    <div><span class="text-secondary">Country:</span> <strong class="text-white">Uganda</strong></div>
+                    <div><span class="text-secondary">Delivery Method:</span> <strong class="text-white">Mobile Money</strong></div>
+                    <div><span class="text-secondary">Phone Number:</span> <strong class="text-warning">+256 780 642 959</strong></div>
+                    <div><span class="text-secondary">Recipient Name:</span> <strong class="text-white">Arnold Muyanja</strong></div>
+                </div>
+            </div>
+
+            <!-- Local Mobile Money Box -->
+            <div class="p-3 mb-3 rounded-3" style="background-color: #0f172a; border: 1px solid #334155;">
+                <div class="d-flex align-items-center mb-2">
+                    <span class="badge bg-secondary text-white fw-bold me-2">Local Uganda Payments</span>
+                </div>
+                <p class="text-secondary small mb-1">
+                    Send payment directly via Mobile Money to <strong class="text-warning">0780642959</strong> (Arnold Muyanja).
+                </p>
+            </div>
+
+            <p class="text-secondary small mb-0">
+                <i class="bi bi-info-circle me-1"></i> Once sent, copy the <strong>Transaction Reference / ID</strong> from your receipt SMS or email and paste it below.
             </p>
-            <div class="p-2 rounded bg-dark border border-secondary text-monospace small">
-                <div><span class="text-subtle">Country:</span> <strong class="text-white">Uganda</strong></div>
-                <div><span class="text-subtle">Delivery Method:</span> <strong class="text-white">Mobile Money</strong></div>
-                <div><span class="text-subtle">Phone Number:</span> <strong class="text-warning">+256 780 642 959</strong></div>
-                <div><span class="text-subtle">Recipient Name:</span> <strong class="text-white">Arnold Muyanja</strong></div>
-            </div>
         </div>
 
-        <!-- Local Mobile Money Box -->
-        <div class="p-3 mb-3 rounded-3" style="background-color: #0f172a; border: 1px solid #334155;">
-            <div class="d-flex align-items-center mb-2">
-                <span class="badge bg-secondary text-white fw-bold me-2">Local Uganda Payments</span>
-            </div>
-            <p class="text-light-silver small mb-1">
-                Send payment directly via Mobile Money to <strong class="text-warning">0780642959</strong> (Arnold Muyanja).
-            </p>
-        </div>
+        <!-- Form Submission -->
+        <form action="/submit-payment" method="POST">
+            <input type="hidden" name="plan_name" id="hidden-plan-name" value="Personal Pro">
+            <input type="hidden" name="plan_price" id="hidden-plan-price" value="19">
 
-        <p class="text-subtle small mb-0">
-            <i class="bi bi-info-circle me-1"></i> Once sent, copy the <strong>Transaction Reference / ID</strong> from your receipt SMS or email and paste it below.
-        </p>
+            <div class="mb-3">
+                <label for="transaction_id" class="form-label text-white fw-bold">Payment Reference / Transaction ID <span class="text-danger">*</span></label>
+                <input type="text" class="form-control bg-dark text-white border-secondary" id="transaction_id" name="transaction_id" placeholder="e.g. TXN-987654321 or WorldRemit Ref #" required>
+            </div>
+
+            <div class="d-grid gap-2">
+                <button type="submit" class="btn btn-success btn-lg fw-bold">Submit Payment</button>
+                <a href="/dashboard" class="btn btn-outline-secondary btn-sm">Cancel</a>
+            </div>
+        </form>
     </div>
 
-    <!-- Form Submission -->
-    <form action="/submit-payment" method="POST">
-        <div class="mb-3">
-            <label for="transaction_id" class="form-label text-white fw-bold">Payment Reference / Transaction ID <span class="text-danger">*</span></label>
-            <input type="text" class="form-control bg-dark text-white border-secondary" id="transaction_id" name="transaction_id" placeholder="e.g. TXN-987654321 or WorldRemit Ref #" required>
-        </div>
-
-        <div class="d-grid gap-2">
-            <button type="submit" class="btn btn-success btn-lg fw-bold">Submit Payment</button>
-            <a href="/dashboard" class="btn btn-outline-secondary btn-sm">Cancel</a>
-        </div>
-    </form>
-
-    <div class="mt-3 text-center">
-        <small class="text-subtle d-block"><i class="bi bi-shield-lock me-1"></i> Manual payments are verified administrative updates.</small>
-        <small class="text-subtle d-block"><i class="bi bi-lightning-charge me-1"></i> Access is updated upon verification in your dashboard.</small>
-    </div>
 </div>
+
+<!-- JavaScript to Handle Dynamic Plan Switching -->
+<script>
+    function selectPlan(planName, price) {
+        // Update payment details box
+        document.getElementById('selected-plan-badge').innerText = planName;
+        document.getElementById('selected-plan-text').innerText = planName;
+        document.getElementById('selected-plan-price').innerText = '$' + price + ' / month';
+        document.getElementById('usd-transfer-amount').innerText = '$' + price + ' USD';
+        
+        // Update hidden form inputs
+        document.getElementById('hidden-plan-name').value = planName;
+        document.getElementById('hidden-plan-price').value = price;
+
+        // Toggle UI button states
+        const plans = ['Starter', 'Personal Pro', 'Business Pro'];
+        plans.forEach(p => {
+            const btn = document.getElementById('btn-' + p);
+            if (p === planName) {
+                btn.className = 'btn btn-info w-100 fw-bold';
+                btn.innerText = 'Selected';
+            } else {
+                btn.className = 'btn btn-outline-info w-100 fw-bold';
+                btn.innerText = 'Select Plan';
+            }
+        });
+    }
+</script>
+
+</body>
+</html>
