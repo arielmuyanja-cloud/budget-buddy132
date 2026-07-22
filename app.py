@@ -3,15 +3,26 @@ import csv
 import io
 from flask import Flask, render_template, request, redirect, url_for, flash, session, Response
 from flask_sqlalchemy import SQLAlchemy
+from dotenv import load_dotenv
+
+# Load environment variables from .env file if available
+load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = 'your_super_secret_key_here'
+app.secret_key = os.getenv('SECRET_KEY', 'default_fallback_secret_key_12345')
 
 # ---------------------------------------------------------------------------
-# DATA PERSISTENCE SETUP (SQLite Database)
+# DATA PERSISTENCE SETUP
+# Uses DATABASE_URL (PostgreSQL) if available on your host, otherwise SQLite
 # ---------------------------------------------------------------------------
 basedir = os.path.abspath(os.path.dirname(__file__))
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'budget.db')
+db_url = os.getenv('DATABASE_URL', 'sqlite:///' + os.path.join(basedir, 'budget.db'))
+
+# Fix for Render/Heroku postgres:// URI compatibility with SQLAlchemy
+if db_url and db_url.startswith("postgres://"):
+    db_url = db_url.replace("postgres://", "postgresql://", 1)
+
+app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
@@ -92,7 +103,7 @@ def index():
             flash('Income logged and saved to database!', 'success')
             return redirect(url_for('index'))
 
-    # Fetch persisted transactions from SQLite
+    # Fetch persisted transactions from Database
     all_transactions = Transaction.query.all()
     
     total_income = sum(t.amount for t in all_transactions if t.type == 'income')
@@ -119,6 +130,7 @@ def upload_statement():
     raw_text = request.form.get('raw_text', '').strip()
     parsed_entries = []
 
+    # 1. Parse raw text input
     if raw_text:
         lines = [line.strip() for line in raw_text.split('\n') if line.strip()]
         for line in lines:
@@ -131,6 +143,7 @@ def upload_statement():
                 except ValueError:
                     continue
 
+    # 2. Parse uploaded CSV file
     elif file and file.filename.endswith('.csv'):
         try:
             stream = io.StringIO(file.stream.read().decode("UTF-8"), newline=None)
@@ -154,7 +167,7 @@ def upload_statement():
         flash('Please select a CSV file or paste statement text.', 'warning')
         return redirect(url_for('index'))
 
-    # Save imported transactions into SQLite Database
+    # Save imported transactions into Database
     if parsed_entries:
         for entry in parsed_entries:
             db.session.add(Transaction(
@@ -200,5 +213,18 @@ def export_report():
     )
 
 
+@app.route('/pricing')
+def pricing():
+    return "Pricing Page Coming Soon!"
+
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    flash('Logged out successfully.', 'info')
+    return redirect(url_for('index'))
+
+
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    port = int(os.getenv('PORT', 5000))
+    app.run(debug=True, host='0.0.0.0', port=port)
