@@ -32,56 +32,57 @@
     
     <!-- Header -->
     <div class="text-center mb-5">
-        <h1 class="fw-bold text-white mb-2">Choose Your Plan</h1>
-        <p class="text-secondary">Select a plan or enter your custom app budget below.</p>
+        <h1 class="fw-bold text-white mb-2">Automate Your Agency's Cost Audit</h1>
+        <p class="text-secondary">Stop leaking cash on idle seats, double-billed tools, and auto-renewals.</p>
     </div>
 
     <!-- Plan Selection Cards -->
     <div class="row g-4 mb-5">
         
-        <!-- Personal Pro Plan ($19) -->
+        <!-- Agency Starter Plan ($49) -->
         <div class="col-lg-3 col-md-6">
-            <div class="card card-plan active h-100 p-4 rounded-4 text-center text-white border-info shadow-lg position-relative" onclick="selectPlan('Personal Pro', 19)">
+            <div class="card card-plan active h-100 p-4 rounded-4 text-center text-white border-info shadow-lg position-relative" onclick="selectPlan('Agency Starter', 49)">
                 <span class="badge bg-info text-dark fw-bold position-absolute top-0 start-50 translate-middle px-3 py-1 rounded-pill">POPULAR</span>
-                <h4 class="fw-bold mb-1 mt-2">Personal Pro</h4>
-                <p class="text-secondary small mb-3">Advanced AI Coach</p>
-                <div class="fs-2 fw-bold text-info mb-3">$19 <span class="fs-6 text-secondary">/mo</span></div>
-                <ul class="list-unstyled text-start small mb-4">
-                    <li class="mb-2"><i class="bi bi-check2 text-success me-2"></i>24/7 Unlimited AI Coach</li>
-                    <li class="mb-2"><i class="bi bi-check2 text-success me-2"></i>Expense & Budget Sync</li>
-                    <li class="mb-2"><i class="bi bi-check2 text-success me-2"></i>Automated Insights</li>
-                </ul>
-                <button type="button" id="btn-Personal Pro" class="btn btn-info w-100 fw-bold">Selected</button>
-            </div>
-        </div>
-
-        <!-- Business Pro Plan ($49) -->
-        <div class="col-lg-3 col-md-6">
-            <div class="card card-plan h-100 p-4 rounded-4 text-center text-white" onclick="selectPlan('Business Pro', 49)">
-                <h4 class="fw-bold mb-1">Business Pro</h4>
-                <p class="text-secondary small mb-3">For Teams & Small Biz</p>
+                <h4 class="fw-bold mb-1 mt-2">Agency Starter</h4>
+                <p class="text-secondary small mb-3">For Solo Founders & Micro Agencies</p>
                 <div class="fs-2 fw-bold text-info mb-3">$49 <span class="fs-6 text-secondary">/mo</span></div>
                 <ul class="list-unstyled text-start small mb-4">
-                    <li class="mb-2"><i class="bi bi-check2 text-success me-2"></i>Everything in Personal Pro</li>
-                    <li class="mb-2"><i class="bi bi-check2 text-success me-2"></i>Multi-User Access</li>
-                    <li class="mb-2"><i class="bi bi-check2 text-success me-2"></i>Priority Support</li>
+                    <li class="mb-2"><i class="bi bi-check2 text-success me-2"></i>Unlimited Monthly CSV Audits</li>
+                    <li class="mb-2"><i class="bi bi-check2 text-success me-2"></i>Automated SaaS Leak Flags</li>
+                    <li class="mb-2"><i class="bi bi-check2 text-success me-2"></i>Duplicate Charge Detection</li>
                 </ul>
-                <button type="button" id="btn-Business Pro" class="btn btn-outline-info w-100 fw-bold">Select Plan</button>
+                <button type="button" id="btn-Agency Starter" class="btn btn-info w-100 fw-bold">Selected</button>
             </div>
         </div>
 
-        <!-- Enterprise Plan ($99) -->
+        <!-- Agency Pro Plan ($149) -->
         <div class="col-lg-3 col-md-6">
-            <div class="card card-plan h-100 p-4 rounded-4 text-center text-white" onclick="selectPlan('Enterprise', 99)">
-                <h4 class="fw-bold mb-1">Enterprise</h4>
-                <p class="text-secondary small mb-3">Full Integration</p>
-                <div class="fs-2 fw-bold text-info mb-3">$99 <span class="fs-6 text-secondary">/mo</span></div>
+            <div class="card card-plan h-100 p-4 rounded-4 text-center text-white" onclick="selectPlan('Agency Pro', 149)">
+                <h4 class="fw-bold mb-1">Agency Pro</h4>
+                <p class="text-secondary small mb-3">For Teams of 5–20</p>
+                <div class="fs-2 fw-bold text-info mb-3">$149 <span class="fs-6 text-secondary">/mo</span></div>
                 <ul class="list-unstyled text-start small mb-4">
-                    <li class="mb-2"><i class="bi bi-check2 text-success me-2"></i>Custom API Integrations</li>
-                    <li class="mb-2"><i class="bi bi-check2 text-success me-2"></i>Dedicated Financial Models</li>
-                    <li class="mb-2"><i class="bi bi-check2 text-success me-2"></i>1-on-1 Strategy Calls</li>
+                    <li class="mb-2"><i class="bi bi-check2 text-success me-2"></i>Everything in Starter</li>
+                    <li class="mb-2"><i class="bi bi-check2 text-success me-2"></i>Multi-Account/Card Statements</li>
+                    <li class="mb-2"><i class="bi bi-check2 text-success me-2"></i>PDF Cost Reduction Reports</li>
+                    <li class="mb-2"><i class="bi bi-check2 text-success me-2"></i>Priority Support</li>
                 </ul>
-                <button type="button" id="btn-Enterprise" class="btn btn-outline-info w-100 fw-bold">Select Plan</button>
+                <button type="button" id="btn-Agency Pro" class="btn btn-outline-info w-100 fw-bold">Select Plan</button>
+            </div>
+        </div>
+
+        <!-- Done-For-You Audit ($499) -->
+        <div class="col-lg-3 col-md-6">
+            <div class="card card-plan h-100 p-4 rounded-4 text-center text-white" onclick="selectPlan('DFY Audit', 499)">
+                <h4 class="fw-bold mb-1">DFY Audit</h4>
+                <p class="text-secondary small mb-3">High-Touch Cleanup</p>
+                <div class="fs-2 fw-bold text-info mb-3">$499 <span class="fs-6 text-secondary">/mo</span></div>
+                <ul class="list-unstyled text-start small mb-4">
+                    <li class="mb-2"><i class="bi bi-check2 text-success me-2"></i>Personal 1-on-1 Monthly Audit</li>
+                    <li class="mb-2"><i class="bi bi-check2 text-success me-2"></i>Vendor Cancellation Management</li>
+                    <li class="mb-2"><i class="bi bi-check2 text-success me-2"></i>Guaranteed $2k+ Annual Savings</li>
+                </ul>
+                <button type="button" id="btn-DFY Audit" class="btn btn-outline-info w-100 fw-bold">Select Plan</button>
             </div>
         </div>
 
@@ -106,13 +107,13 @@
     <div class="card bg-dark text-white border-info shadow-lg p-4 rounded-4 mx-auto" style="max-width: 600px;">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h3 class="fw-bold text-info mb-0">Complete Your Order</h3>
-            <span class="badge bg-primary fs-6 px-3 py-2" id="selected-plan-badge">Personal Pro</span>
+            <span class="badge bg-primary fs-6 px-3 py-2" id="selected-plan-badge">Agency Starter</span>
         </div>
 
         <div class="p-3 mb-4 rounded-3" style="background-color: #1e293b;">
             <div class="d-flex justify-content-between align-items-center">
-                <span class="text-secondary">Selected Plan: <strong class="text-white" id="selected-plan-text">Personal Pro</strong></span>
-                <span class="fs-4 fw-bold text-info" id="selected-plan-price">$19 / month</span>
+                <span class="text-secondary">Selected Plan: <strong class="text-white" id="selected-plan-text">Agency Starter</strong></span>
+                <span class="fs-4 fw-bold text-info" id="selected-plan-price">$49 / month</span>
             </div>
 
             <!-- Custom Budget Input Field (Appears when Custom App is clicked) -->
@@ -120,7 +121,7 @@
                 <label for="custom_amount_input" class="form-label text-warning small fw-bold">Enter Your Custom App Budget ($ USD):</label>
                 <div class="input-group">
                     <span class="input-group-text bg-dark text-warning border-secondary fw-bold">$</span>
-                    <input type="number" class="form-control bg-dark text-white border-secondary fw-bold" id="custom_amount_input" value="300" min="1" oninput="updateCustomAmount(this.value)">
+                    <input type="number" class="form-control bg-dark text-white border-secondary fw-bold" id="custom_amount_input" value="1000" min="1" oninput="updateCustomAmount(this.value)">
                     <span class="input-group-text bg-dark text-secondary border-secondary">USD</span>
                 </div>
             </div>
@@ -137,7 +138,7 @@
                     <small class="text-secondary">Pay with US Card</small>
                 </div>
                 <p class="text-secondary small mb-2">
-                    Use <strong>Sendwave</strong>, <strong>WorldRemit</strong>, or <strong>Remitly</strong> to transfer <strong class="text-warning" id="usd-transfer-amount">$19 USD</strong> directly:
+                    Use <strong>Sendwave</strong>, <strong>WorldRemit</strong>, or <strong>Remitly</strong> to transfer <strong class="text-warning" id="usd-transfer-amount">$49 USD</strong> directly:
                 </p>
                 <div class="p-2 rounded bg-dark border border-secondary text-monospace small">
                     <div><span class="text-secondary">Country:</span> <strong class="text-white">Uganda</strong></div>
@@ -164,8 +165,8 @@
 
         <!-- Form Submission -->
         <form action="/submit-payment" method="POST">
-            <input type="hidden" name="plan_name" id="hidden-plan-name" value="Personal Pro">
-            <input type="hidden" name="plan_price" id="hidden-plan-price" value="19">
+            <input type="hidden" name="plan_name" id="hidden-plan-name" value="Agency Starter">
+            <input type="hidden" name="plan_price" id="hidden-plan-price" value="49">
 
             <div class="mb-3">
                 <label for="transaction_id" class="form-label text-white fw-bold">Payment Reference / Transaction ID <span class="text-danger">*</span></label>
@@ -183,7 +184,7 @@
 
 <!-- JavaScript to Handle Dynamic Plan & Custom Price Switching -->
 <script>
-    let currentPlan = 'Personal Pro';
+    let currentPlan = 'Agency Starter';
 
     function selectPlan(planName, price) {
         currentPlan = planName;
@@ -196,7 +197,7 @@
         if (price === 'custom') {
             // Show custom amount box
             customContainer.style.display = 'block';
-            const val = document.getElementById('custom_amount_input').value || 300;
+            const val = document.getElementById('custom_amount_input').value || 1000;
             updateCustomAmount(val);
         } else {
             // Hide custom input box and set standard prices
@@ -207,7 +208,7 @@
         }
 
         // Toggle UI button states
-        const plans = ['Personal Pro', 'Business Pro', 'Enterprise', 'Custom App'];
+        const plans = ['Agency Starter', 'Agency Pro', 'DFY Audit', 'Custom App'];
         plans.forEach(p => {
             const btn = document.getElementById('btn-' + p);
             if (p === planName) {
