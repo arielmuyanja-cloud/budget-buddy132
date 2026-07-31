@@ -5,23 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Free SaaS Waste Audit for Marketing Agencies | StackGuard</title>
   <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       background-color: #0f172a;
       color: #ffffff;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       padding: 40px 20px 80px 20px;
       line-height: 1.5;
     }
-    .container {
-      max-width: 800px;
-      margin: 0 auto;
-      text-align: center;
-    }
+    .container { max-width: 900px; margin: 0 auto; text-align: center; }
     .badge {
       background-color: #1e293b;
       color: #38bdf8;
@@ -32,34 +24,18 @@
       border: 1px solid #334155;
       display: inline-block;
       margin-bottom: 20px;
-      letter-spacing: 0.5px;
     }
-    h1 {
-      font-size: 40px;
-      font-weight: 800;
-      line-height: 1.2;
-      margin-bottom: 16px;
-      letter-spacing: -1px;
-    }
-    p.subtitle {
-      color: #94a3b8;
-      font-size: 18px;
-      margin-bottom: 40px;
-      max-width: 650px;
-      margin-left: auto;
-      margin-right: auto;
-    }
+    h1 { font-size: 40px; font-weight: 800; margin-bottom: 16px; letter-spacing: -1px; }
+    p.subtitle { color: #94a3b8; font-size: 18px; margin-bottom: 40px; max-width: 650px; margin: 0 auto 40px auto; }
+    
     .form-card {
       background-color: #1e293b;
       border-radius: 12px;
       padding: 40px 30px;
       border: 1px solid #334155;
-      box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5);
       margin-bottom: 40px;
     }
-    .form-group {
-      margin-bottom: 20px;
-    }
+    .form-group { margin-bottom: 20px; }
     input[type="email"], input[type="text"] {
       width: 100%;
       padding: 16px;
@@ -69,10 +45,6 @@
       color: #ffffff;
       font-size: 16px;
       outline: none;
-      transition: border-color 0.2s ease;
-    }
-    input[type="email"]:focus, input[type="text"]:focus {
-      border-color: #38bdf8;
     }
     .btn-submit {
       width: 100%;
@@ -84,53 +56,29 @@
       font-size: 18px;
       font-weight: 800;
       cursor: pointer;
-      transition: opacity 0.2s ease;
     }
-    .btn-submit:hover {
-      opacity: 0.9;
+
+    /* PRICING SECTION STYLES */
+    .pricing-grid {
+      display: flex;
+      gap: 20px;
+      margin-top: 40px;
+      justify-content: center;
+      flex-wrap: wrap;
     }
-    .guarantee-text {
-      color: #64748b;
-      font-size: 13px;
-      margin-top: 12px;
-    }
-    .demo-report-box {
+    .price-card {
       background-color: #1e293b;
-      border: 1px dashed #22c55e;
+      border: 1px solid #334155;
       border-radius: 12px;
       padding: 30px;
+      flex: 1;
+      min-width: 260px;
       text-align: left;
     }
-    .demo-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      border-bottom: 1px solid #334155;
-      padding-bottom: 15px;
-      margin-bottom: 20px;
+    .price-card.featured {
+      border: 2px solid #22c55e;
     }
-    .demo-header h3 {
-      font-size: 18px;
-      color: #ffffff;
-    }
-    .savings-tag {
-      background-color: rgba(34, 197, 94, 0.1);
-      color: #22c55e;
-      padding: 4px 12px;
-      border-radius: 6px;
-      font-weight: bold;
-      font-size: 14px;
-    }
-    .leak-item {
-      display: flex;
-      justify-content: space-between;
-      padding: 10px 0;
-      border-bottom: 1px solid #1e293b;
-      font-size: 14px;
-    }
-    .leak-item strong {
-      color: #ef4444;
-    }
+    .price { font-size: 32px; font-weight: bold; color: #22c55e; margin: 15px 0; }
   </style>
 </head>
 <body>
@@ -142,46 +90,35 @@
       We audit your tech stack to expose unused Slack seats, duplicate Canva accounts, idle Adobe licenses, and hidden subscription price hikes.
     </p>
 
-    <!-- LEAD CAPTURE FORM -->
+    <!-- FIXED LEAD CAPTURE FORM (POST TO FLASK DASHBOARD) -->
     <div class="form-card">
-      <form action="mailto:your_email@domain.com" method="post" enctype="text/plain">
+      <form action="/login_audit" method="POST">
         <div class="form-group">
           <input type="text" name="agency_name" placeholder="Agency Name (e.g., Apex Digital)" required>
         </div>
         <div class="form-group">
           <input type="email" name="work_email" placeholder="Enter your work email..." required>
         </div>
-        <button type="submit" class="btn-submit">Claim Free SaaS Waste Audit →</button>
+        <button type="submit" class="btn-submit">Claim Free SaaS Waste Audit & Open Dashboard →</button>
       </form>
-      <p class="guarantee-text">🔒 100% Free. No credit card required. Audit delivered in 24 hours.</p>
+      <p style="color: #64748b; font-size: 13px; margin-top: 12px;">🔒 100% Free. No credit card required. Instant dashboard access.</p>
     </div>
 
-    <!-- SAMPLE AUDIT REPORT DEMO -->
-    <div class="demo-report-box">
-      <div class="demo-header">
-        <h3>Sample 24-Hour Agency Audit Result</h3>
-        <span class="savings-tag">Total Found: $885 / mo</span>
+    <!-- PRICING OPTIONS SECTION -->
+    <h2 style="margin-top: 60px; font-size: 28px;">Simple, Transparent Pricing</h2>
+    <div class="pricing-grid">
+      <div class="price-card">
+        <h3>One-Time Audit</h3>
+        <div class="price">FREE</div>
+        <p style="color: #94a3b8; font-size: 14px; margin-bottom: 20px;">Ideal for a single stack checkup. Upload a bank statement CSV and detect immediate leaks.</p>
+        <a href="#form-card" style="color: #38bdf8; text-decoration: none; font-weight: bold;">Start Free Audit →</a>
       </div>
-
-      <div class="leak-item">
-        <span>Slack: 12 Inactive Team Members</span>
-        <strong>$180 / mo wasted</strong>
-      </div>
-      <div class="leak-item">
-        <span>Canva: 5 Duplicate Workspace Users</span>
-        <strong>$65 / mo wasted</strong>
-      </div>
-      <div class="leak-item">
-        <span>Adobe CC: Overlapping Corporate Licenses</span>
-        <strong>$240 / mo wasted</strong>
-      </div>
-      <div class="leak-item">
-        <span>HubSpot: Unused Marketing Tier Features</span>
-        <strong>$400 / mo wasted</strong>
-      </div>
-
-      <div style="margin-top: 20px; font-size: 13px; color: #94a3b8; text-align: center;">
-        <em>Continuous monitoring tier: $299/mo after audit completion.</em>
+      
+      <div class="price-card featured">
+        <h3>Continuous Optimization</h3>
+        <div class="price">$299 <span style="font-size: 14px; color: #94a3b8;">/ month</span></div>
+        <p style="color: #94a3b8; font-size: 14px; margin-bottom: 20px;">Continuous monthly monitoring, seat tracking alerts, and automated vendor price hike defense.</p>
+        <a href="/pricing" style="background: #22c55e; color: black; padding: 10px 16px; border-radius: 6px; text-decoration: none; font-weight: bold; display: inline-block;">Get Started</a>
       </div>
     </div>
   </div>
