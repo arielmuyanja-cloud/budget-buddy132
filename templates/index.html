@@ -46,16 +46,27 @@
       font-size: 16px;
       outline: none;
     }
-    .btn-submit {
+    input[type="email"]:focus, input[type="text"]:focus {
+      border-color: #38bdf8;
+    }
+    .btn-gmail {
       width: 100%;
       padding: 16px;
       border-radius: 8px;
       border: none;
-      background-color: #22c55e;
-      color: #000000;
+      background-color: #ea4335; /* Gmail Red */
+      color: #ffffff;
       font-size: 18px;
       font-weight: 800;
       cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: background-color 0.2s ease;
+    }
+    .btn-gmail:hover {
+      background-color: #d93025;
     }
 
     /* PRICING SECTION STYLES */
@@ -90,18 +101,20 @@
       We audit your tech stack to expose unused Slack seats, duplicate Canva accounts, idle Adobe licenses, and hidden subscription price hikes.
     </p>
 
-    <!-- FIXED LEAD CAPTURE FORM (POST TO FLASK DASHBOARD) -->
+    <!-- FORM WITH JAVASCRIPT GMAIL AUTO-REDIRECT -->
     <div class="form-card">
-      <form action="/login_audit" method="POST">
+      <form id="auditForm">
         <div class="form-group">
-          <input type="text" name="agency_name" placeholder="Agency Name (e.g., Apex Digital)" required>
+          <input type="text" id="agencyName" placeholder="Agency Name (e.g., Apex Digital)" required>
         </div>
         <div class="form-group">
-          <input type="email" name="work_email" placeholder="Enter your work email..." required>
+          <input type="email" id="workEmail" placeholder="Enter your work email..." required>
         </div>
-        <button type="submit" class="btn-submit">Claim Free SaaS Waste Audit & Open Dashboard →</button>
+        <button type="submit" class="btn-gmail">
+          ✉️ Send Request via Gmail →
+        </button>
       </form>
-      <p style="color: #64748b; font-size: 13px; margin-top: 12px;">🔒 100% Free. No credit card required. Instant dashboard access.</p>
+      <p style="color: #64748b; font-size: 13px; margin-top: 12px;">🔒 Opens web Gmail directly. No Outlook or desktop app required.</p>
     </div>
 
     <!-- PRICING OPTIONS SECTION -->
@@ -110,8 +123,8 @@
       <div class="price-card">
         <h3>One-Time Audit</h3>
         <div class="price">FREE</div>
-        <p style="color: #94a3b8; font-size: 14px; margin-bottom: 20px;">Ideal for a single stack checkup. Upload a bank statement CSV and detect immediate leaks.</p>
-        <a href="#form-card" style="color: #38bdf8; text-decoration: none; font-weight: bold;">Start Free Audit →</a>
+        <p style="color: #94a3b8; font-size: 14px; margin-bottom: 20px;">Ideal for a single stack checkup. Request a manual checkup and detect immediate leaks.</p>
+        <a href="#auditForm" style="color: #38bdf8; text-decoration: none; font-weight: bold;">Request Free Audit →</a>
       </div>
       
       <div class="price-card featured">
@@ -122,6 +135,35 @@
       </div>
     </div>
   </div>
+
+  <!-- JAVASCRIPT FOR GMAIL AUTO-REDIRECT -->
+  <script>
+    // ⚠️ REPLACE THIS WITH YOUR REAL GMAIL ADDRESS
+    const YOUR_GMAIL_ADDRESS = "your_email@gmail.com"; 
+
+    document.getElementById('auditForm').addEventListener('submit', function(e) {
+      e.preventDefault(); // Prevents page reload or mailto prompt
+
+      // Get values from form inputs
+      const agency = document.getElementById('agencyName').value.trim();
+      const userEmail = document.getElementById('workEmail').value.trim();
+
+      // Format email subject & body text safely for URLs
+      const subject = encodeURIComponent(`SaaS Waste Audit Request - ${agency}`);
+      const body = encodeURIComponent(
+        `Hi StackGuard Team,\n\nI would like to request a SaaS waste audit for my agency.\n\n` +
+        `Agency Name: ${agency}\n` +
+        `Work Email: ${userEmail}\n\n` +
+        `Please reach out to me with the next steps for submitting our software list/CSV.`
+      );
+
+      // Build web Gmail compose URL
+      const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${YOUR_GMAIL_ADDRESS}&su=${subject}&body=${body}`;
+
+      // Open Gmail directly in a new browser tab
+      window.open(gmailUrl, '_blank');
+    });
+  </script>
 
 </body>
 </html>
