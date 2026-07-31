@@ -5,20 +5,14 @@ from flask import Flask, render_template, request, redirect, url_for, flash, ses
 from flask_sqlalchemy import SQLAlchemy
 from dotenv import load_dotenv
 
-# Load environment variables from .env file if available
 load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'default_fallback_secret_key_12345')
 
-# ---------------------------------------------------------------------------
-# DATA PERSISTENCE SETUP
-# Uses DATABASE_URL (PostgreSQL) if available on your host, otherwise SQLite
-# ---------------------------------------------------------------------------
 basedir = os.path.abspath(os.path.dirname(__file__))
 db_url = os.getenv('DATABASE_URL', 'sqlite:///' + os.path.join(basedir, 'budget.db'))
 
-# Fix for Render/Heroku postgres:// URI compatibility with SQLAlchemy
 if db_url and db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql://", 1)
 
@@ -27,124 +21,85 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
-# Database Model for Transactions
 class Transaction(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     date = db.Column(db.String(20), nullable=False)
     description = db.Column(db.String(200), nullable=False)
     amount = db.Column(db.Float, nullable=False)
-    type = db.Column(db.String(10), nullable=False)  # 'income' or 'expense'
+    type = db.Column(db.String(10), nullable=False)
 
-# Initialize database tables
 with app.app_context():
     db.create_all()
 
-
-# ---------------------------------------------------------------------------
-# AI AUDIT LOGIC
-# ---------------------------------------------------------------------------
 def analyze_statement_data(lines):
     insights = []
     annual_savings = 0.0
-    ai_keywords = ['chatgpt', 'openai', 'midjourney', 'claude', 'anthropic', 'elevenlabs', 'voice generator', 'ai pro']
+    monthly_savings = 0.0
+    subs = []
+    ai_keywords = ['chatgpt', 'openai', 'midjourney', 'claude', 'anthropic', 'elevenlabs', 'slack', 'canva', 'adobe', 'hubspot']
     
     for line in lines:
         line_lower = line.lower()
         for keyword in ai_keywords:
             if keyword in line_lower:
-                insights.append(f"Detected AI Subscription: '{line.strip()}' - Flagged for review.")
-                annual_savings += 240.00
+                insights.append(f"Detected SaaS Subscription: '{line.strip()}' - Flagged for review.")
+                monthly_savings += 50.00
+                annual_savings += 600.00
+                subs.append({'name': line.strip(), 'amount': 50.00})
                 break
-                
-        if 'duplicate' in line_lower:
-            insights.append(f"Potential Duplicate Detected: '{line.strip()}'")
-            annual_savings += 100.00
 
     if not insights:
-        insights.append("No obvious unused AI subscriptions or spending leaks detected.")
+        insights.append("No obvious unused subscriptions detected yet.")
 
     return {
         'insights': insights,
-        'annual_savings': f"{annual_savings:.2f}"
+        'monthly_savings': monthly_savings,
+        'annual_savings': annual_savings,
+        'subs': subs
     }
 
-
-# ---------------------------------------------------------------------------
-# ROUTES
-# ---------------------------------------------------------------------------
-@app.route('/', methods=['GET', 'POST'])
+# 1. LANDING PAGE
+@app.route('/')
 def index():
-    if request.method == 'POST':
-        description = request.form.get('description')
-        amount = request.form.get('amount')
-        income_amount = request.form.get('income_amount')
+    return render_template('index.html')
 
-        if description and amount:
-            new_expense = Transaction(
-                date='2026-07-22',
-                description=description,
-                amount=float(amount),
-                type='expense'
-            )
-            db.session.add(new_expense)
-            db.session.commit()
-            flash('Expense logged and saved to database!', 'success')
-            return redirect(url_for('index'))
+# 2. LANDING PAGE FORM SUBMIT -> REDIRECT TO DASHBOARD
+@app.route('/login_audit', methods=['POST'])
+def login_audit():
+    agency_name = request.form.get('agency_name', 'Agency User')
+    email = request.form.get('work_email')
+    
+    session['username'] = agency_name
+    session['work_email'] = email
+    
+    return redirect(url_for('dashboard'))
 
-        if income_amount:
-            new_income = Transaction(
-                date='2026-07-22',
-                description='Income Deposit',
-                amount=float(income_amount),
-                type='income'
-            )
-            db.session.add(new_income)
-            db.session.commit()
-            flash('Income logged and saved to database!', 'success')
-            return redirect(url_for('index'))
-
-    # Fetch persisted transactions from Database
+# 3. DASHBOARD ROUTE
+@app.route('/dashboard')
+def dashboard():
+    username = session.get('username', 'Guest Business')
     all_transactions = Transaction.query.all()
     
     total_income = sum(t.amount for t in all_transactions if t.type == 'income')
     total_expense = sum(t.amount for t in all_transactions if t.type == 'expense')
     balance = total_income - total_expense
 
-    subscription = {'plan': 'Free', 'status': 'active'}
-
     return render_template(
-        'index.html',
-        username='User',
-        account_type='PERSONAL',
-        subscription=subscription,
+        'business_dashboard.html',
+        username=username,
         total_income=total_income,
         total_expense=total_expense,
         balance=balance,
         transactions=all_transactions
     )
 
-
+# 4. CSV UPLOAD ROUTE (REDIRECTS BACK TO DASHBOARD)
 @app.route('/upload_statement', methods=['POST'])
 def upload_statement():
     file = request.files.get('file')
-    raw_text = request.form.get('raw_text', '').strip()
     parsed_entries = []
 
-    # 1. Parse raw text input
-    if raw_text:
-        lines = [line.strip() for line in raw_text.split('\n') if line.strip()]
-        for line in lines:
-            parts = [p.strip() for p in line.split(',') if p.strip()]
-            if len(parts) >= 2:
-                try:
-                    desc = parts[0]
-                    amt = abs(float(parts[1].replace('$', '')))
-                    parsed_entries.append({'date': '2026-07-22', 'desc': desc, 'amount': amt, 'type': 'expense'})
-                except ValueError:
-                    continue
-
-    # 2. Parse uploaded CSV file
-    elif file and file.filename.endswith('.csv'):
+    if file and file.filename.endswith('.csv'):
         try:
             stream = io.StringIO(file.stream.read().decode("UTF-8"), newline=None)
             csv_reader = csv.reader(stream)
@@ -153,7 +108,7 @@ def upload_statement():
                     continue
                 try:
                     parsed_entries.append({
-                        'date': row[0].strip() if row[0].strip() else '2026-07-22',
+                        'date': row[0].strip() if row[0].strip() else '2026-08-01',
                         'desc': row[1].strip(),
                         'amount': abs(float(row[2].replace('$', '').strip())),
                         'type': row[3].strip().lower() if len(row) > 3 and row[3].strip().lower() in ['income', 'expense'] else 'expense'
@@ -162,12 +117,8 @@ def upload_statement():
                     continue
         except Exception as e:
             flash(f'Error reading CSV file: {str(e)}', 'danger')
-            return redirect(url_for('index'))
-    else:
-        flash('Please select a CSV file or paste statement text.', 'warning')
-        return redirect(url_for('index'))
+            return redirect(url_for('dashboard'))
 
-    # Save imported transactions into Database
     if parsed_entries:
         for entry in parsed_entries:
             db.session.add(Transaction(
@@ -178,71 +129,21 @@ def upload_statement():
             ))
         db.session.commit()
         
-        lines_for_audit = [f"{e['desc']} - ${e['amount']}" for e in parsed_entries]
+        lines_for_audit = [f"{e['desc']}" for e in parsed_entries]
         session['last_audit'] = analyze_statement_data(lines_for_audit)
         flash(f'Successfully imported and saved {len(parsed_entries)} transactions!', 'success')
-    else:
-        flash('No valid transactions extracted.', 'danger')
 
-    return redirect(url_for('index'))
+    return redirect(url_for('dashboard'))
 
-
-# ---------------------------------------------------------------------------
-# EXPORT REPORT ROUTE (CSV Download)
-# ---------------------------------------------------------------------------
-@app.route('/export_report')
-def export_report():
-    all_transactions = Transaction.query.all()
-    
-    output = io.StringIO()
-    writer = csv.writer(output)
-    
-    # CSV Header
-    writer.writerow(['ID', 'Date', 'Description', 'Type', 'Amount ($)'])
-    
-    # CSV Data Rows
-    for t in all_transactions:
-        writer.writerow([t.id, t.date, t.description, t.type.upper(), f"{t.amount:.2f}"])
-        
-    output.seek(0)
-    
-    return Response(
-        output.getvalue(),
-        mimetype="text/csv",
-        headers={"Content-Disposition": "attachment;filename=Budget_Buddy_Statement_Report.csv"}
-    )
-
-
-# ---------------------------------------------------------------------------
-# PRICING & PAYMENT HANDLING
-# ---------------------------------------------------------------------------
 @app.route('/pricing')
 def pricing():
     return render_template('pricing.html')
-
-
-@app.route('/submit-payment', methods=['POST'])
-def submit_payment():
-    plan_name = request.form.get('plan_name')
-    plan_price = request.form.get('plan_price')
-    transaction_id = request.form.get('transaction_id')
-    
-    # Log payment attempt to Render console
-    print(f"--- PAYMENT SUBMITTED ---")
-    print(f"Plan: {plan_name} (${plan_price})")
-    print(f"Ref/Txn ID: {transaction_id}")
-    print(f"-------------------------")
-    
-    flash(f'Payment submitted successfully for {plan_name}! We are verifying Reference: {transaction_id}', 'success')
-    return redirect(url_for('index'))
-
 
 @app.route('/logout')
 def logout():
     session.clear()
     flash('Logged out successfully.', 'info')
     return redirect(url_for('index'))
-
 
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 5000))
