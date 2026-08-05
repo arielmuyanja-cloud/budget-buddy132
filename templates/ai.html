@@ -1,170 +1,75 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XHK5KLN2RM"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
+{% extends "base.html" %}
 
-      gtag('config', 'G-TGJSMVVB44');
-    </script>
-
-    <title>Budget Buddy AI Coach</title>
-
-    <style>
-        body{
-            font-family: Arial, sans-serif;
-            background: #0f172a;
-            color: white;
-            padding: 20px;
-        }
-
-        .container{
-            max-width: 900px;
-            margin: auto;
-        }
-
-        .card{
-            background: #1e293b;
-            padding: 20px;
-            border-radius: 12px;
-            margin-bottom: 20px;
-        }
-
-        textarea, input[type="text"]{
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #334155;
-            border-radius: 8px;
-            margin-top: 10px;
-            box-sizing: border-box;
-            background: #0f172a;
-            color: white;
-            font-size: 0.95rem;
-        }
-
-        textarea{
-            height: 150px;
-            resize: vertical;
-            font-family: inherit;
-        }
-
-        input[type="text"]{
-            font-family: monospace;
-            font-size: 0.9rem;
-        }
-
-        button{
-            margin-top: 15px;
-            padding: 12px 20px;
-            background: #22c55e;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: background 0.2s ease;
-        }
-
-        button:hover {
-            background: #16a34a;
-        }
-
-        .answer{
-            margin-top: 20px;
-            background: #0f766e;
-            padding: 15px;
-            border-radius: 10px;
-            line-height: 1.6;
-        }
-
-        a{
-            color: #60a5fa;
-            text-decoration: none;
-            font-size: 0.95rem;
-        }
-        
-        a:hover {
-            text-decoration: underline;
-        }
-
-        ol {
-            padding-left: 20px;
-            color: #cbd5e1;
-            font-size: 0.95rem;
-            line-height: 1.6;
-        }
-        
-        ol li {
-            margin-bottom: 8px;
-        }
-    </style>
-</head>
-
-<body>
-
-<div class="container">
-
-    <!-- Flash Messages UI Component -->
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        {% for category, message in messages %}
-          <div style="padding: 15px; margin-bottom: 20px; border-radius: 8px; font-weight: bold; text-align: center;
-                      background: {{ '#22c55e' if category == 'success' else '#ef4444' }}; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.2);">
-              {{ message }}
-          </div>
-        {% endfor %}
-      {% endif %}
-    {% endwith %}
-
-    <!-- Header Card -->
-    <div class="card" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-        <h1 style="margin: 0; font-size: 1.8rem;">🤖 Budget Buddy AI Coach</h1>
-        <a href="/">⬅ Back to Dashboard</a>
-    </div>
-
-    <!-- Bank Link Card -->
-    <div class="card">
-        <h3 style="color: #22c55e; margin-top: 0; font-size: 1.3rem;">🔗 Link Your Bank Account</h3>
-        <p style="color: #94a3b8; font-size: 0.95rem;">
-            Connect your live bank feeds seamlessly using SimpleFIN:
-        </p>
-        <ol>
-            <li>Go to your SimpleFIN Bridge account.</li>
-            <li>Click <strong>"New app connection"</strong> and specify "Budget Buddy".</li>
-            <li>Copy the long string token they generate for you and paste it below.</li>
-        </ol>
-
-        <form action="/link-bank" method="POST">
-            <label style="font-size: 0.85rem; color: #cbd5e1; font-weight: bold; display: block; margin-top: 15px;">
-                SimpleFIN Connection Token:
-            </label>
-            <input type="text" name="simplefin_token" required placeholder="aHR0cHM6Ly9icmlkZ2Uuc2ltcGxlZmluLm9yZy8...">
-            <button type="submit">Verify & Save Bank Connection</button>
+{% block content %}
+<div class="container my-5">
+    <h2>SaaS Leak Audit Statement Scanner</h2>
+    <p class="text-muted">Upload your monthly bank or credit card statements (CSV) to run an automated leak scan.</p>
+    
+    <div class="card p-4 shadow-sm">
+        <form id="uploadForm" enctype="multipart/form-data">
+            <div class="mb-3">
+                <label for="statements" class="form-label">Select CSV Bank Statements</label>
+                <input class="form-control" type="file" id="statements" name="statements" multiple accept=".csv">
+                <div class="form-text">Free tier allows up to 3 files. Paid accounts can upload up to 50 statements at once.</div>
+            </div>
+            <button type="submit" class="btn btn-primary">Run SaaS Leak Audit</button>
         </form>
     </div>
 
-    <!-- AI Advice Card -->
-    <div class="card">
-        <form method="POST">
-            <h3 style="margin-top: 0; font-size: 1.3rem;">Ask your financial question</h3>
-            <textarea
-                name="question"
-                placeholder="Example: How can I save more money this month?"
-                required></textarea>
-            <button type="submit">Get Advice</button>
-        </form>
-
-        {% if answer %}
-        <div class="answer">
-            <h3 style="margin-top: 0;">💡 AI Advice</h3>
-            <p style="margin-bottom: 0; white-space: pre-line;">{{ answer }}</p>
-        </div>
-        {% endif %}
-    </div>
-
+    <!-- Response Display Section -->
+    <div id="resultBox" class="mt-4" style="display: none;"></div>
 </div>
 
-</body>
-</html>
+<script>
+document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const resultBox = document.getElementById('resultBox');
+    resultBox.style.display = 'block';
+    resultBox.innerHTML = '<div class="alert alert-info">Processing statements...</div>';
+
+    const formData = new FormData();
+    const fileInput = document.getElementById('statements');
+    
+    for (let i = 0; i < fileInput.files.length; i++) {
+        formData.append('statements', fileInput.files[i]);
+    }
+
+    try {
+        const response = await fetch('/upload-statements', {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            resultBox.innerHTML = `
+                <div class="alert alert-danger">
+                    <strong>Error:</strong> ${data.message || data.error}
+                    ${data.upgrade_required ? '<br><a href="/pricing" class="btn btn-sm btn-warning mt-2">Upgrade to Paid Tier ($600)</a>' : ''}
+                </div>`;
+            return;
+        }
+
+        if (data.tier === 'FREE') {
+            resultBox.innerHTML = `
+                <div class="alert alert-warning">
+                    <h4>Teaser Scan Results (${data.processed_count} files scanned)</h4>
+                    <p><strong>Estimated Annual SaaS Leak:</strong> ${data.teaser_summary.estimated_savings}</p>
+                    <p>${data.message}</p>
+                    <a href="/pricing" class="btn btn-success">Unlock Full 50-Statement Bulk Scan ($600)</a>
+                </div>`;
+        } else {
+            resultBox.innerHTML = `
+                <div class="alert alert-success">
+                    <h4>Full Audit Initiated</h4>
+                    <p>${data.message}</p>
+                    <p>Successfully uploaded ${data.processed_count} statements for processing.</p>
+                </div>`;
+        }
+    } catch (err) {
+        resultBox.innerHTML = '<div class="alert alert-danger">An unexpected error occurred during upload.</div>';
+    }
+});
+</script>
+{% endblock %}
