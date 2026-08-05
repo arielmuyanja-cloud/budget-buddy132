@@ -3,7 +3,7 @@ import io
 import csv
 import json
 
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, render_template, jsonify
 
 import stripe
 
@@ -16,8 +16,9 @@ app.secret_key = os.environ.get(
 )
 
 
+
 # -----------------------------
-# STRIPE
+# STRIPE CONFIG
 # -----------------------------
 
 stripe.api_key = os.environ.get(
@@ -33,7 +34,7 @@ STRIPE_WEBHOOK_SECRET = os.environ.get(
 
 
 # -----------------------------
-# TIERS
+# USER TIERS
 # -----------------------------
 
 TIER_LIMITS = {
@@ -47,7 +48,7 @@ TIER_LIMITS = {
 
 
 # -----------------------------
-# DATABASE
+# SIMPLE DATABASE
 # -----------------------------
 
 DATABASE = "users.json"
@@ -87,7 +88,7 @@ def get_user(email):
     return users.get(
         email,
         {
-            "tier": "FREE"
+            "tier":"FREE"
         }
     )
 
@@ -98,21 +99,20 @@ def upgrade_user(email):
 
     users = load_users()
 
-
     users[email] = {
 
-        "tier": "PAID"
+        "tier":"PAID"
 
     }
-
 
     save_users(users)
 
 
 
 
+
 # -----------------------------
-# PAGES
+# HOME
 # -----------------------------
 
 
@@ -126,17 +126,9 @@ def home():
 
 
 
-@app.route("/pricing")
-def pricing():
-
-    return "Pricing"
-
-
-
-
 
 # -----------------------------
-# UPLOAD AUDIT
+# UPLOAD + AUDIT
 # -----------------------------
 
 
@@ -148,13 +140,13 @@ def pricing():
 def upload_statements():
 
 
-    email = request.form.get(
-        "email"
+    agency = request.form.get(
+        "agency_name"
     )
 
 
-    agency = request.form.get(
-        "agency_name"
+    email = request.form.get(
+        "email"
     )
 
 
@@ -170,14 +162,16 @@ def upload_statements():
 
 
 
+
+
     if not email:
 
         return jsonify({
 
-            "error":
-            "Email required"
+            "error":"Email required"
 
         }),400
+
 
 
 
@@ -187,9 +181,10 @@ def upload_statements():
         return jsonify({
 
             "error":
-            "Upload CSV files or paste CSV data"
+            "Upload a CSV or paste CSV data"
 
         }),400
+
 
 
 
@@ -204,9 +199,9 @@ def upload_statements():
 
 
 
-    # Count all inputs
 
-    total_inputs = len(
+
+    inputs = len(
         [
             f for f in files
             if f.filename
@@ -216,12 +211,13 @@ def upload_statements():
 
     if pasted_csv:
 
-        total_inputs += 1
+        inputs += 1
 
 
 
 
-    if total_inputs > limit:
+
+    if inputs > limit:
 
 
         return jsonify({
@@ -229,17 +225,11 @@ def upload_statements():
             "error":
             "Upload limit exceeded",
 
-
-            "tier":
-            tier,
-
-
             "allowed":
             limit,
 
-
-            "message":
-            "Upgrade to process up to 50 statements"
+            "tier":
+            tier
 
         }),403
 
@@ -247,19 +237,15 @@ def upload_statements():
 
 
 
-    results = []
+    results=[]
 
-
-    total_transactions = 0
-
-
+    total_transactions=0
 
 
 
-    # -----------------------------
-    # PROCESS UPLOADED FILES
-    # -----------------------------
 
+
+    # PROCESS FILE UPLOADS
 
     for file in files:
 
@@ -276,7 +262,6 @@ def upload_statements():
 
 
 
-
         content = file.stream.read().decode(
 
             "utf-8",
@@ -284,7 +269,6 @@ def upload_statements():
             errors="ignore"
 
         )
-
 
 
         stream = io.StringIO(
@@ -297,25 +281,25 @@ def upload_statements():
         )
 
 
-        rows = list(reader)
-
-
-        transactions = len(rows)
+        rows=list(reader)
 
 
 
-        total_transactions += transactions
+        count=len(rows)
+
+
+
+        total_transactions += count
 
 
 
         results.append({
 
-            "source":
+            "name":
             file.filename,
 
-
             "transactions":
-            transactions
+            count
 
         })
 
@@ -324,44 +308,41 @@ def upload_statements():
 
 
 
-    # -----------------------------
     # PROCESS PASTED CSV
-    # -----------------------------
 
 
     if pasted_csv:
 
 
-        stream = io.StringIO(
+        stream=io.StringIO(
             pasted_csv
         )
 
 
-        reader = csv.DictReader(
+        reader=csv.DictReader(
             stream
         )
 
 
-        rows = list(reader)
-
-
-        transactions = len(rows)
+        rows=list(reader)
 
 
 
-        total_transactions += transactions
+        count=len(rows)
 
+
+
+        total_transactions += count
 
 
 
         results.append({
 
-            "source":
+            "name":
             "pasted_csv",
 
-
             "transactions":
-            transactions
+            count
 
         })
 
@@ -370,12 +351,20 @@ def upload_statements():
 
 
 
-    estimated_savings = min(
+    # SAVINGS ESTIMATE
 
-        max(
-            total_transactions * 5,
-            1200
-        ),
+    estimated_savings=max(
+
+        1200,
+
+        total_transactions * 100
+
+    )
+
+
+    estimated_savings=min(
+
+        estimated_savings,
 
         3500
 
@@ -385,110 +374,58 @@ def upload_statements():
 
 
 
-    # -----------------------------
-    # FREE REPORT
-    # -----------------------------
+    # FREE USER
 
 
-    if tier == "FREE":
+    if tier=="FREE":
 
 
-        return jsonify({
+        return render_template(
 
-            "status":
-            "success",
+            "teaser.html",
 
+            agency=agency,
 
-            "tier":
-            "FREE",
+            files=inputs,
 
+            transactions=total_transactions,
 
-            "agency":
-            agency,
+            savings=f"${estimated_savings:,}",
 
+            leaks=[
 
-            "files_scanned":
-            total_inputs,
+                "Unused SaaS seats",
 
+                "Duplicate subscriptions",
 
-            "transactions_found":
-            total_transactions,
+                "Old employee accounts",
 
+                "Hidden renewals"
 
+            ]
 
-            "teaser_report":{
-
-
-                "estimated_savings":
-
-                f"${estimated_savings:,}",
-
-
-
-                "possible_leaks":[
-
-                    "Unused software seats",
-
-                    "Duplicate SaaS subscriptions",
-
-                    "Old employee accounts",
-
-                    "Hidden renewals"
-
-                ]
-
-            },
-
-
-
-            "message":
-
-            "Upgrade to unlock the complete 48-hour audit"
-
-        })
+        )
 
 
 
 
 
 
-
-    # -----------------------------
-    # PAID REPORT
-    # -----------------------------
+    # PAID USER
 
 
-    return jsonify({
+    return render_template(
 
-        "status":
-        "success",
+        "paid_report.html",
 
+        agency=agency,
 
-        "tier":
-        "PAID",
+        results=results,
 
+        transactions=total_transactions
 
-        "agency":
-        agency,
+    )
 
-
-        "statements_processed":
-        total_inputs,
-
-
-        "transactions":
-        total_transactions,
-
-
-        "audit_results":
-        results,
-
-
-        "delivery":
-
-        "Full audit delivered within 48 hours"
-
-    })
 
 
 
@@ -509,18 +446,16 @@ def upload_statements():
 def stripe_webhook():
 
 
-    payload = request.data
+    payload=request.data
 
-
-    signature = request.headers.get(
+    signature=request.headers.get(
         "Stripe-Signature"
     )
 
 
-
     try:
 
-        event = stripe.Webhook.construct_event(
+        event=stripe.Webhook.construct_event(
 
             payload,
 
@@ -539,23 +474,18 @@ def stripe_webhook():
 
 
 
-    if event["type"] == "payment_intent.succeeded":
+    if event["type"]=="payment_intent.succeeded":
 
 
-        payment = event["data"]["object"]
+        payment=event["data"]["object"]
 
 
 
-        email = payment.get(
-
+        email=payment.get(
             "metadata",
-
             {}
-
         ).get(
-
             "email"
-
         )
 
 
@@ -563,13 +493,6 @@ def stripe_webhook():
         if email:
 
             upgrade_user(email)
-
-
-            print(
-                f"{email} upgraded to PAID"
-            )
-
-
 
 
 
@@ -583,10 +506,7 @@ def stripe_webhook():
 
 
 
-
-
-if __name__ == "__main__":
-
+if __name__=="__main__":
 
     app.run(
 
