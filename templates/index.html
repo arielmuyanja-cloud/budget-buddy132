@@ -1,169 +1,168 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Free SaaS Waste Audit for Marketing Agencies | StackGuard</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      background-color: #0f172a;
-      color: #ffffff;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      padding: 40px 20px 80px 20px;
-      line-height: 1.5;
-    }
-    .container { max-width: 900px; margin: 0 auto; text-align: center; }
-    .badge {
-      background-color: #1e293b;
-      color: #38bdf8;
-      padding: 6px 16px;
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: 700;
-      border: 1px solid #334155;
-      display: inline-block;
-      margin-bottom: 20px;
-    }
-    h1 { font-size: 40px; font-weight: 800; margin-bottom: 16px; letter-spacing: -1px; }
-    p.subtitle { color: #94a3b8; font-size: 18px; margin-bottom: 40px; max-width: 650px; margin: 0 auto 40px auto; }
-    
-    .form-card {
-      background-color: #1e293b;
-      border-radius: 12px;
-      padding: 40px 30px;
-      border: 1px solid #334155;
-      margin-bottom: 40px;
-    }
-    .form-group { margin-bottom: 20px; }
-    input[type="email"], input[type="text"] {
-      width: 100%;
-      padding: 16px;
-      border-radius: 8px;
-      border: 1px solid #334155;
-      background-color: #0f172a;
-      color: #ffffff;
-      font-size: 16px;
-      outline: none;
-    }
-    input[type="email"]:focus, input[type="text"]:focus {
-      border-color: #38bdf8;
-    }
-    .btn-gmail {
-      width: 100%;
-      padding: 16px;
-      border-radius: 8px;
-      border: none;
-      background-color: #ea4335; /* Gmail Red */
-      color: #ffffff;
-      font-size: 18px;
-      font-weight: 800;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      transition: background-color 0.2s ease;
-    }
-    .btn-gmail:hover {
-      background-color: #d93025;
-    }
 
-    /* PRICING SECTION STYLES */
-    .pricing-grid {
-      display: flex;
-      gap: 20px;
-      margin-top: 40px;
-      justify-content: center;
-      flex-wrap: wrap;
-    }
-    .price-card {
-      background-color: #1e293b;
-      border: 1px solid #334155;
-      border-radius: 12px;
-      padding: 30px;
-      flex: 1;
-      min-width: 260px;
-      text-align: left;
-    }
-    .price-card.featured {
-      border: 2px solid #22c55e;
-    }
-    .price { font-size: 32px; font-weight: bold; color: #22c55e; margin: 15px 0; }
-  </style>
+<html>
+
+<head>
+
+<title>
+StackGuard SaaS Leak Audit
+</title>
+
+
+<style>
+
+body{
+
+background:#0f172a;
+color:white;
+font-family:Arial;
+padding:40px;
+
+}
+
+
+.container{
+
+max-width:700px;
+margin:auto;
+text-align:center;
+
+}
+
+
+.card{
+
+background:#1e293b;
+padding:30px;
+border-radius:12px;
+
+}
+
+
+input{
+
+width:100%;
+padding:15px;
+margin:10px 0;
+
+background:#0f172a;
+color:white;
+
+border:1px solid #334155;
+
+border-radius:8px;
+
+}
+
+
+
+button{
+
+width:100%;
+padding:16px;
+
+background:#22c55e;
+
+border:none;
+
+border-radius:8px;
+
+font-size:18px;
+
+font-weight:bold;
+
+cursor:pointer;
+
+}
+
+
+</style>
+
+
 </head>
+
+
+
 <body>
 
-  <div class="container">
-    <div class="badge">EXCLUSIVE FOR US MARKETING AGENCIES (10–100 EMPLOYEES)</div>
-    <h1>Your Agency Could Be Wasting $1,000+ Every Month on Unused Software</h1>
-    <p class="subtitle">
-      We audit your tech stack to expose unused Slack seats, duplicate Canva accounts, idle Adobe licenses, and hidden subscription price hikes.
-    </p>
 
-    <!-- FORM WITH JAVASCRIPT GMAIL AUTO-REDIRECT -->
-    <div class="form-card">
-      <form id="auditForm">
-        <div class="form-group">
-          <input type="text" id="agencyName" placeholder="Agency Name (e.g., Apex Digital)" required>
-        </div>
-        <div class="form-group">
-          <input type="email" id="workEmail" placeholder="Enter your work email..." required>
-        </div>
-        <button type="submit" class="btn-gmail">
-          ✉️ Send Request via Gmail →
-        </button>
-      </form>
-      <p style="color: #64748b; font-size: 13px; margin-top: 12px;">🔒 Opens web Gmail directly. No Outlook or desktop app required.</p>
-    </div>
+<div class="container">
 
-    <!-- PRICING OPTIONS SECTION -->
-    <h2 style="margin-top: 60px; font-size: 28px;">Simple, Transparent Pricing</h2>
-    <div class="pricing-grid">
-      <div class="price-card">
-        <h3>One-Time Audit</h3>
-        <div class="price">FREE</div>
-        <p style="color: #94a3b8; font-size: 14px; margin-bottom: 20px;">Ideal for a single stack checkup. Request a manual checkup and detect immediate leaks.</p>
-        <a href="#auditForm" style="color: #38bdf8; text-decoration: none; font-weight: bold;">Request Free Audit →</a>
-      </div>
-      
-      <div class="price-card featured">
-        <h3>Continuous Optimization</h3>
-        <div class="price">$299 <span style="font-size: 14px; color: #94a3b8;">/ month</span></div>
-        <p style="color: #94a3b8; font-size: 14px; margin-bottom: 20px;">Continuous monthly monitoring, seat tracking alerts, and automated vendor price hike defense.</p>
-        <a href="/pricing" style="background: #22c55e; color: black; padding: 10px 16px; border-radius: 6px; text-decoration: none; font-weight: bold; display: inline-block;">Get Started</a>
-      </div>
-    </div>
-  </div>
 
-  <!-- JAVASCRIPT FOR GMAIL AUTO-REDIRECT -->
-  <script>
-    // ⚠️ REPLACE THIS WITH YOUR REAL GMAIL ADDRESS
-    const YOUR_GMAIL_ADDRESS = "your_email@gmail.com"; 
+<h1>
+Find Your Agency's Hidden SaaS Waste
+</h1>
 
-    document.getElementById('auditForm').addEventListener('submit', function(e) {
-      e.preventDefault(); // Prevents page reload or mailto prompt
 
-      // Get values from form inputs
-      const agency = document.getElementById('agencyName').value.trim();
-      const userEmail = document.getElementById('workEmail').value.trim();
+<p>
+Upload your software statements and discover $1,000+ in possible savings.
+</p>
 
-      // Format email subject & body text safely for URLs
-      const subject = encodeURIComponent(`SaaS Waste Audit Request - ${agency}`);
-      const body = encodeURIComponent(
-        `Hi StackGuard Team,\n\nI would like to request a SaaS waste audit for my agency.\n\n` +
-        `Agency Name: ${agency}\n` +
-        `Work Email: ${userEmail}\n\n` +
-        `Please reach out to me with the next steps for submitting our software list/CSV.`
-      );
 
-      // Build web Gmail compose URL
-      const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${YOUR_GMAIL_ADDRESS}&su=${subject}&body=${body}`;
 
-      // Open Gmail directly in a new browser tab
-      window.open(gmailUrl, '_blank');
-    });
-  </script>
+<div class="card">
+
+
+<form action="/upload-statements"
+method="POST"
+enctype="multipart/form-data">
+
+
+<input
+type="text"
+name="agency_name"
+placeholder="Agency Name"
+required>
+
+
+
+<input
+type="email"
+name="email"
+placeholder="Work Email"
+required>
+
+
+
+<input
+type="file"
+name="statements"
+multiple
+accept=".csv"
+required>
+
+
+
+<button>
+
+Run Free Audit
+
+</button>
+
+
+</form>
+
+
+<p>
+
+Free users:
+3 CSV files max
+
+<br>
+
+Paid users:
+50 CSV files
+
+</p>
+
+
+</div>
+
+
+</div>
+
+
 
 </body>
+
 </html>
