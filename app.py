@@ -1,150 +1,109 @@
 import os
-import csv
 import io
-from flask import Flask, render_template, request, redirect, url_for, flash, session, Response
-from flask_sqlalchemy import SQLAlchemy
-from dotenv import load_dotenv
-
-load_dotenv()
+import csv
+from flask import Flask, request, jsonify, render_template, session, redirect, url_for
+import stripe
 
 app = Flask(__name__)
-app.secret_key = os.getenv('SECRET_KEY', 'default_fallback_secret_key_12345')
+app.secret_key = os.environ.get("SECRET_KEY", "your-secret-key")
 
-basedir = os.path.abspath(os.path.dirname(__file__))
-db_url = os.getenv('DATABASE_URL', 'sqlite:///' + os.path.join(basedir, 'budget.db'))
+# Configure Stripe Keys
+stripe.api_key = os.environ.get("STRIPE_SECRET_KEY", "sk_test_12345")
+STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "whsec_12345")
 
-if db_url and db_url.startswith("postgres://"):
-    db_url = db_url.replace("postgres://", "postgresql://", 1)
+# Define Tier Limits
+TIER_LIMITS = {
+    'FREE': 3,     # Limit: 3 CSV/statement files max for free tier
+    'PAID': 50     # Limit: Up to 50 statements for paid tier ($600)
+}
 
-app.config['SQLALCHEMY_DATABASE_URI'] = db_url
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+def get_user_tier(user_id):
+    """
+    Fetch user tier from your database.
+    Replace this helper with your actual database query (e.g., SQLite / PostgreSQL).
+    """
+    # Example mock check:
+    # return db.query("SELECT tier FROM users WHERE id = %s", user_id)
+    return session.get('user_tier', 'FREE')
 
-db = SQLAlchemy(app)
+@app.route('/upload-statements', methods=['POST'])
+def upload_statements():
+    user_id = session.get('user_id')
+    user_tier = get_user_tier(user_id)
+    allowed_limit = TIER_LIMITS.get(user_tier, 3)
 
-class Transaction(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    date = db.Column(db.String(20), nullable=False)
-    description = db.Column(db.String(200), nullable=False)
-    amount = db.Column(db.Float, nullable=False)
-    type = db.Column(db.String(10), nullable=False)
+    if 'statements' not in request.files:
+        return jsonify({'error': 'No statement files selected.'}), 400
 
-with app.app_context():
-    db.create_all()
+    files = request.files.getlist('statements')
 
-def analyze_statement_data(lines):
-    insights = []
-    annual_savings = 0.0
-    monthly_savings = 0.0
-    subs = []
-    ai_keywords = ['chatgpt', 'openai', 'midjourney', 'claude', 'anthropic', 'elevenlabs', 'slack', 'canva', 'adobe', 'hubspot']
+    if not files or files[0].filename == '':
+        return jsonify({'error': 'No valid files uploaded.'}), 400
+
+    # Enforce Tier File Upload Limits
+    if len(files) > allowed_limit:
+        return jsonify({
+            'error': 'Upload limit exceeded.',
+            'message': f'Your current {user_tier} tier permits up to {allowed_limit} files. You attempted to upload {len(files)} files.',
+            'tier': user_tier,
+            'upgrade_required': True
+        }), 403
+
+    processed_results = []
     
-    for line in lines:
-        line_lower = line.lower()
-        for keyword in ai_keywords:
-            if keyword in line_lower:
-                insights.append(f"Detected SaaS Subscription: '{line.strip()}' - Flagged for review.")
-                monthly_savings += 50.00
-                annual_savings += 600.00
-                subs.append({'name': line.strip(), 'amount': 50.00})
-                break
+    # Process uploaded CSV / Statement files
+    for file in files:
+        if file.filename.endswith('.csv'):
+            stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
+            csv_input = csv.reader(stream)
+            # Basic parsing logic
+            row_count = sum(1 for row in csv_input)
+            processed_results.append({'filename': file.filename, 'rows': row_count})
 
-    if not insights:
-        insights.append("No obvious unused subscriptions detected yet.")
+    if user_tier == 'FREE':
+        return jsonify({
+            'status': 'success',
+            'tier': 'FREE',
+            'processed_count': len(files),
+            'teaser_summary': {
+                'estimated_savings': '$1,200 - $3,500 / year',
+                'detected_leaks': ['Unused software seats', 'Duplicate SaaS subscriptions']
+            },
+            'message': 'Free teaser scan complete. Upgrade to process up to 50 statements and unlock complete audit details.'
+        }), 200
 
-    return {
-        'insights': insights,
-        'monthly_savings': monthly_savings,
-        'annual_savings': annual_savings,
-        'subs': subs
-    }
+    # Paid Tier Response
+    return jsonify({
+        'status': 'success',
+        'tier': 'PAID',
+        'processed_count': len(files),
+        'audit_results': processed_results,
+        'message': 'Deep 48-hour audit scan initiated successfully.'
+    }), 200
 
-# 1. LANDING PAGE
-@app.route('/')
-def index():
-    return render_template('index.html')
+@app.route('/stripe-webhook', methods=['POST'])
+def stripe_webhook():
+    payload = request.get_data(as_text=True)
+    sig_header = request.headers.get('Stripe-Signature')
 
-# 2. LANDING PAGE FORM SUBMIT -> REDIRECT TO DASHBOARD
-@app.route('/login_audit', methods=['POST'])
-def login_audit():
-    agency_name = request.form.get('agency_name', 'Agency User')
-    email = request.form.get('work_email')
-    
-    session['username'] = agency_name
-    session['work_email'] = email
-    
-    return redirect(url_for('dashboard'))
+    try:
+        event = stripe.Webhook.construct_event(
+            payload, sig_header, STRIPE_WEBHOOK_SECRET
+        )
+    except ValueError as e:
+        return 'Invalid payload', 400
+    except stripe.error.SignatureVerificationError as e:
+        return 'Invalid signature', 400
 
-# 3. DASHBOARD ROUTE
-@app.route('/dashboard')
-def dashboard():
-    username = session.get('username', 'Guest Business')
-    all_transactions = Transaction.query.all()
-    
-    total_income = sum(t.amount for t in all_transactions if t.type == 'income')
-    total_expense = sum(t.amount for t in all_transactions if t.type == 'expense')
-    balance = total_income - total_expense
-
-    return render_template(
-        'business_dashboard.html',
-        username=username,
-        total_income=total_income,
-        total_expense=total_expense,
-        balance=balance,
-        transactions=all_transactions
-    )
-
-# 4. CSV UPLOAD ROUTE (REDIRECTS BACK TO DASHBOARD)
-@app.route('/upload_statement', methods=['POST'])
-def upload_statement():
-    file = request.files.get('file')
-    parsed_entries = []
-
-    if file and file.filename.endswith('.csv'):
-        try:
-            stream = io.StringIO(file.stream.read().decode("UTF-8"), newline=None)
-            csv_reader = csv.reader(stream)
-            for row in csv_reader:
-                if not row or len(row) < 3 or 'amount' in row[2].lower() or 'description' in row[1].lower():
-                    continue
-                try:
-                    parsed_entries.append({
-                        'date': row[0].strip() if row[0].strip() else '2026-08-01',
-                        'desc': row[1].strip(),
-                        'amount': abs(float(row[2].replace('$', '').strip())),
-                        'type': row[3].strip().lower() if len(row) > 3 and row[3].strip().lower() in ['income', 'expense'] else 'expense'
-                    })
-                except ValueError:
-                    continue
-        except Exception as e:
-            flash(f'Error reading CSV file: {str(e)}', 'danger')
-            return redirect(url_for('dashboard'))
-
-    if parsed_entries:
-        for entry in parsed_entries:
-            db.session.add(Transaction(
-                date=entry['date'],
-                description=entry['desc'],
-                amount=entry['amount'],
-                type=entry['type']
-            ))
-        db.session.commit()
+    # Handle successful payment confirmation
+    if event['type'] == 'payment_intent.succeeded':
+        payment_intent = event['data']['object']
+        user_id = payment_intent.get('metadata', {}).get('user_id')
         
-        lines_for_audit = [f"{e['desc']}" for e in parsed_entries]
-        session['last_audit'] = analyze_statement_data(lines_for_audit)
-        flash(f'Successfully imported and saved {len(parsed_entries)} transactions!', 'success')
+        if user_id:
+            # Upgrade user status in session or DB
+            # db.execute("UPDATE users SET tier = 'PAID' WHERE id = %s", user_id)
+            session['user_tier'] = 'PAID'
+            print(f"User {user_id} upgraded to PAID tier. Upload limit expanded to 50 files.")
 
-    return redirect(url_for('dashboard'))
-
-@app.route('/pricing')
-def pricing():
-    return render_template('pricing.html')
-
-@app.route('/logout')
-def logout():
-    session.clear()
-    flash('Logged out successfully.', 'info')
-    return redirect(url_for('index'))
-
-if __name__ == '__main__':
-    port = int(os.getenv('PORT', 5000))
-    app.run(debug=True, host='0.0.0.0', port=port)
+    return jsonify({'status': 'success'}), 200
