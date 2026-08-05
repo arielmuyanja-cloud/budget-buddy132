@@ -3,12 +3,7 @@ import io
 import csv
 import json
 
-from flask import (
-    Flask,
-    request,
-    jsonify,
-    render_template
-)
+from flask import Flask, request, jsonify, render_template
 
 import stripe
 
@@ -22,7 +17,7 @@ app.secret_key = os.environ.get(
 
 
 # -----------------------------
-# STRIPE CONFIG
+# STRIPE
 # -----------------------------
 
 stripe.api_key = os.environ.get(
@@ -43,19 +38,19 @@ STRIPE_WEBHOOK_SECRET = os.environ.get(
 
 TIER_LIMITS = {
 
-    "FREE":3,
+    "FREE": 3,
 
-    "PAID":50
+    "PAID": 50
 
 }
 
 
 
 # -----------------------------
-# SIMPLE USER STORAGE
+# DATABASE
 # -----------------------------
 
-DATABASE="users.json"
+DATABASE = "users.json"
 
 
 
@@ -65,7 +60,7 @@ def load_users():
 
         return {}
 
-    with open(DATABASE,"r") as f:
+    with open(DATABASE, "r") as f:
 
         return json.load(f)
 
@@ -74,7 +69,7 @@ def load_users():
 
 def save_users(users):
 
-    with open(DATABASE,"w") as f:
+    with open(DATABASE, "w") as f:
 
         json.dump(
             users,
@@ -87,12 +82,12 @@ def save_users(users):
 
 def get_user(email):
 
-    users=load_users()
+    users = load_users()
 
     return users.get(
         email,
         {
-            "tier":"FREE"
+            "tier": "FREE"
         }
     )
 
@@ -101,16 +96,17 @@ def get_user(email):
 
 def upgrade_user(email):
 
-    users=load_users()
+    users = load_users()
 
-    users[email]={
 
-        "tier":"PAID"
+    users[email] = {
+
+        "tier": "PAID"
 
     }
 
-    save_users(users)
 
+    save_users(users)
 
 
 
@@ -133,14 +129,14 @@ def home():
 @app.route("/pricing")
 def pricing():
 
-    return "Pricing page"
+    return "Pricing"
 
 
 
 
 
 # -----------------------------
-# CSV UPLOAD
+# UPLOAD AUDIT
 # -----------------------------
 
 
@@ -152,14 +148,25 @@ def pricing():
 def upload_statements():
 
 
-    email=request.form.get(
+    email = request.form.get(
         "email"
     )
 
 
-    agency=request.form.get(
+    agency = request.form.get(
         "agency_name"
     )
+
+
+    files = request.files.getlist(
+        "statements"
+    )
+
+
+    pasted_csv = request.form.get(
+        "pasted_csv",
+        ""
+    ).strip()
 
 
 
@@ -167,52 +174,72 @@ def upload_statements():
 
         return jsonify({
 
-            "error":"Email required"
+            "error":
+            "Email required"
 
         }),400
 
 
 
 
-    files=request.files.getlist(
-        "statements"
+    if not files and not pasted_csv:
+
+        return jsonify({
+
+            "error":
+            "Upload CSV files or paste CSV data"
+
+        }),400
+
+
+
+
+    user = get_user(email)
+
+
+    tier = user["tier"]
+
+
+    limit = TIER_LIMITS[tier]
+
+
+
+    # Count all inputs
+
+    total_inputs = len(
+        [
+            f for f in files
+            if f.filename
+        ]
     )
 
 
+    if pasted_csv:
 
-    if not files:
+        total_inputs += 1
+
+
+
+
+    if total_inputs > limit:
+
 
         return jsonify({
 
-            "error":"No files uploaded"
-
-        }),400
-
+            "error":
+            "Upload limit exceeded",
 
 
-
-    user=get_user(email)
-
-
-    tier=user["tier"]
+            "tier":
+            tier,
 
 
-    limit=TIER_LIMITS[tier]
+            "allowed":
+            limit,
 
-
-
-    if len(files)>limit:
-
-        return jsonify({
-
-            "error":"Upload limit exceeded",
-
-            "current_tier":tier,
-
-            "allowed":limit,
 
             "message":
-            "Upgrade to unlock 50 statements"
+            "Upgrade to process up to 50 statements"
 
         }),403
 
@@ -220,51 +247,72 @@ def upload_statements():
 
 
 
-    results=[]
+    results = []
 
-    total_transactions=0
 
+    total_transactions = 0
+
+
+
+
+
+    # -----------------------------
+    # PROCESS UPLOADED FILES
+    # -----------------------------
 
 
     for file in files:
 
 
-        if not file.filename.endswith(".csv"):
+        if not file.filename:
 
             continue
 
 
 
-        content=file.stream.read().decode(
+        if not file.filename.lower().endswith(".csv"):
+
+            continue
+
+
+
+
+        content = file.stream.read().decode(
+
             "utf-8",
+
             errors="ignore"
+
         )
 
 
-        stream=io.StringIO(
+
+        stream = io.StringIO(
             content
         )
 
 
-        reader=csv.DictReader(
+        reader = csv.DictReader(
             stream
         )
 
 
-        rows=list(reader)
+        rows = list(reader)
 
 
-        transactions=len(rows)
+        transactions = len(rows)
 
 
-        total_transactions+=transactions
+
+        total_transactions += transactions
 
 
 
         results.append({
 
-            "filename":
+            "source":
             file.filename,
+
 
             "transactions":
             transactions
@@ -275,10 +323,57 @@ def upload_statements():
 
 
 
-    estimated_savings=min(
+
+    # -----------------------------
+    # PROCESS PASTED CSV
+    # -----------------------------
+
+
+    if pasted_csv:
+
+
+        stream = io.StringIO(
+            pasted_csv
+        )
+
+
+        reader = csv.DictReader(
+            stream
+        )
+
+
+        rows = list(reader)
+
+
+        transactions = len(rows)
+
+
+
+        total_transactions += transactions
+
+
+
+
+        results.append({
+
+            "source":
+            "pasted_csv",
+
+
+            "transactions":
+            transactions
+
+        })
+
+
+
+
+
+
+    estimated_savings = min(
 
         max(
-            total_transactions*5,
+            total_transactions * 5,
             1200
         ),
 
@@ -290,49 +385,65 @@ def upload_statements():
 
 
 
-    # FREE USER REPORT
+    # -----------------------------
+    # FREE REPORT
+    # -----------------------------
 
-    if tier=="FREE":
+
+    if tier == "FREE":
 
 
         return jsonify({
 
-            "status":"success",
+            "status":
+            "success",
 
-            "tier":"FREE",
 
-            "agency":agency,
+            "tier":
+            "FREE",
+
+
+            "agency":
+            agency,
+
 
             "files_scanned":
-            len(files),
+            total_inputs,
 
-            "transactions":
+
+            "transactions_found":
             total_transactions,
 
 
-            "teaser":{
 
-                "potential_savings":
+            "teaser_report":{
+
+
+                "estimated_savings":
+
                 f"${estimated_savings:,}",
 
 
-                "issues_found":[
 
-                    "Unused SaaS seats",
+                "possible_leaks":[
 
-                    "Duplicate subscriptions",
+                    "Unused software seats",
 
-                    "Unused licenses",
+                    "Duplicate SaaS subscriptions",
 
-                    "Hidden price increases"
+                    "Old employee accounts",
+
+                    "Hidden renewals"
 
                 ]
 
             },
 
 
+
             "message":
-            "Upgrade for the complete 48-hour SaaS Leak Audit"
+
+            "Upgrade to unlock the complete 48-hour audit"
 
         })
 
@@ -341,30 +452,44 @@ def upload_statements():
 
 
 
-    # PAID USER REPORT
+
+    # -----------------------------
+    # PAID REPORT
+    # -----------------------------
 
 
     return jsonify({
 
-        "status":"success",
+        "status":
+        "success",
 
-        "tier":"PAID",
 
-        "agency":agency,
+        "tier":
+        "PAID",
 
-        "files_scanned":
-        len(files),
+
+        "agency":
+        agency,
+
+
+        "statements_processed":
+        total_inputs,
+
 
         "transactions":
         total_transactions,
 
+
         "audit_results":
         results,
 
+
         "delivery":
-        "48 hour full audit"
+
+        "Full audit delivered within 48 hours"
 
     })
+
 
 
 
@@ -384,16 +509,18 @@ def upload_statements():
 def stripe_webhook():
 
 
-    payload=request.data
+    payload = request.data
 
-    signature=request.headers.get(
+
+    signature = request.headers.get(
         "Stripe-Signature"
     )
 
 
+
     try:
 
-        event=stripe.Webhook.construct_event(
+        event = stripe.Webhook.construct_event(
 
             payload,
 
@@ -412,17 +539,23 @@ def stripe_webhook():
 
 
 
-    if event["type"]=="payment_intent.succeeded":
+    if event["type"] == "payment_intent.succeeded":
 
 
-        payment=event["data"]["object"]
+        payment = event["data"]["object"]
 
 
-        email=payment.get(
+
+        email = payment.get(
+
             "metadata",
+
             {}
+
         ).get(
+
             "email"
+
         )
 
 
@@ -433,7 +566,7 @@ def stripe_webhook():
 
 
             print(
-                f"{email} upgraded"
+                f"{email} upgraded to PAID"
             )
 
 
@@ -442,7 +575,7 @@ def stripe_webhook():
 
     return jsonify({
 
-        "received":True
+        "success":True
 
     })
 
@@ -450,10 +583,17 @@ def stripe_webhook():
 
 
 
-if __name__=="__main__":
+
+
+if __name__ == "__main__":
+
 
     app.run(
+
         host="0.0.0.0",
+
         port=5000,
+
         debug=True
+
     )
