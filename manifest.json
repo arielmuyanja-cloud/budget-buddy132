@@ -1,15 +1,15 @@
 {
-  "name": "Budget Buddy",
   "short_name": "BudgetBuddy",
-  "start_url": "/",
-  "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#2c3e50",
+  "name": "Budget Buddy - Agency SaaS Financial Audit & Tracking",
   "icons": [
     {
       "src": "/static/icon.png",
-      "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "sizes": "512x512"
     }
-  ]
+  ],
+  "start_url": "/",
+  "background_color": "#0d1117",
+  "theme_color": "#0d6efd",
+  "display": "standalone"
 }
