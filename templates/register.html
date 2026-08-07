@@ -1,88 +1,45 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XHK5KLN2RM"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
+{% extends "base.html" %}
 
-      gtag('config', 'G-XHK5KLN2RM');
-    </script>
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-5">
+            <div class="card border-0 shadow-sm p-4">
+                <h3 class="fw-bold text-center mb-1">Create Account</h3>
+                <p class="text-muted text-center small mb-4">Get started with Budget Buddy</p>
 
-    <title>Register</title>
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                  {% if messages %}
+                    {% for category, message in messages %}
+                      <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                      </div>
+                    {% endfor %}
+                  {% endif %}
+                {% endwith %}
 
-    <style>
-        body {
-            font-family: Arial;
-            background: #0f172a;
-            color: white;
-            text-align: center;
-            padding: 40px;
-        }
+                <form action="{{ url_for('register') }}" method="POST">
+                    <div class="mb-3">
+                        <label class="form-label small text-muted">Agency / Company Name</label>
+                        <input type="text" name="agency_name" class="form-control" placeholder="Apex Digital" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-muted">Work Email Address</label>
+                        <input type="email" name="email" class="form-control" placeholder="owner@agency.com" required>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label small text-muted">Password</label>
+                        <input type="password" name="password" class="form-control" placeholder="••••••••" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100 fw-bold">Sign Up</button>
+                </form>
 
-        .card {
-            background: #1e293b;
-            padding: 20px;
-            max-width: 400px;
-            margin: auto;
-            border-radius: 10px;
-        }
-
-        input, select {
-            width: 90%;
-            padding: 10px;
-            margin: 8px;
-            border-radius: 6px;
-            border: none;
-        }
-
-        button {
-            padding: 10px;
-            width: 95%;
-            background: #3b82f6;
-            border: none;
-            border-radius: 6px;
-            color: white;
-            cursor: pointer;
-        }
-
-        a {
-            color: #60a5fa;
-        }
-    </style>
-</head>
-
-<body>
-
-<div class="card">
-
-    <h2>🧾 Create Account</h2>
-
-    <form method="POST">
-
-        <input name="first_name" placeholder="First Name" required>
-        <input name="last_name" placeholder="Last Name" required>
-        <input name="email" placeholder="Email" required>
-
-        <input name="username" placeholder="Username" required>
-        <input name="password" type="password" placeholder="Password" required>
-
-        <select name="profile_type" required>
-            <option value="student">Student</option>
-            <option value="professional">Young Professional</option>
-            <option value="general">General User</option>
-        </select>
-
-        <button type="submit">Register</button>
-    </form>
-
-    <p>
-        Already have an account? <a href="/login">Login</a>
-    </p>
-
+                <div class="text-center mt-3">
+                    <span class="small text-muted">Already have an account? <a href="{{ url_for('login') }}">Log In</a></span>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
-
-</body>
-</html>
+{% endblock %}
