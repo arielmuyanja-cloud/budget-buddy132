@@ -82,8 +82,8 @@ class Goal(db.Model):
 
 # Automatic Schema Initialization & Table Sync
 with app.app_context():
-    db.drop_all()  # Drops legacy tables missing reset_token / stripe_customer_id
-    db.create_all()  # Recreates fresh schema with all updated columns
+    # db.drop_all()  # Commented out so user data isn't reset on app restart
+    db.create_all()  # Recreates missing schema tables if needed
 
 # --- DECORATORS ---
 def login_required(f):
