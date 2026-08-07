@@ -1,13 +1,12 @@
 import os
 import csv
 import io
-import re
 import json
-from datetime import datetime, timedelta
+from datetime import datetime
 from functools import wraps
 from flask import (
     Flask, render_template, request, redirect, 
-    url_for, flash, jsonify, session, send_file
+    url_for, flash, jsonify, session
 )
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -67,7 +66,7 @@ class Goal(db.Model):
     target_amount = db.Column(db.Float, nullable=False)
     current_amount = db.Column(db.Float, default=0.0)
 
-# Init Database
+# Initialize Database Schema
 with app.app_context():
     db.create_all()
 
@@ -81,57 +80,68 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-# --- HELPER / PRO PLAN AI ENGINES ---
-KNOWN_SUBSCRIPTIONS = ["adobe", "chatgpt", "canva", "google workspace", "slack", "zoom", "semrush", "hubspot", "github", "render"]
+# --- PRO PLAN & FINANCIAL ANALYSIS ENGINES ---
+KNOWN_SUBSCRIPTIONS = [
+    "adobe", "chatgpt", "canva", "google workspace", "slack", 
+    "zoom", "semrush", "hubspot", "github", "render", "clickup", "meta"
+]
 
 def analyze_subscriptions(transactions):
     detected = []
+    seen = set()
     for t in transactions:
         desc_lower = t.description.lower()
         for sub in KNOWN_SUBSCRIPTIONS:
-            if sub in desc_lower:
-                detected.append({"name": t.description, "amount": t.amount, "category": t.category})
+            if sub in desc_lower and sub not in seen:
+                detected.append({
+                    "name": t.description, 
+                    "amount": t.amount, 
+                    "category": t.category
+                })
+                seen.add(sub)
                 break
     return detected
 
-def calculate_health_score(revenue, expenses, active_budgets, user_id):
+def calculate_health_score(revenue, expenses, budgets, user_id):
     score = 100
     if revenue > 0 and (expenses / revenue) > 0.7:
         score -= 20
     elif revenue == 0 and expenses > 0:
-        score -= 40
+        score -= 30
         
-    # Check overspending
-    for b in active_budgets:
-        spent = db.session.query(db.func.sum(Transaction.amount)).filter(
-            Transaction.user_id == user_id,
-            Transaction.category == b.category,
-            Transaction.type == 'EXPENSE'
-        ).scalar() or 0.0
-        if spent > b.monthly_limit:
+    for b in budgets:
+        spent = sum(
+            t.amount for t in Transaction.query.filter_by(
+                user_id=user_id, category=b.category, type='EXPENSE'
+            ).all()
+        )
+        if spent > b.monthly_limit and b.monthly_limit > 0:
             score -= 10
 
     return max(0, min(100, score))
 
 def generate_ai_insights(revenue, expenses, transactions):
     insights = []
-    if expenses > revenue:
-        insights.append("Warning: Your total expenses currently exceed your overall revenue.")
-    else:
-        insights.append("Revenue is higher than total expenses, showing positive net margin.")
+    if expenses > revenue and revenue > 0:
+        insights.append("Warning: Total expenses exceed revenue this month.")
+    elif revenue > 0:
+        margin = ((revenue - expenses) / revenue) * 100
+        insights.append(f"Healthy net profit margin at {margin:.1f}%.")
 
     subs = analyze_subscriptions(transactions)
-    if len(subs) > 0:
+    if subs:
         total_sub_cost = sum(s['amount'] for s in subs)
-        insights.append(f"Detected {len(subs)} recurring subscriptions totaling ${total_sub_cost:.2f}/month.")
-    
+        insights.append(f"Detected {len(subs)} active subscriptions costing approx. ${total_sub_cost:.2f}/month.")
+    else:
+        insights.append("No active software subscription spikes detected in current statements.")
+        
     return insights
 
-# --- ROUTES: AUTHENTICATION ---
+# --- FEATURE 1: AUTHENTICATION ROUTES ---
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
-        email = request.form.get('email').strip().lower()
+        email = request.form.get('email', '').strip().lower()
         password = request.form.get('password')
         agency_name = request.form.get('agency_name')
 
@@ -144,7 +154,7 @@ def register():
         db.session.add(new_user)
         db.session.commit()
 
-        # Create default categories
+        # Feature 4: Seed default categories upon registration
         defaults = [
             Category(user_id=new_user.id, name="Software", type="EXPENSE"),
             Category(user_id=new_user.id, name="Advertising", type="EXPENSE"),
@@ -155,7 +165,7 @@ def register():
         db.session.commit()
 
         session['user_id'] = new_user.id
-        flash("Registration successful! Welcome to Budget Buddy.", "success")
+        flash("Registration successful! Welcome aboard.", "success")
         return redirect(url_for('dashboard'))
 
     return render_template('register.html')
@@ -163,7 +173,7 @@ def register():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        email = request.form.get('email').strip().lower()
+        email = request.form.get('email', '').strip().lower()
         password = request.form.get('password')
         user = User.query.filter_by(email=email).first()
 
@@ -182,18 +192,26 @@ def logout():
     flash("You have been logged out.", "info")
     return redirect(url_for('login'))
 
-# --- ROUTES: DASHBOARD & CORE FEATURES ---
+# --- FEATURE 2, 8 & 9: MAIN DASHBOARD & CHARTS ---
 @app.route('/dashboard')
 @login_required
 def dashboard():
     user = User.query.get(session['user_id'])
-    txs = Transaction.query.filter_by(user_id=user.id).order_by(Transaction.date.desc()).all()
+    query_str = request.args.get('q', '').strip().lower()
+    
+    tx_query = Transaction.query.filter_by(user_id=user.id)
+    
+    # Feature 8: Search Filter
+    if query_str:
+        tx_query = tx_query.filter(Transaction.description.ilike(f"%{query_str}%"))
+        
+    txs = tx_query.order_by(Transaction.date.desc()).all()
     
     total_revenue = sum(t.amount for t in txs if t.type == 'INCOME')
     total_expenses = sum(t.amount for t in txs if t.type == 'EXPENSE')
     net_profit = total_revenue - total_expenses
 
-    # Budgets & Overspending Alerts
+    # Feature 5 & 6: Budgets, Progress Bars & Alerts
     budgets = Budget.query.filter_by(user_id=user.id).all()
     budget_progress = []
     alerts = []
@@ -202,28 +220,29 @@ def dashboard():
         pct = min(100, int((spent / b.monthly_limit) * 100)) if b.monthly_limit > 0 else 0
         rem = b.monthly_limit - spent
         budget_progress.append({
-            "category": b.category, "limit": b.monthly_limit,
+            "id": b.id, "category": b.category, "limit": b.monthly_limit,
             "spent": spent, "remaining": rem, "pct": pct
         })
         if spent > b.monthly_limit:
-            alerts.append(f"Overspending alert: {b.category} exceeds limit by ${abs(rem):.2f}!")
+            alerts.append(f"Budget Alert: Category '{b.category}' exceeded set threshold by ${abs(rem):.2f}!")
 
-    # Goals
+    # Feature 10 (PRO): Goal Tracking
     goals = Goal.query.filter_by(user_id=user.id).all()
     goal_data = []
     for g in goals:
         pct = min(100, int((g.current_amount / g.target_amount) * 100)) if g.target_amount > 0 else 0
         goal_data.append({"id": g.id, "title": g.title, "target": g.target_amount, "current": g.current_amount, "pct": pct})
 
-    # PRO Plan Specific Insights
+    # PRO Features
     health_score = calculate_health_score(total_revenue, total_expenses, budgets, user.id)
     ai_insights = generate_ai_insights(total_revenue, total_expenses, txs)
     detected_subs = analyze_subscriptions(txs)
+    categories = Category.query.filter_by(user_id=user.id).all()
 
     return render_template(
         'business_dashboard.html',
         user=user,
-        transactions=txs[:10],
+        transactions=txs,
         total_revenue=total_revenue,
         total_expenses=total_expenses,
         net_profit=net_profit,
@@ -232,10 +251,12 @@ def dashboard():
         goals=goal_data,
         health_score=health_score,
         ai_insights=ai_insights,
-        subscriptions=detected_subs
+        subscriptions=detected_subs,
+        categories=categories,
+        search_query=query_str
     )
 
-# --- TRANSACTION CRUD & SEARCH ---
+# --- FEATURE 3: TRANSACTION CRUD ROUTING ---
 @app.route('/transactions/add', methods=['POST'])
 @login_required
 def add_transaction():
@@ -247,7 +268,7 @@ def add_transaction():
     tx = Transaction(user_id=session['user_id'], description=desc, amount=amount, type=t_type, category=category)
     db.session.add(tx)
     db.session.commit()
-    flash("Transaction added successfully.", "success")
+    flash("Transaction recorded.", "success")
     return redirect(url_for('dashboard'))
 
 @app.route('/transactions/delete/<int:tx_id>', methods=['POST'])
@@ -256,45 +277,23 @@ def delete_transaction(tx_id):
     tx = Transaction.query.filter_by(id=tx_id, user_id=session['user_id']).first_or_404()
     db.session.delete(tx)
     db.session.commit()
-    flash("Transaction removed.", "info")
+    flash("Transaction deleted.", "info")
     return redirect(url_for('dashboard'))
 
-# --- CSV IMPORT ENGINE ---
-@app.route('/import-csv', methods=['POST'])
+# --- FEATURE 4: CATEGORY MANAGEMENT ---
+@app.route('/categories/add', methods=['POST'])
 @login_required
-def import_csv():
-    file = request.files.get('file')
-    if not file or not file.filename.endswith('.csv'):
-        flash("Please upload a valid CSV file.", "danger")
-        return redirect(url_for('dashboard'))
-
-    stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
-    csv_input = csv.DictReader(stream)
-
-    imported_count = 0
-    for row in csv_input:
-        # Normalize CSV field matching
-        row_keys = {k.lower().strip(): v for k, v in row.items()}
-        desc = row_keys.get('description') or row_keys.get('name') or 'CSV Import'
-        amt_str = row_keys.get('amount', '0').replace('$', '').replace(',', '')
-        
-        try:
-            amt = float(amt_str)
-        except ValueError:
-            continue
-
-        t_type = 'INCOME' if row_keys.get('transaction type', '').lower() == 'credit' or amt > 0 else 'EXPENSE'
-        category = row_keys.get('category', 'Imported')
-
-        tx = Transaction(user_id=session['user_id'], description=desc, amount=abs(amt), type=t_type, category=category)
-        db.session.add(tx)
-        imported_count += 1
-
-    db.session.commit()
-    flash(f"Successfully imported {imported_count} transactions.", "success")
+def add_category():
+    name = request.form.get('name')
+    cat_type = request.form.get('type', 'EXPENSE')
+    if name:
+        cat = Category(user_id=session['user_id'], name=name, type=cat_type)
+        db.session.add(cat)
+        db.session.commit()
+        flash(f"Category '{name}' created.", "success")
     return redirect(url_for('dashboard'))
 
-# --- BUDGET & GOAL SETTING ---
+# --- FEATURE 5 & 6: BUDGETS & GOALS ---
 @app.route('/budgets/set', methods=['POST'])
 @login_required
 def set_budget():
@@ -309,7 +308,7 @@ def set_budget():
         db.session.add(b)
         
     db.session.commit()
-    flash("Budget updated successfully.", "success")
+    flash("Budget saved.", "success")
     return redirect(url_for('dashboard'))
 
 @app.route('/goals/add', methods=['POST'])
@@ -321,8 +320,61 @@ def add_goal():
     goal = Goal(user_id=session['user_id'], title=title, target_amount=target, current_amount=0.0)
     db.session.add(goal)
     db.session.commit()
-    flash("Goal added.", "success")
+    flash("Goal initialized.", "success")
     return redirect(url_for('dashboard'))
+
+# --- FEATURE 7 & HOMEPAGE CSV SCANNER ---
+@app.route('/upload-statements', methods=['POST'])
+def upload_statements():
+    files = request.files.getlist('csv_files')
+    user_id = session.get('user_id')
+    user = User.query.get(user_id) if user_id else None
+    
+    # 3-file Free Limit Enforcement
+    is_pro = user and user.plan_tier == 'PRO'
+    max_allowed = 50 if is_pro else 3
+
+    if len(files) > max_allowed:
+        return jsonify({
+            "error": f"Free plan allows up to {max_allowed} CSV files. Upgrade to PRO to scan up to 50 statements."
+        }), 403
+
+    parsed_count = 0
+    total_spend = 0.0
+
+    for file in files:
+        if file and file.filename.endswith('.csv'):
+            stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
+            csv_input = csv.DictReader(stream)
+            for row in csv_input:
+                row_keys = {k.lower().strip(): v for k, v in row.items()}
+                desc = row_keys.get('description') or row_keys.get('name') or 'CSV Transaction'
+                amt_str = str(row_keys.get('amount', '0')).replace('$', '').replace(',', '')
+                try:
+                    amt = float(amt_str)
+                except ValueError:
+                    continue
+
+                t_type = 'INCOME' if row_keys.get('transaction type', '').lower() == 'credit' or amt > 0 else 'EXPENSE'
+                category = row_keys.get('category', 'Imported')
+
+                if user_id:
+                    tx = Transaction(user_id=user_id, description=desc, amount=abs(amt), type=t_type, category=category)
+                    db.session.add(tx)
+                
+                if t_type == 'EXPENSE':
+                    total_spend += abs(amt)
+                parsed_count += 1
+
+    if user_id:
+        db.session.commit()
+
+    return jsonify({
+        "status": "success",
+        "processed_files": len(files),
+        "total_records": parsed_count,
+        "estimated_annual_waste": round(total_spend * 0.15, 2)  # Teaser formula: ~15% estimated SaaS waste
+    })
 
 # --- HOMEPAGE / LANDING ROUTE ---
 @app.route('/')
