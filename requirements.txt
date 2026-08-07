@@ -1,5 +1,6 @@
-flask
+Flask
 Flask-SQLAlchemy
+Werkzeug
 openai
 gunicorn
 python-dotenv
