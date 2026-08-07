@@ -1,0 +1,16 @@
+
+{% extends "base.html" %}
+{% block title %}Budget Buddy — Business Finance Dashboard{% endblock %}
+{% block content %}
+<div class="py-5 text-center">
+ <span class="badge text-bg-success">BUDGET BUDDY</span>
+ <h1 class="display-3 fw-bold mt-3">Know where your money is going.</h1>
+ <p class="lead text-muted mx-auto" style="max-width:760px">Track revenue, expenses, budgets and goals for free. Upgrade to Pro for financial insights, recurring-spend detection, forecasts and advanced reports.</p>
+ <div class="d-flex justify-content-center gap-2 mt-4"><a href="{{ url_for('register') }}" class="btn btn-success btn-lg px-4">Start Free</a><a href="{{ url_for('pricing') }}" class="btn btn-outline-light btn-lg px-4">See Pro — $29/mo</a></div>
+</div>
+<div class="row g-3 pb-5">
+{% for title,desc in [('Dashboard','Revenue, expenses, profit, recent transactions and charts.'),('Transactions','Add, edit, delete, search, filter and import your financial activity.'),('Budgets','Set advertising, software, payroll and other budgets with progress tracking.'),('Pro Intelligence','Get insights, savings recommendations, recurring subscriptions and forecasts.')]}
+<div class="col-md-3"><div class="card p-4 h-100"><h5>{{ title }}</h5><p class="text-muted mb-0">{{ desc }}</p></div></div>
+{% endfor %}
+</div>
+{% endblock %}
