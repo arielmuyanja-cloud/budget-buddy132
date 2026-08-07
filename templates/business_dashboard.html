@@ -1,160 +1,196 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Business Dashboard - Budget Buddy</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body { background-color: #0f172a; color: #f8fafc; font-family: sans-serif; }
-        .card { background-color: #1e293b; border: 1px solid #334155; border-radius: 12px; }
-        .metric-title { color: #94a3b8; font-size: 0.85rem; text-transform: uppercase; }
-        .audit-box { background: #0284c715; border: 1px solid #0284c7; border-radius: 8px; padding: 15px; }
-    </style>
-</head>
-<body class="p-4">
-
-<div class="container">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>🏢 {{ username }} <span class="badge bg-primary fs-6">Business Dashboard</span></h2>
-        <div>
-            <a href="/pricing" class="btn btn-warning text-dark fw-bold me-2">Upgrade Plan</a>
-            <a href="/logout" class="btn btn-outline-danger">Logout</a>
+{% extends "base.html" %}
+{% block content %}
+<div class="container py-4">
+    <!-- Top Financial Overview -->
+    <div class="row mb-4 align-items-center bg-dark rounded p-4 border border-secondary">
+        <div class="col-md-8">
+            <h2 class="fw-bold text-white mb-1">{{ user.agency_name or user.email }}</h2>
+            <span class="badge bg-primary">{{ user.plan_tier }} PLAN</span>
         </div>
-    </div>
-
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        {% for category, message in messages %}
-          <div class="alert alert-info">{{ message }}</div>
-        {% endfor %}
-      {% endif %}
-    {% endwith %}
-
-    <!-- METRICS OVERVIEW -->
-    <div class="row g-3 mb-4">
-        <div class="col-md-4">
-            <div class="card p-3">
-                <div class="metric-title">Total Revenue</div>
-                <h3 class="text-success">${{ "%.2f"|format(total_income) }}</h3>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card p-3">
-                <div class="metric-title">Operating Expenses</div>
-                <h3 class="text-danger">${{ "%.2f"|format(total_expense) }}</h3>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card p-3">
-                <div class="metric-title">Net Cash Flow</div>
-                <h3 class="text-info">${{ "%.2f"|format(balance) }}</h3>
+        <div class="col-md-4 text-end">
+            <div class="p-2 border border-secondary rounded">
+                <span class="d-block text-secondary small">HEALTH SCORE</span>
+                <span class="fs-2 fw-bold {% if health_score >= 70 %}text-success{% else %}text-warning{% endif %}">{{ health_score }} / 100</span>
             </div>
         </div>
     </div>
 
-    <!-- AI & SUBSCRIPTION SAVINGS AUDIT -->
+    <!-- Active Warnings -->
+    {% for alert in alerts %}
+    <div class="alert alert-warning alert-dismissible fade show" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ alert }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+
+    <!-- Metric Cards -->
     <div class="row g-3 mb-4">
-        <div class="col-md-12">
-            <div class="card p-4 border-warning">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h4 class="text-warning mb-0">🤖 AI & SaaS Subscription Drain Audit</h4>
-                    {% if session.get('last_audit') %}
-                    <span class="badge bg-danger fs-6">
-                        Potential Savings: ${{ "%.2f"|format(session['last_audit']['annual_savings']) }}/yr
-                    </span>
-                    {% endif %}
-                </div>
+        <div class="col-md-4">
+            <div class="card p-3">
+                <span class="text-secondary small">TOTAL REVENUE</span>
+                <h3 class="text-success fw-bold mt-1">${{ "%.2f"|format(total_revenue) }}</h3>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card p-3">
+                <span class="text-secondary small">TOTAL EXPENSES</span>
+                <h3 class="text-danger fw-bold mt-1">${{ "%.2f"|format(total_expenses) }}</h3>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card p-3">
+                <span class="text-secondary small">NET PROFIT</span>
+                <h3 class="{% if net_profit >= 0 %}text-primary{% else %}text-danger{% endif %} fw-bold mt-1">${{ "%.2f"|format(net_profit) }}</h3>
+            </div>
+        </div>
+    </div>
 
-                {% if session.get('last_audit') and session['last_audit']['subs'] %}
-                <div class="row mb-3 text-center">
-                    <div class="col-md-6">
-                        <div class="p-3 rounded" style="background: #ef444420; border: 1px solid #ef4444;">
-                            <small class="text-secondary text-uppercase">Monthly Recurring Cost</small>
-                            <h2 class="text-danger mb-0">${{ "%.2f"|format(session['last_audit']['monthly_savings']) }}</h2>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="p-3 rounded" style="background: #22c55e20; border: 1px solid #22c55e;">
-                            <small class="text-secondary text-uppercase">Potential 12-Month Savings</small>
-                            <h2 class="text-success mb-0">${{ "%.2f"|format(session['last_audit']['annual_savings']) }}</h2>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="audit-box">
-                    <h6 class="text-info fw-bold">Detected AI Tools & Memberships:</h6>
-                    <ul class="mb-3">
-                        {% for sub in session['last_audit']['subs'] %}
-                            <li class="text-light">
-                                <strong>{{ sub.name }}</strong> — ${{ "%.2f"|format(sub.amount) }}/mo
-                            </li>
-                        {% endfor %}
-                    </ul>
-
-                    <h6 class="text-warning fw-bold">AI Financial Recommendations:</h6>
-                    {% for line in session['last_audit']['insights'] %}
-                        <p class="mb-1 text-light">{{ line }}</p>
-                    {% endfor %}
-                </div>
-
+    <!-- PRO Section: AI Insights & Subscriptions -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-6">
+            <div class="card p-3 h-100">
+                <h5 class="fw-bold text-primary"><i class="bi bi-cpu me-2"></i>AI Financial Insights</h5>
+                {% if user.plan_tier == 'PRO' %}
+                <div id="ai-container" class="mt-2 small text-secondary">Loading AI audit...</div>
+                <script>
+                    fetch('/api/ai-insights').then(r => r.json()).then(d => {
+                        let html = '<ul class="list-unstyled mb-0">';
+                        d.insights.forEach(i => html += `<li class="mb-2"><i class="bi bi-arrow-right-short text-primary"></i> ${i}</li>`);
+                        document.getElementById('ai-container').innerHTML = html + '</ul>';
+                    });
+                </script>
                 {% else %}
-                <div class="text-center py-3">
-                    <p class="text-secondary mb-0">Upload a CSV statement below to calculate how much you can save by cutting redundant AI tools and company memberships.</p>
-                </div>
+                <p class="small text-secondary mt-2">Upgrade to PRO to unlock real-time automated AI spend analysis.</p>
+                <a href="{{ url_for('pricing') }}" class="btn btn-warning btn-sm mt-auto">Upgrade ($29/mo)</a>
                 {% endif %}
             </div>
         </div>
+        <div class="col-md-6">
+            <div class="card p-3 h-100">
+                <h5 class="fw-bold text-warning"><i class="bi bi-arrow-repeat me-2"></i>Detected Subscriptions</h5>
+                <ul class="list-group list-group-flush bg-transparent">
+                    {% for sub in subscriptions %}
+                    <li class="list-group-item bg-transparent text-white d-flex justify-content-between px-0">
+                        <span>{{ sub.name }}</span>
+                        <span class="text-danger fw-bold">${{ "%.2f"|format(sub.amount) }}/mo</span>
+                    </li>
+                    {% else %}
+                    <li class="text-secondary small py-2">No recurring software detected.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
     </div>
 
-    <!-- STATEMENT UPLOAD -->
-    <div class="row g-3 mb-4">
-        <div class="col-md-12">
-            <div class="card p-4">
-                <h4>📄 Import US Bank Statement (CSV)</h4>
-                <p class="text-secondary small">Supports CSV files from Chase, Mercury, Bank of America, Wells Fargo, Relay, and major US banks.</p>
-                
-                <form action="/upload_statement" method="POST" enctype="multipart/form-data" class="d-flex gap-2">
-                    <input type="file" name="file" accept=".csv" class="form-control bg-dark text-white" required>
-                    <button type="submit" class="btn btn-success fw-bold px-4">Upload & Audit</button>
+    <!-- Controls: Add Tx & CSV Upload -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-6">
+            <div class="card p-3">
+                <h6 class="fw-bold mb-3">Add Single Transaction</h6>
+                <form action="{{ url_for('add_transaction') }}" method="POST">
+                    <div class="row g-2 mb-2">
+                        <div class="col-6"><input type="text" name="description" class="form-control form-control-sm" placeholder="Description" required></div>
+                        <div class="col-6"><input type="number" step="0.01" name="amount" class="form-control form-control-sm" placeholder="Amount ($)" required></div>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <select name="type" class="form-select form-select-sm">
+                                <option value="EXPENSE">Expense</option>
+                                <option value="INCOME">Income</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <select name="category" class="form-select form-select-sm">
+                                {% for c in categories %}
+                                <option value="{{ c.name }}">{{ c.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-sm w-100">Save Transaction</button>
+                </form>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card p-3">
+                <h6 class="fw-bold mb-2">Import Statement CSV</h6>
+                <p class="small text-secondary">Upload bank statements for automated column matching and waste scanning.</p>
+                <form action="{{ url_for('import_csv') }}" method="POST" enctype="multipart/form-data">
+                    <input type="file" name="file" class="form-control form-control-sm mb-3" accept=".csv" required>
+                    <button type="submit" class="btn btn-outline-light btn-sm w-100">Upload & Import</button>
                 </form>
             </div>
         </div>
     </div>
 
-    <!-- TRANSACTIONS LEDGER -->
-    <div class="card p-4">
-        <h4>Business Ledger</h4>
-        <table class="table table-dark table-hover mt-3">
-            <thead>
-                <tr>
-                    <th>Date</th>
-                    <th>Description</th>
-                    <th>Type</th>
-                    <th>Amount</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for t in transactions %}
-                <tr>
-                    <td>{{ t.date }}</td>
-                    <td>{{ t.description }}</td>
-                    <td>
-                        <span class="badge {% if t.type == 'income' %}bg-success{% else %}bg-danger{% endif %}">
-                            {{ t.type|upper }}
-                        </span>
-                    </td>
-                    <td>${{ "%.2f"|format(t.amount) }}</td>
-                </tr>
-                {% else %}
-                <tr>
-                    <td colspan="4" class="text-center text-secondary">No transactions logged yet. Upload a CSV statement to import your ledger.</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <!-- Spending Chart -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card p-3">
+                <h6 class="fw-bold mb-3">Expense Category Breakdown</h6>
+                <canvas id="expenseChart" style="max-height: 250px;"></canvas>
+            </div>
+        </div>
     </div>
 
+    <!-- Transactions Table -->
+    <div class="card p-3">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="fw-bold mb-0">Transaction Records</h6>
+            <div>
+                <a href="{{ url_for('export_csv') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-filetype-csv me-1"></i>CSV</a>
+                <a href="{{ url_for('export_pdf') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-filetype-pdf me-1"></i>PDF</a>
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-dark table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Description</th>
+                        <th>Category</th>
+                        <th>Type</th>
+                        <th>Amount</th>
+                        <th class="text-end">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in transactions %}
+                    <tr>
+                        <td class="small">{{ t.date }}</td>
+                        <td>{{ t.description }}</td>
+                        <td><span class="badge bg-secondary">{{ t.category }}</span></td>
+                        <td><span class="badge {% if t.type == 'INCOME' %}bg-success{% else %}bg-danger{% endif %}">{{ t.type }}</span></td>
+                        <td class="fw-bold">${{ "%.2f"|format(t.amount) }}</td>
+                        <td class="text-end">
+                            <form action="{{ url_for('delete_transaction', tx_id=t.id) }}" method="POST" class="d-inline">
+                                <button type="submit" class="btn btn-link text-danger p-0"><i class="bi bi-trash"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="6" class="text-center text-secondary py-3">No transactions logged yet. Upload a CSV statement to begin.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
 
-</body>
-</html>
+<script>
+    const chartData = JSON.parse('{{ chart_categories_json|safe }}');
+    const ctx = document.getElementById('expenseChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: Object.keys(chartData),
+            datasets: [{
+                label: 'Expenses ($)',
+                data: Object.values(chartData),
+                backgroundColor: '#3b82f6'
+            }]
+        },
+        options: { responsive: true, plugins: { legend: { display: false } } }
+    });
+</script>
+{% endblock %}
