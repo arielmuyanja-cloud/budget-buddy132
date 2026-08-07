@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card p-3">
+                <h6 class="fw-bold mb-3">Add Custom Category</h6>
+                <form action="{{ url_for('manage_categories') }}" method="POST">
+                    <div class="mb-3">
+                        <input type="text" name="name" class="form-control" placeholder="Category Name" required>
+                    </div>
+                    <div class="mb-3">
+                        <select name="type" class="form-select">
+                            <option value="EXPENSE">Expense</option>
+                            <option value="INCOME">Income</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Create</button>
+                </form>
+            </div>
+        </div>
+        <div class="col-md-8">
+            <div class="card p-3">
+                <h6 class="fw-bold mb-3">Existing Categories</h6>
+                <ul class="list-group list-group-flush">
+                    {% for c in categories %}
+                    <li class="list-group-item bg-transparent text-white d-flex justify-content-between align-items-center">
+                        <span>{{ c.name }} <span class="badge bg-secondary ms-2">{{ c.type }}</span></span>
+                        <form action="{{ url_for('delete_category', cat_id=c.id) }}" method="POST">
+                            <button type="submit" class="btn btn-link text-danger p-0"><i class="bi bi-trash"></i></button>
+                        </form>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
