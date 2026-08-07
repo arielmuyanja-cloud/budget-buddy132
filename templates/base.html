@@ -1,46 +1,59 @@
-
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>{% block title %}Budget Buddy{% endblock %}</title>
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
-<style>
-body{background:#0b1220;color:#eef2ff;font-family:Inter,system-ui,-apple-system,sans-serif}
-.navbar,.card,.modal-content{background:#121c2e!important;border:1px solid #26344d}
-.navbar-brand{font-weight:800}.text-muted{color:#8fa0b8!important}
-.metric{border-radius:16px;padding:20px;background:#121c2e;border:1px solid #26344d}
-.metric .label{font-size:12px;text-transform:uppercase;color:#8fa0b8}.metric .value{font-size:28px;font-weight:800}
-.form-control,.form-select{background:#0b1220!important;color:#eef2ff!important;border-color:#334155!important}
-.table{--bs-table-bg:#121c2e;--bs-table-color:#eef2ff;--bs-table-border-color:#26344d}
-.sidebar-link{color:#b9c5d8;text-decoration:none;display:block;padding:9px 12px;border-radius:8px}.sidebar-link:hover{background:#1d2a40;color:#fff}
-.pro-badge{background:#22c55e;color:#052e16;padding:3px 8px;border-radius:999px;font-size:11px;font-weight:800}
-.progress{background:#26344d}.small-muted{font-size:12px;color:#8fa0b8}
-</style>
-{% block head %}{% endblock %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Budget Buddy - SaaS Financial Audit</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { background-color: #0f172a; color: #f8fafc; font-family: system-ui, -apple-system, sans-serif; }
+        .card { background-color: #1e293b; border: 1px solid #334155; color: #f8fafc; }
+        .navbar { background-color: #0f172a; border-bottom: 1px solid #334155; }
+        .form-control, .form-select { background-color: #0f172a; border-color: #334155; color: #f8fafc; }
+        .form-control:focus, .form-select:focus { background-color: #0f172a; color: #f8fafc; border-color: #3b82f6; }
+        .table { color: #f8fafc; }
+        .table-dark { --bs-table-bg: #1e293b; }
+    </style>
 </head>
 <body>
-<nav class="navbar navbar-dark px-3 py-3 mb-4">
- <a class="navbar-brand" href="{{ url_for('dashboard') }}">💰 Budget Buddy</a>
- <div class="d-flex align-items-center gap-3">
-  {% if current_user %}
-   <span>{{ current_user['first_name'] }} {% if current_user['tier']=='PRO' %}<span class="pro-badge">PRO</span>{% endif %}</span>
-   <a class="btn btn-sm btn-outline-light" href="{{ url_for('profile') }}">Profile</a>
-   <a class="btn btn-sm btn-outline-danger" href="{{ url_for('logout') }}">Logout</a>
-  {% endif %}
- </div>
-</nav>
-<div class="container-fluid px-3 px-lg-4">
-{% with messages=get_flashed_messages(with_categories=true) %}
-{% for category,message in messages %}
-<div class="alert alert-{{ 'warning' if category=='message' else category }} alert-dismissible fade show">{{ message }}<button class="btn-close" data-bs-dismiss="alert"></button></div>
-{% endfor %}
-{% endwith %}
-{% block content %}{% endblock %}
-</div>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-{% block scripts %}{% endblock %}
+    <nav class="navbar navbar-expand-lg navbar-dark py-3">
+        <div class="container">
+            <a class="navbar-brand fw-bold text-primary" href="{{ url_for('index') }}"><i class="bi bi-wallet2 me-2"></i>Budget Buddy</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"><span class="navbar-toggler-icon"></span></button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto align-items-center">
+                    {% if session.get('user_id') %}
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('dashboard') }}">Dashboard</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('manage_categories') }}">Categories</a></li>
+                        <li class="nav-item"><a class="nav-link text-warning" href="{{ url_for('pricing') }}"><i class="bi bi-star-fill me-1"></i>PRO Plan</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('profile') }}">Profile</a></li>
+                        <li class="nav-item ms-2"><a class="btn btn-outline-light btn-sm" href="{{ url_for('logout') }}">Logout</a></li>
+                    {% else %}
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('login') }}">Login</a></li>
+                        <li class="nav-item ms-2"><a class="btn btn-primary btn-sm" href="{{ url_for('register') }}">Sign Up Free</a></li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-3">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    {% block content %}{% endblock %}
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
