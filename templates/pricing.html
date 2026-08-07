@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pricing & Plans | StackGuard</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: #0f172a;
+      color: #ffffff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      padding: 40px 20px 80px 20px;
+    }
+    .container { max-width: 1100px; margin: 0 auto; text-align: center; }
+    .badge {
+      background-color: #1e293b;
+      color: #38bdf8;
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+      border: 1px solid #334155;
+      display: inline-block;
+      margin-bottom: 20px;
+    }
+    h1 { font-size: 40px; font-weight: 800; margin-bottom: 12px; }
+    p.subtitle { color: #94a3b8; font-size: 18px; margin-bottom: 50px; }
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 25px;
+      align-items: stretch;
+    }
+    .card {
+      background-color: #1e293b;
+      border-radius: 12px;
+      padding: 35px 30px;
+      border: 1px solid #334155;
+      text-align: left;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .card.featured {
+      border: 2px solid #22c55e;
+      box-shadow: 0 10px 30px -10px rgba(34, 197, 94, 0.2);
+    }
+    .plan-badge {
+      font-size: 11px;
+      font-weight: 800;
+      padding: 4px 10px;
+      border-radius: 4px;
+      color: #000;
+      display: inline-block;
+      margin-bottom: 12px;
+    }
+    .price { font-size: 48px; font-weight: 800; margin: 15px 0 5px 0; }
+    .price span { font-size: 16px; color: #94a3b8; font-weight: 400; }
+    ul { list-style: none; padding: 0; margin: 0 0 35px 0; line-height: 2.2; color: #cbd5e1; font-size: 14px; }
+    .check { color: #22c55e; font-weight: bold; margin-right: 6px; }
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 14px 0;
+      text-align: center;
+      border-radius: 8px;
+      font-weight: 700;
+      text-decoration: none;
+      box-sizing: border-box;
+      font-size: 15px;
+      transition: opacity 0.2s ease;
+    }
+    .btn-primary { background-color: #22c55e; color: #000000; }
+    .btn-secondary { background-color: transparent; color: #ffffff; border: 1px solid #334155; }
+    .btn-primary:hover { opacity: 0.9; }
+    .btn-secondary:hover { background-color: #1e293b; }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div class="badge">FOUNDING AGENCY PROGRAM</div>
+    <h1>Stop Wasting Money on Unused SaaS</h1>
+    <p class="subtitle">Select your agency plan to request a free 24-hour spend audit.</p>
+
+    <div class="pricing-grid">
+      
+      <!-- STARTER PLAN -->
+      <div class="card">
+        <div>
+          <span class="plan-badge" style="background-color: #3b82f6;">STARTER</span>
+          <h2>Starter</h2>
+          <p style="color: #aaa; font-size: 13px; margin-top: 5px;">For small agencies (1–10 employees)</p>
+          <div class="price">$149 <span>/ month</span></div>
+          <ul>
+            <li><span class="check">✓</span> Unlimited Statement Scans</li>
+            <li><span class="check">✓</span> Unused SaaS License Detection</li>
+            <li><span class="check">✓</span> Duplicate Charge Alerts</li>
+            <li><span class="check">✓</span> Monthly Executive PDF Reports</li>
+            <li><span class="check">✓</span> Email Notifications</li>
+          </ul>
+        </div>
+        <a href="mailto:amuyanja1314@gmail.com?subject=Starter%20Plan%20Audit%20Request" class="btn btn-secondary">Claim Starter Plan</a>
+      </div>
+
+      <!-- GROWTH PLAN (FEATURED) -->
+      <div class="card featured">
+        <div>
+          <span class="plan-badge" style="background-color: #22c55e;">MOST POPULAR</span>
+          <h2>Growth</h2>
+          <p style="color: #aaa; font-size: 13px; margin-top: 5px;">For growing agencies (10–50 employees)</p>
+          <div class="price">$299 <span>/ month</span></div>
+          <ul>
+            <li><span class="check">✓</span> Everything in Starter</li>
+            <li><span class="check">✓</span> Continuous 24/7 Spend Monitoring</li>
+            <li><span class="check">✓</span> Real-Time Slack Leak Alerts</li>
+            <li><span class="check">✓</span> Multiple Card & Bank Integration</li>
+            <li><span class="check">✓</span> Seat Utilization Guard</li>
+          </ul>
+        </div>
+        <a href="mailto:amuyanja1314@gmail.com?subject=Growth%20Plan%20Audit%20Request" class="btn btn-primary">Lock In Growth ($299)</a>
+      </div>
+
+      <!-- SCALE PLAN -->
+      <div class="card">
+        <div>
+          <span class="plan-badge" style="background-color: #a855f7;">SCALE</span>
+          <h2>Scale</h2>
+          <p style="color: #aaa; font-size: 13px; margin-top: 5px;">For multi-team agencies & CFOs</p>
+          <div class="price">$599 <span>/ month</span></div>
+          <ul>
+            <li><span class="check">✓</span> Everything in Growth</li>
+            <li><span class="check">✓</span> Multi-Client Workspaces</li>
+            <li><span class="check">✓</span> White-Label Executive Reports</li>
+            <li><span class="check">✓</span> Full API Access & SSO</li>
+            <li><span class="check">✓</span> Priority 1-on-1 Support</li>
+          </ul>
+        </div>
+        <a href="mailto:amuyanja1314@gmail.com?subject=Scale%20Plan%20Audit%20Request" class="btn btn-secondary">Request Scale Access</a>
+      </div>
+
+    </div>
+  </div>
+
+</body>
+</html>
