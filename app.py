@@ -80,8 +80,10 @@ class Goal(db.Model):
     target_amount = db.Column(db.Float, nullable=False)
     current_amount = db.Column(db.Float, default=0.0)
 
+# Automatic Schema Initialization & Table Sync
 with app.app_context():
-    db.create_all()
+    db.drop_all()  # Drops legacy tables missing reset_token / stripe_customer_id
+    db.create_all()  # Recreates fresh schema with all updated columns
 
 # --- DECORATORS ---
 def login_required(f):
