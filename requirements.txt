@@ -1,0 +1,8 @@
+flask
+Flask-SQLAlchemy
+openai
+gunicorn
+python-dotenv
+stripe
+requests
+psycopg2-binary
