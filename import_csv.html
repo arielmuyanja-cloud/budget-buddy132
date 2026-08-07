@@ -1,8 +1,0 @@
-
-{% extends "base.html" %}
-{% block title %}Import CSV | Budget Buddy{% endblock %}
-{% block content %}
-<div class="row justify-content-center"><div class="col-xl-9"><div class="card p-4"><h2>CSV Import</h2><p class="text-muted">Upload a bank or accounting CSV. Budget Buddy automatically matches date, description, amount, debit/credit, type and category columns.</p>
-<form method="post" enctype="multipart/form-data" class="mb-4"><input class="form-control mb-3" type="file" name="file" accept=".csv" required><button class="btn btn-primary">Preview CSV</button></form>
-{% if preview %}<div class="alert alert-success">Preview ready: {{ preview|length }} transactions. Review the first rows, then import.</div><div class="table-responsive"><table class="table"><thead><tr><th>Date</th><th>Description</th><th>Type</th><th>Category</th><th>Amount</th></tr></thead><tbody>{% for r in preview[:20] %}<tr><td>{{ r['date'] }}</td><td>{{ r['description'] }}</td><td>{{ r['kind'] }}</td><td>{{ r['category'] or '—' }}</td><td>${{ '%.2f'|format(r['amount']) }}</td></tr>{% endfor %}</tbody></table></div><form method="post" action="{{ url_for('confirm_csv') }}"><button class="btn btn-success">Import {{ preview|length }} transactions</button></form>{% endif %}</div></div></div>
-{% endblock %}
