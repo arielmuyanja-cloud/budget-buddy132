@@ -2,7 +2,8 @@ import os
 import csv
 import io
 import json
-import stripe
+import uuid
+import requests
 from datetime import datetime, timedelta
 from functools import wraps
 
@@ -29,10 +30,9 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
-# External API Keys
-stripe.api_key = os.environ.get("STRIPE_SECRET_KEY", "sk_test_mock")
-STRIPE_PUBLISHABLE_KEY = os.environ.get("STRIPE_PUBLISHABLE_KEY", "pk_test_mock")
-STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
+# External API Keys (Flutterwave & OpenAI)
+FLW_PUBLIC_KEY = os.environ.get("FLW_PUBLIC_KEY", "FLWPUBK_TEST-xxxxxxxx")
+FLW_SECRET_KEY = os.environ.get("FLW_SECRET_KEY", "FLWSECK_TEST-xxxxxxxx")
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
 
 # --- DATABASE MODELS ---
@@ -41,10 +41,9 @@ class User(db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
     agency_name = db.Column(db.String(120), nullable=True)
-    plan_tier = db.Column(db.String(20), default="FREE")  # "FREE" or "PRO"
+    plan_tier = db.Column(db.String(20), default="FREE")  # "FREE", "STARTER", "GROWTH", or "PRO"
     is_verified = db.Column(db.Boolean, default=False)
     reset_token = db.Column(db.String(100), nullable=True)
-    stripe_customer_id = db.Column(db.String(100), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     transactions = db.relationship('Transaction', backref='user', lazy=True, cascade="all, delete-orphan")
@@ -82,8 +81,7 @@ class Goal(db.Model):
 
 # Automatic Schema Initialization & Table Sync
 with app.app_context():
-    # db.drop_all()  # Commented out so user data isn't reset on app restart
-    db.create_all()  # Recreates missing schema tables if needed
+    db.create_all()
 
 # --- DECORATORS ---
 def login_required(f):
@@ -99,8 +97,8 @@ def pro_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         user = User.query.get(session.get('user_id'))
-        if not user or user.plan_tier != 'PRO':
-            flash("This feature is exclusive to PRO subscribers ($29/mo). Upgrade to unlock!", "warning")
+        if not user or user.plan_tier not in ['GROWTH', 'PRO']:
+            flash("This feature is exclusive to GROWTH and PRO subscribers. Upgrade to unlock!", "warning")
             return redirect(url_for('pricing'))
         return f(*args, **kwargs)
     return decorated_function
@@ -275,7 +273,7 @@ def dashboard():
         pct = min(100, int((g.current_amount / g.target_amount) * 100)) if g.target_amount > 0 else 0
         goal_data.append({"id": g.id, "title": g.title, "target": g.target_amount, "current": g.current_amount, "pct": pct})
 
-    # PRO Analytics Engine Integrations
+    # Analytics Engine Integrations
     detected_subs = detect_subscriptions(transactions)
     health_score = compute_financial_health(total_revenue, total_expenses, budgets, user.id)
 
@@ -477,7 +475,7 @@ def advanced_reports():
     
     # Financial Forecasting & Trends
     this_month_expenses = sum(t.amount for t in txs if t.type == 'EXPENSE' and t.date.month == datetime.utcnow().month)
-    forecasted_exp = this_month_expenses * 1.08  # Simple predictive math model
+    forecasted_exp = this_month_expenses * 1.08  # Predictive math model
     
     return render_template('advanced_reports.html', txs=txs, forecast=forecasted_exp)
 
@@ -500,7 +498,11 @@ def ai_insights():
             )
             insights = res.choices[0].message.content.split('\n')
         except Exception:
-            insights = ["Software costs are trending 12% higher than standard agency benchmarks.", "Client revenue margins are steady.", "Unused SaaS seats detected in Adobe and Canva accounts."]
+            insights = [
+                "Software costs are trending 12% higher than standard agency benchmarks.",
+                "Client revenue margins are steady.",
+                "Unused SaaS seats detected in Adobe and Canva accounts."
+            ]
     else:
         insights = [
             "Your software spending increased 18% month-over-month.",
@@ -510,44 +512,89 @@ def ai_insights():
 
     return jsonify({"insights": insights})
 
-# --- STRIPE BILLING INTEGRATION ---
+# --- FLUTTERWAVE BILLING INTEGRATION ---
 @app.route('/pricing')
 def pricing():
-    return render_template('pricing.html', stripe_key=STRIPE_PUBLISHABLE_KEY)
+    return render_template('pricing.html')
 
 @app.route('/create-checkout-session', methods=['POST'])
 @login_required
 def create_checkout_session():
+    user = User.query.get(session['user_id'])
+    plan = request.form.get('plan', 'STARTER')
+    amount = request.form.get('amount', '19')
+
+    # Unique reference containing tier info (e.g. BB-GROWTH-1-a1b2c3)
+    tx_ref = f"BB-{plan}-{user.id}-{uuid.uuid4().hex[:6]}"
+
+    payload = {
+        "tx_ref": tx_ref,
+        "amount": amount,
+        "currency": "USD",
+        "redirect_url": url_for('flutterwave_callback', _external=True),
+        "customer": {
+            "email": user.email,
+            "name": user.agency_name or "Budget Buddy User"
+        },
+        "customizations": {
+            "title": f"Budget Buddy {plan}",
+            "description": f"Monthly Subscription (${amount}/mo)"
+        }
+    }
+
+    headers = {
+        "Authorization": f"Bearer {FLW_SECRET_KEY}",
+        "Content-Type": "application/json"
+    }
+
     try:
-        checkout_session = stripe.checkout.Session.create(
-            payment_method_types=['card'],
-            line_items=[{
-                'price_data': {
-                    'currency': 'usd',
-                    'product_data': {'name': 'Budget Buddy PRO Membership'},
-                    'unit_amount': 2900,  # $29.00/mo
-                    'recurring': {'interval': 'month'},
-                },
-                'quantity': 1,
-            }],
-            mode='subscription',
-            success_url=url_for('stripe_success', _external=True),
-            cancel_url=url_for('pricing', _external=True),
-            client_reference_id=str(session['user_id'])
-        )
-        return redirect(checkout_session.url, code=303)
+        response = requests.post("https://api.flutterwave.com/v3/payments", json=payload, headers=headers)
+        data = response.json()
+
+        if data.get("status") == "success":
+            return redirect(data["data"]["link"])
+        else:
+            flash("Failed to initiate payment session. Please try again.", "danger")
+            return redirect(url_for('pricing'))
     except Exception as e:
-        flash(f"Stripe setup error: {str(e)}", "danger")
+        flash(f"Payment gateway error: {str(e)}", "danger")
         return redirect(url_for('pricing'))
 
-@app.route('/stripe-success')
+@app.route('/flutterwave-callback')
 @login_required
-def stripe_success():
-    user = User.query.get(session['user_id'])
-    user.plan_tier = 'PRO'
-    db.session.commit()
-    flash("Upgrade successful! Welcome to Budget Buddy PRO.", "success")
-    return redirect(url_for('dashboard'))
+def flutterwave_callback():
+    status = request.args.get('status')
+    transaction_id = request.args.get('transaction_id')
+
+    if status == 'successful' and transaction_id:
+        headers = {"Authorization": f"Bearer {FLW_SECRET_KEY}"}
+        verify_url = f"https://api.flutterwave.com/v3/transactions/{transaction_id}/verify"
+        
+        try:
+            res = requests.get(verify_url, headers=headers).json()
+
+            if res.get("status") == "success" and res.get("data", {}).get("status") == "successful":
+                user = User.query.get(session['user_id'])
+                tx_ref = res["data"].get("tx_ref", "")
+
+                # Detect tier from reference
+                if "STARTER" in tx_ref:
+                    user.plan_tier = 'STARTER'
+                elif "GROWTH" in tx_ref:
+                    user.plan_tier = 'GROWTH'
+                elif "PRO" in tx_ref:
+                    user.plan_tier = 'PRO'
+                else:
+                    user.plan_tier = 'STARTER'
+
+                db.session.commit()
+                flash(f"Payment successful! Welcome to Budget Buddy {user.plan_tier}.", "success")
+                return redirect(url_for('dashboard'))
+        except Exception as e:
+            flash(f"Verification error: {str(e)}", "danger")
+
+    flash("Payment failed or was cancelled.", "danger")
+    return redirect(url_for('pricing'))
 
 if __name__ == '__main__':
     app.run(debug=True)
