@@ -1,38 +1,127 @@
 {% extends "base.html" %}
-{% block content %}
-<div class="container py-5 text-center">
-    <h2 class="fw-bold text-white mb-2">Simple, Transparent Pricing</h2>
-    <p class="text-secondary mb-5">Upgrade to PRO to unlock AI analysis, automated forecasts, and subscription audits.</p>
 
-    <div class="row justify-content-center g-4">
-        <div class="col-md-4">
-            <div class="card p-4 border-secondary h-100">
-                <h4 class="fw-bold">FREE</h4>
-                <h2 class="display-5 fw-bold my-3">$0</h2>
-                <ul class="list-unstyled text-secondary text-start mb-4">
-                    <li class="mb-2"><i class="bi bi-check text-primary me-2"></i>Transaction Management</li>
-                    <li class="mb-2"><i class="bi bi-check text-primary me-2"></i>CSV Statement Imports</li>
-                    <li class="mb-2"><i class="bi bi-check text-primary me-2"></i>Category Budget Alerts</li>
-                </ul>
-                <a href="{{ url_for('register') }}" class="btn btn-outline-light mt-auto">Current Tier</a>
-            </div>
+{% block content %}
+<div class="container py-5">
+  <div class="text-center mb-5">
+    <h1 class="fw-bold">Flexible Plans for Every Budget</h1>
+    <p class="text-muted">Choose the right plan to track expenses, spot leaks, and scale your savings.</p>
+  </div>
+
+  <div class="row row-cols-1 row-cols-md-2 row-cols-xl-4 g-4 align-items-stretch">
+    
+    <!-- FREE TIER -->
+    <div class="col">
+      <div class="card h-100 shadow-sm border-0 rounded-4">
+        <div class="card-body p-4 d-flex flex-column">
+          <h3 class="fw-bold fs-4">Free</h3>
+          <div class="my-3">
+            <span class="fs-1 fw-bold">$0</span>
+            <span class="text-muted">/mo</span>
+          </div>
+          <p class="text-muted small">Essential tools to manage personal day-to-day expenses.</p>
+          <hr class="my-3">
+          <ul class="list-unstyled mb-4 flex-grow-1">
+            <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Expense tracking</li>
+            <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Basic dashboard</li>
+            <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Manual transactions</li>
+            <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Basic budgeting</li>
+            <li class="mb-2 text-muted"><i class="bi bi-dash-circle me-2"></i>Limited AI insights</li>
+          </ul>
+          <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary w-100 rounded-3 py-2">Get Started</a>
         </div>
-        <div class="col-md-4">
-            <div class="card p-4 border-primary shadow-lg h-100">
-                <span class="badge bg-primary mb-2">RECOMMENDED</span>
-                <h4 class="fw-bold">PRO PLAN</h4>
-                <h2 class="display-5 fw-bold my-3">$29<span class="fs-6 text-secondary">/mo</span></h2>
-                <ul class="list-unstyled text-secondary text-start mb-4">
-                    <li class="mb-2"><i class="bi bi-check text-primary me-2"></i>Everything in Free</li>
-                    <li class="mb-2"><i class="bi bi-check text-primary me-2"></i>AI Financial Audits & Savings</li>
-                    <li class="mb-2"><i class="bi bi-check text-primary me-2"></i>Recurring Subscription Leak Detector</li>
-                    <li class="mb-2"><i class="bi bi-check text-primary me-2"></i>Predictive Cash Flow Forecasting</li>
-                </ul>
-                <form action="{{ url_for('create_checkout_session') }}" method="POST" class="mt-auto">
-                    <button type="submit" class="btn btn-primary w-100 fw-bold">Upgrade to PRO</button>
-                </form>
-            </div>
-        </div>
+      </div>
     </div>
+
+    <!-- STARTER TIER -->
+    <div class="col">
+      <div class="card h-100 shadow-sm border-0 rounded-4">
+        <div class="card-body p-4 d-flex flex-column">
+          <h3 class="fw-bold fs-4">Starter</h3>
+          <div class="my-3">
+            <span class="fs-1 fw-bold">$19</span>
+            <span class="text-muted">/mo</span>
+          </div>
+          <p class="text-muted small">Automation tools for smart daily tracking and receipts.</p>
+          <hr class="my-3">
+          <ul class="list-unstyled mb-4 flex-grow-1">
+            <li class="mb-2 text-primary fw-semibold"><i class="bi bi-check-circle-fill me-2"></i>Everything in Free</li>
+            <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Receipt scanning</li>
+            <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>AI expense categorization</li>
+            <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Budget alerts</li>
+            <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Subscription tracking</li>
+            <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Monthly reports</li>
+          </ul>
+          <form action="{{ url_for('create_checkout_session') }}" method="POST">
+            <input type="hidden" name="plan" value="STARTER">
+            <input type="hidden" name="amount" value="19">
+            <button type="submit" class="btn btn-primary w-100 rounded-3 py-2">Upgrade to Starter</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- GROWTH TIER (HIGHLIGHTED) -->
+    <div class="col">
+      <div class="card h-100 shadow border-2 border-primary rounded-4 position-relative">
+        <span class="position-absolute top-0 start-50 translate-middle badge rounded-pill bg-primary px-3 py-2">
+          ⭐ Most Popular
+        </span>
+        <div class="card-body p-4 d-flex flex-column">
+          <h3 class="fw-bold fs-4">Growth</h3>
+          <div class="my-3">
+            <span class="fs-1 fw-bold">$49</span>
+            <span class="text-muted">/mo</span>
+          </div>
+          <p class="text-muted small">Deep AI insights and cost-cutting for agencies and businesses.</p>
+          <hr class="my-3">
+          <ul class="list-unstyled mb-4 flex-grow-1">
+            <li class="mb-2 text-primary fw-semibold"><i class="bi bi-check-circle-fill me-2"></i>Everything in Starter</li>
+            <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>AI cost-cutting recommendations</li>
+            <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Subscription leak detection</li>
+            <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Cash-flow forecasting</li>
+            <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Savings score</li>
+            <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Expense benchmarking</li>
+            <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Automated monthly reports</li>
+            <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>More integrations</li>
+          </ul>
+          <form action="{{ url_for('create_checkout_session') }}" method="POST">
+            <input type="hidden" name="plan" value="GROWTH">
+            <input type="hidden" name="amount" value="49">
+            <button type="submit" class="btn btn-primary w-100 rounded-3 py-2 fw-bold">Upgrade to Growth</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- PRO TIER -->
+    <div class="col">
+      <div class="card h-100 shadow-sm border-0 rounded-4">
+        <div class="card-body p-4 d-flex flex-column">
+          <h3 class="fw-bold fs-4">Pro</h3>
+          <div class="my-3">
+            <span class="fs-1 fw-bold">$99</span>
+            <span class="text-muted">/mo</span>
+          </div>
+          <p class="text-muted small">Maximum analytics, multi-business support, and dedicated help.</p>
+          <hr class="my-3">
+          <ul class="list-unstyled mb-4 flex-grow-1">
+            <li class="mb-2 text-primary fw-semibold"><i class="bi bi-check-circle-fill me-2"></i>Everything in Growth</li>
+            <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Multiple businesses</li>
+            <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Team spending analytics</li>
+            <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Advanced benchmarking</li>
+            <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Unlimited AI analysis</li>
+            <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Priority support</li>
+            <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Advanced reports</li>
+          </ul>
+          <form action="{{ url_for('create_checkout_session') }}" method="POST">
+            <input type="hidden" name="plan" value="PRO">
+            <input type="hidden" name="amount" value="99">
+            <button type="submit" class="btn btn-dark w-100 rounded-3 py-2">Upgrade to Pro</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+  </div>
 </div>
 {% endblock %}
