@@ -23,9 +23,9 @@
 
   .bb-grid {
     display: grid;
-    grid-template-columns: 1.4fr 1fr;
+    grid-template-columns: 1.15fr 1fr;
     gap: 24px;
-    align-items: start;
+    align-items: stretch;
   }
   @media (max-width: 900px) {
     .bb-grid { grid-template-columns: 1fr; }
@@ -36,7 +36,9 @@
     border: 1px solid rgba(255,255,255,0.07);
     border-radius: 16px;
     box-shadow: 0 4px 24px rgba(0,0,0,0.25);
-    padding: 40px;
+    padding: 48px;
+    display: flex;
+    flex-direction: column;
   }
 
   .bb-card-head {
@@ -233,7 +235,7 @@
       </div>
     </div>
 
-    <form method="POST" action="{{ url_for('profile') }}">
+    <form method="POST" action="{{ url_for('profile') }}" style="display:flex; flex-direction:column; flex:1;">
       <div class="bb-field">
         <label for="agency_name" class="bb-label">Agency / Business Name</label>
         <input
@@ -269,7 +271,7 @@
         >
       </div>
 
-      <div class="bb-actions">
+      <div class="bb-actions" style="margin-top:auto;">
         <button type="submit" class="bb-btn-primary">Save Changes</button>
       </div>
     </form>
@@ -291,7 +293,7 @@
         <li>Basic spending categories</li>
         <li>Limited monthly reports</li>
       </ul>
-      <a href="{{ url_for('pricing') }}" class="bb-btn-upgrade">Upgrade to Pro →</a>
+      <a href="{{ url_for('pricing') }}" class="bb-btn-upgrade" style="margin-top:auto;">Upgrade to Pro →</a>
     {% else %}
       <span class="bb-plan-badge active">{{ user.plan_tier|capitalize }}</span>
       <p class="bb-plan-desc">You're currently on the {{ user.plan_tier|capitalize }} plan.</p>
@@ -307,7 +309,7 @@
           <li>Advanced reporting &amp; analytics</li>
         {% endif %}
       </ul>
-      <a href="{{ url_for('pricing') }}" class="bb-btn-manage">Manage Subscription</a>
+      <a href="{{ url_for('pricing') }}" class="bb-btn-manage" style="margin-top:auto;">Manage Subscription</a>
     {% endif %}
   </div>
 
