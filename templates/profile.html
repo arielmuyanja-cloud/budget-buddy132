@@ -3,9 +3,9 @@
 {% block content %}
 <style>
   .bb-wrap {
-    max-width: 640px;
+    max-width: 1080px;
     margin: 0 auto;
-    padding: 40px 16px 64px;
+    padding: 40px 24px 64px;
   }
   .bb-header { margin-bottom: 32px; }
   .bb-header h1 {
@@ -21,13 +21,22 @@
     margin: 0;
   }
 
+  .bb-grid {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+  @media (max-width: 900px) {
+    .bb-grid { grid-template-columns: 1fr; }
+  }
+
   .bb-card {
     background: #131c2e;
     border: 1px solid rgba(255,255,255,0.07);
     border-radius: 16px;
     box-shadow: 0 4px 24px rgba(0,0,0,0.25);
     padding: 32px;
-    margin-bottom: 24px;
   }
 
   .bb-card-head {
@@ -212,6 +221,8 @@
     <p>Manage your account, business information and subscription.</p>
   </div>
 
+  <div class="bb-grid">
+
   <!-- PROFILE CARD -->
   <div class="bb-card">
     <div class="bb-card-head">
@@ -298,6 +309,8 @@
       </ul>
       <a href="{{ url_for('pricing') }}" class="bb-btn-manage">Manage Subscription</a>
     {% endif %}
+  </div>
+
   </div>
 </div>
 {% endblock %}
