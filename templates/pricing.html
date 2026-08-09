@@ -135,18 +135,18 @@
             once it's verified — usually within a few hours.
           </p>
 
-          <div class="rounded-3 p-3 mb-4" style="background-color:#0f172a;border:1px solid #334155;">
-            <p class="small text-muted mb-2">Go to Sendwave, send the cash, then get the reference code and paste it below.</p>
-            <div class="row g-2">
+          <div class="rounded-3 p-4 mb-4" style="background-color:#0f172a;border:1px solid #334155;">
+            <p class="small text-muted mb-3">Go to Sendwave, send the cash, then get the reference code and paste it below.</p>
+            <div class="row g-3">
               <div class="col-6">
-                <div class="rounded-3 p-2 px-3" style="background-color:#1e293b;border:1px solid #334155;">
-                  <div class="text-muted" style="font-size:0.7rem;">Number</div>
+                <div class="rounded-3 p-3" style="background-color:#1e293b;border:1px solid #334155;">
+                  <div class="text-muted mb-1" style="font-size:0.7rem;">Number</div>
                   <div class="fw-semibold">0780642959</div>
                 </div>
               </div>
               <div class="col-6">
-                <div class="rounded-3 p-2 px-3" style="background-color:#1e293b;border:1px solid #334155;">
-                  <div class="text-muted" style="font-size:0.7rem;">Name</div>
+                <div class="rounded-3 p-3" style="background-color:#1e293b;border:1px solid #334155;">
+                  <div class="text-muted mb-1" style="font-size:0.7rem;">Name</div>
                   <div class="fw-semibold">Arnold</div>
                 </div>
               </div>
@@ -157,7 +157,7 @@
           <form action="{{ url_for('sendwave_submit') }}" method="POST" class="row g-3">
             <div class="col-md-4">
               <label class="form-label small">Plan</label>
-              <select name="plan" class="form-select" required>
+              <select name="plan" class="form-select py-3" required>
                 <option value="STARTER">Starter — $19</option>
                 <option value="GROWTH">Growth — $49</option>
                 <option value="PRO">Pro — $99</option>
@@ -165,14 +165,14 @@
             </div>
             <div class="col-md-4">
               <label class="form-label small">Sendwave reference code</label>
-              <input type="text" name="reference_code" class="form-control" placeholder="e.g. SW-8842KX" required>
+              <input type="text" name="reference_code" class="form-control py-3" placeholder="e.g. SW-8842KX" required>
             </div>
             <div class="col-md-4">
               <label class="form-label small">Name on transfer (optional)</label>
-              <input type="text" name="sender_name" class="form-control" placeholder="If different from your account">
+              <input type="text" name="sender_name" class="form-control py-3" placeholder="If different from your account">
             </div>
             <div class="col-12">
-              <button type="submit" class="btn btn-outline-primary w-100 rounded-3">Submit for Verification</button>
+              <button type="submit" class="btn btn-outline-primary w-100 rounded-3 py-3">Submit for Verification</button>
             </div>
           </form>
           <div class="text-center mt-3">
