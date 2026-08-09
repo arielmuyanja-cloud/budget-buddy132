@@ -123,5 +123,48 @@
     </div>
 
   </div>
+
+  <!-- SENDWAVE MANUAL PAYMENT -->
+  <div class="row justify-content-center mt-5">
+    <div class="col-lg-7">
+      <div class="card border-0 rounded-4 shadow-sm">
+        <div class="card-body p-4">
+          <h4 class="fw-bold mb-1"><i class="bi bi-send-check text-primary me-2"></i>Already sent payment via Sendwave?</h4>
+          <p class="text-muted small mb-4">
+            Paid outside the automatic checkout? Enter your Sendwave reference code below and we'll confirm your plan
+            once it's verified — usually within a few hours.
+          </p>
+          {% if session.get('user_id') %}
+          <form action="{{ url_for('sendwave_submit') }}" method="POST" class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label small">Plan</label>
+              <select name="plan" class="form-select" required>
+                <option value="STARTER">Starter — $19</option>
+                <option value="GROWTH">Growth — $49</option>
+                <option value="PRO">Pro — $99</option>
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small">Sendwave reference code</label>
+              <input type="text" name="reference_code" class="form-control" placeholder="e.g. SW-8842KX" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small">Name on transfer (optional)</label>
+              <input type="text" name="sender_name" class="form-control" placeholder="If different from your account">
+            </div>
+            <div class="col-12">
+              <button type="submit" class="btn btn-outline-primary w-100 rounded-3">Submit for Verification</button>
+            </div>
+          </form>
+          <div class="text-center mt-3">
+            <a href="{{ url_for('sendwave_status') }}" class="small text-muted">Check status of a previous submission →</a>
+          </div>
+          {% else %}
+          <p class="mb-0"><a href="{{ url_for('login') }}">Log in</a> to submit a Sendwave reference code.</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 {% endblock %}
