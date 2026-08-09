@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-5">
+  <h2 class="fw-bold mb-1"><i class="bi bi-shield-check text-primary me-2"></i>Sendwave Payment Review</h2>
+  <p class="text-muted mb-4">Verify the reference code against the Sendwave agent app/site before approving.</p>
+
+  <h5 class="fw-bold mb-3">Pending ({{ pending|length }})</h5>
+  {% if not pending %}
+    <p class="text-muted mb-5">No pending submissions.</p>
+  {% else %}
+    <div class="card border-0 rounded-4 shadow-sm mb-5">
+      <div class="card-body p-0">
+        <table class="table table-dark align-middle mb-0">
+          <thead>
+            <tr>
+              <th class="ps-4">Submitted</th>
+              <th>User</th>
+              <th>Plan</th>
+              <th>Amount</th>
+              <th>Reference Code</th>
+              <th>Sender Name</th>
+              <th class="pe-4 text-end">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in pending %}
+            <tr>
+              <td class="ps-4">{{ p.submitted_at.strftime('%b %d, %Y %H:%M') }}</td>
+              <td>{{ p.user.email }}</td>
+              <td>{{ p.plan_requested }}</td>
+              <td>${{ "%.2f"|format(p.amount) }}</td>
+              <td><code>{{ p.reference_code }}</code></td>
+              <td>{{ p.sender_name or "—" }}</td>
+              <td class="pe-4 text-end">
+                <form action="{{ url_for('admin_sendwave_approve', payment_id=p.id) }}" method="POST" class="d-inline">
+                  <button type="submit" class="btn btn-success btn-sm rounded-3">Approve</button>
+                </form>
+                <button type="button" class="btn btn-outline-danger btn-sm rounded-3" data-bs-toggle="collapse" data-bs-target="#reject-{{ p.id }}">Reject</button>
+                <div class="collapse mt-2" id="reject-{{ p.id }}">
+                  <form action="{{ url_for('admin_sendwave_reject', payment_id=p.id) }}" method="POST" class="d-flex gap-2">
+                    <input type="text" name="notes" class="form-control form-control-sm" placeholder="Reason (optional)">
+                    <button type="submit" class="btn btn-danger btn-sm rounded-3">Confirm</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  {% endif %}
+
+  <h5 class="fw-bold mb-3">Recently Reviewed</h5>
+  {% if not reviewed %}
+    <p class="text-muted">Nothing reviewed yet.</p>
+  {% else %}
+    <div class="card border-0 rounded-4 shadow-sm">
+      <div class="card-body p-0">
+        <table class="table table-dark align-middle mb-0">
+          <thead>
+            <tr>
+              <th class="ps-4">Reviewed</th>
+              <th>User</th>
+              <th>Plan</th>
+              <th>Reference Code</th>
+              <th class="pe-4">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in reviewed %}
+            <tr>
+              <td class="ps-4">{{ p.reviewed_at.strftime('%b %d, %Y %H:%M') }}</td>
+              <td>{{ p.user.email }}</td>
+              <td>{{ p.plan_requested }}</td>
+              <td><code>{{ p.reference_code }}</code></td>
+              <td class="pe-4">
+                {% if p.status == 'APPROVED' %}
+                  <span class="badge bg-success rounded-pill px-3 py-2">Approved</span>
+                {% else %}
+                  <span class="badge bg-danger rounded-pill px-3 py-2">Rejected</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}
