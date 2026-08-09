@@ -35,6 +35,9 @@ FLW_PUBLIC_KEY = os.environ.get("FLW_PUBLIC_KEY", "FLWPUBK_TEST-xxxxxxxx")
 FLW_SECRET_KEY = os.environ.get("FLW_SECRET_KEY", "FLWSECK_TEST-xxxxxxxx")
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
 
+# Owner email — used to gate the manual payment approval dashboard
+ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "amuyanja1314@gmail.com")
+
 # --- DATABASE MODELS ---
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -79,6 +82,20 @@ class Goal(db.Model):
     target_amount = db.Column(db.Float, nullable=False)
     current_amount = db.Column(db.Float, default=0.0)
 
+class SendwavePayment(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    plan_requested = db.Column(db.String(20), nullable=False)   # STARTER, GROWTH, PRO
+    amount = db.Column(db.Float, nullable=False)
+    reference_code = db.Column(db.String(100), nullable=False)  # Sendwave transaction/reference code
+    sender_name = db.Column(db.String(120), nullable=True)      # name payment was sent under, if different
+    status = db.Column(db.String(20), default="PENDING")        # PENDING, APPROVED, REJECTED
+    submitted_at = db.Column(db.DateTime, default=datetime.utcnow)
+    reviewed_at = db.Column(db.DateTime, nullable=True)
+    admin_notes = db.Column(db.String(300), nullable=True)
+
+    user = db.relationship('User', backref=db.backref('sendwave_payments', cascade="all, delete-orphan"))
+
 # Automatic Schema Initialization & Table Sync
 with app.app_context():
     db.create_all()
@@ -100,6 +117,16 @@ def pro_required(f):
         if not user or user.plan_tier not in ['GROWTH', 'PRO']:
             flash("This feature is exclusive to GROWTH and PRO subscribers. Upgrade to unlock!", "warning")
             return redirect(url_for('pricing'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        user = User.query.get(session.get('user_id'))
+        if not user or user.email.lower() != ADMIN_EMAIL.lower():
+            flash("You don't have access to that page.", "danger")
+            return redirect(url_for('dashboard'))
         return f(*args, **kwargs)
     return decorated_function
 
@@ -595,6 +622,80 @@ def flutterwave_callback():
 
     flash("Payment failed or was cancelled.", "danger")
     return redirect(url_for('pricing'))
+
+# --- SENDWAVE MANUAL PAYMENT VERIFICATION ---
+SENDWAVE_PLAN_AMOUNTS = {"STARTER": 19, "GROWTH": 49, "PRO": 99}
+
+@app.route('/sendwave/submit', methods=['POST'])
+@login_required
+def sendwave_submit():
+    user = User.query.get(session['user_id'])
+    plan = request.form.get('plan', '').strip().upper()
+    reference_code = request.form.get('reference_code', '').strip()
+    sender_name = request.form.get('sender_name', '').strip()
+
+    if plan not in SENDWAVE_PLAN_AMOUNTS:
+        flash("Please select a valid plan.", "danger")
+        return redirect(url_for('pricing'))
+
+    if not reference_code:
+        flash("Please enter the Sendwave reference code from your transfer.", "danger")
+        return redirect(url_for('pricing'))
+
+    existing = SendwavePayment.query.filter_by(reference_code=reference_code).first()
+    if existing:
+        flash("That reference code has already been submitted. If this is a mistake, contact support.", "warning")
+        return redirect(url_for('sendwave_status'))
+
+    payment = SendwavePayment(
+        user_id=user.id,
+        plan_requested=plan,
+        amount=SENDWAVE_PLAN_AMOUNTS[plan],
+        reference_code=reference_code,
+        sender_name=sender_name or None,
+        status="PENDING"
+    )
+    db.session.add(payment)
+    db.session.commit()
+
+    flash("Got it — your payment is pending verification. This usually takes a few hours.", "success")
+    return redirect(url_for('sendwave_status'))
+
+@app.route('/sendwave/status')
+@login_required
+def sendwave_status():
+    user = User.query.get(session['user_id'])
+    payments = SendwavePayment.query.filter_by(user_id=user.id).order_by(SendwavePayment.submitted_at.desc()).all()
+    return render_template('sendwave_status.html', payments=payments)
+
+@app.route('/admin/sendwave')
+@admin_required
+def admin_sendwave():
+    pending = SendwavePayment.query.filter_by(status="PENDING").order_by(SendwavePayment.submitted_at.asc()).all()
+    reviewed = SendwavePayment.query.filter(SendwavePayment.status != "PENDING").order_by(SendwavePayment.reviewed_at.desc()).limit(30).all()
+    return render_template('admin_sendwave.html', pending=pending, reviewed=reviewed)
+
+@app.route('/admin/sendwave/approve/<int:payment_id>', methods=['POST'])
+@admin_required
+def admin_sendwave_approve(payment_id):
+    payment = SendwavePayment.query.get_or_404(payment_id)
+    payment.status = "APPROVED"
+    payment.reviewed_at = datetime.utcnow()
+    payment.user.plan_tier = payment.plan_requested
+    db.session.commit()
+    flash(f"Approved — {payment.user.email} is now on {payment.plan_requested}.", "success")
+    return redirect(url_for('admin_sendwave'))
+
+@app.route('/admin/sendwave/reject/<int:payment_id>', methods=['POST'])
+@admin_required
+def admin_sendwave_reject(payment_id):
+    payment = SendwavePayment.query.get_or_404(payment_id)
+    payment.status = "REJECTED"
+    payment.reviewed_at = datetime.utcnow()
+    payment.admin_notes = request.form.get('notes', '').strip() or None
+    db.session.commit()
+    flash("Marked as rejected.", "info")
+    return redirect(url_for('admin_sendwave'))
 
 if __name__ == '__main__':
     app.run(debug=True)
