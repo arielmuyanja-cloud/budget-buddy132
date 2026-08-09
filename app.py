@@ -133,8 +133,7 @@ def compute_financial_health(revenue, expenses, budgets, user_id):
             score -= 10
 
     return max(0, min(100, score))
-
-# --- AUTH ROUTES ---
+    # --- AUTH ROUTES ---
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
@@ -192,7 +191,7 @@ def logout():
     return redirect(url_for('login'))
 
 @app.route('/forgot-password', methods=['GET', 'POST'])
-def forgot_password():
+def forgot_password_route():
     if request.method == 'POST':
         email = request.form.get('email')
         user = User.query.filter_by(email=email).first()
@@ -215,6 +214,7 @@ def profile():
             user.password_hash = generate_password_hash(new_pw, method='scrypt')
         db.session.commit()
         flash("Profile updated successfully.", "success")
+        return redirect(url_for('profile'))
     return render_template('profile.html', user=user)
 
 # --- DASHBOARD & CORE ---
@@ -423,7 +423,7 @@ def import_csv():
     db.session.commit()
     flash(f"Successfully processed {imported_count} CSV records.", "success")
     return redirect(url_for('dashboard'))
-
+    # --- EXPORTS (PDF & CSV) ---
 @app.route('/reports/export/csv')
 @login_required
 def export_csv():
