@@ -134,6 +134,25 @@
             Paid outside the automatic checkout? Enter your Sendwave reference code below and we'll confirm your plan
             once it's verified — usually within a few hours.
           </p>
+
+          <div class="rounded-3 p-3 mb-4" style="background-color:#0f172a;border:1px solid #334155;">
+            <p class="small text-muted mb-2">Go to Sendwave, send the cash, then get the reference code and paste it below.</p>
+            <div class="row g-2">
+              <div class="col-6">
+                <div class="rounded-3 p-2 px-3" style="background-color:#1e293b;border:1px solid #334155;">
+                  <div class="text-muted" style="font-size:0.7rem;">Number</div>
+                  <div class="fw-semibold">0780642959</div>
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="rounded-3 p-2 px-3" style="background-color:#1e293b;border:1px solid #334155;">
+                  <div class="text-muted" style="font-size:0.7rem;">Name</div>
+                  <div class="fw-semibold">Arnold</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {% if session.get('user_id') %}
           <form action="{{ url_for('sendwave_submit') }}" method="POST" class="row g-3">
             <div class="col-md-4">
