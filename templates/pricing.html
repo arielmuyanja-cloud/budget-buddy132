@@ -129,73 +129,36 @@
     <div class="col-lg-7">
       <div class="card border-0 rounded-4 shadow-sm">
         <div class="card-body p-5">
-          <h4 class="fw-bold mb-2"><i class="bi bi-send-check text-primary me-2"></i>Already sent payment via Sendwave?</h4>
-          <p class="text-muted small mb-4">
-            Paid outside the automatic checkout? Follow the steps below and we'll confirm your plan
-            once it's verified — usually within a few hours.
+          <p class="text-muted mb-4">
+            Go to Sendwave, send the cash, then get the reference code and paste it here.
           </p>
 
-          <div class="rounded-3 p-4 mb-4" style="background-color:#0f172a;border:1px solid #334155;">
-            <div class="d-flex mb-4">
-              <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 me-3" style="width:28px;height:28px;background-color:#3b82f6;font-size:0.8rem;font-weight:600;">1</div>
-              <div>
-                <div class="fw-semibold mb-1">Open Sendwave and send your payment</div>
-                <div class="text-muted small">Send to the number and name below, for the amount of the plan you're buying.</div>
-              </div>
-            </div>
-
-            <div class="row g-3 mb-4">
-              <div class="col-6">
-                <div class="rounded-3 p-3" style="background-color:#1e293b;border:1px solid #334155;">
-                  <div class="text-muted mb-1" style="font-size:0.7rem;">Number</div>
-                  <div class="fw-semibold">0780642959</div>
-                </div>
-              </div>
-              <div class="col-6">
-                <div class="rounded-3 p-3" style="background-color:#1e293b;border:1px solid #334155;">
-                  <div class="text-muted mb-1" style="font-size:0.7rem;">Name</div>
-                  <div class="fw-semibold">Arnold</div>
-                </div>
-              </div>
-            </div>
-
-            <div class="d-flex mb-4">
-              <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 me-3" style="width:28px;height:28px;background-color:#3b82f6;font-size:0.8rem;font-weight:600;">2</div>
-              <div>
-                <div class="fw-semibold mb-1">Copy the reference code</div>
-                <div class="text-muted small">Sendwave gives you a code after the transfer goes through — copy it exactly as shown.</div>
-              </div>
-            </div>
-
-            <div class="d-flex">
-              <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 me-3" style="width:28px;height:28px;background-color:#3b82f6;font-size:0.8rem;font-weight:600;">3</div>
-              <div>
-                <div class="fw-semibold mb-1">Paste it below and submit</div>
-                <div class="text-muted small">We'll manually verify the code and activate your plan — no need to wait around, we'll email you.</div>
-              </div>
-            </div>
-          </div>
+          <p class="mb-3">
+            <span class="text-muted">Number</span>
+            <span class="fw-semibold ms-2">0780642959</span>
+          </p>
+          <p class="mb-4">
+            <span class="text-muted">Name</span>
+            <span class="fw-semibold ms-2">Arnold</span>
+          </p>
 
           {% if session.get('user_id') %}
-          <form action="{{ url_for('sendwave_submit') }}" method="POST" class="row g-3">
-            <div class="col-md-4">
-              <label class="form-label small">Plan</label>
+          <form action="{{ url_for('sendwave_submit') }}" method="POST">
+            <div class="mb-4">
+              <label class="form-label small text-muted">code</label>
+              <input type="text" name="reference_code" class="form-control py-3" required>
+            </div>
+            <div class="mb-4">
+              <label class="form-label small text-muted">Plan</label>
               <select name="plan" class="form-select py-3" required>
                 <option value="STARTER">Starter — $19</option>
                 <option value="GROWTH">Growth — $49</option>
-                <option value="PRO">Pro — $99</option>
+                <option value="PRO" selected>Pro — $99</option>
               </select>
             </div>
-            <div class="col-md-4">
-              <label class="form-label small">Sendwave reference code</label>
-              <input type="text" name="reference_code" class="form-control py-3" placeholder="e.g. SW-8842KX" required>
-            </div>
-            <div class="col-md-4">
-              <label class="form-label small">Name on transfer (optional)</label>
-              <input type="text" name="sender_name" class="form-control py-3" placeholder="If different from your account">
-            </div>
-            <div class="col-12">
-              <button type="submit" class="btn btn-outline-primary w-100 rounded-3 py-3">Submit for Verification</button>
+            <input type="hidden" name="sender_name" value="">
+            <div class="text-center">
+              <button type="submit" class="btn btn-outline-primary px-5 py-2 rounded-3">submit</button>
             </div>
           </form>
           <div class="text-center mt-3">
