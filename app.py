@@ -3,13 +3,17 @@ import csv
 import io
 import json
 import uuid
+import secrets
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 import requests
 from datetime import datetime, timedelta
 from functools import wraps
 
 from flask import (
     Flask, render_template, request, redirect, 
-    url_for, flash, jsonify, session, send_file, Response
+    url_for, flash, jsonify, session, send_file, Response, abort
 )
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -37,6 +41,13 @@ OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
 
 # Owner email — used to gate the manual payment approval dashboard
 ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "amuyanja1314@gmail.com")
+
+# SMTP config — used to email the admin when a Sendwave payment needs review
+SMTP_SERVER = os.environ.get("SMTP_SERVER", "smtp.gmail.com")
+SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
+SMTP_USERNAME = os.environ.get("SMTP_USERNAME", "")
+SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
+SMTP_FROM = os.environ.get("SMTP_FROM", SMTP_USERNAME)
 
 # --- DATABASE MODELS ---
 class User(db.Model):
@@ -93,6 +104,7 @@ class SendwavePayment(db.Model):
     submitted_at = db.Column(db.DateTime, default=datetime.utcnow)
     reviewed_at = db.Column(db.DateTime, nullable=True)
     admin_notes = db.Column(db.String(300), nullable=True)
+    action_token = db.Column(db.String(64), unique=True, nullable=True)  # lets the accept/decline email links work without login
 
     user = db.relationship('User', backref=db.backref('sendwave_payments', cascade="all, delete-orphan"))
 
@@ -626,6 +638,61 @@ def flutterwave_callback():
 # --- SENDWAVE MANUAL PAYMENT VERIFICATION ---
 SENDWAVE_PLAN_AMOUNTS = {"STARTER": 19, "GROWTH": 49, "PRO": 99}
 
+def send_sendwave_review_email(payment):
+    """Emails ADMIN_EMAIL asking them to confirm a Sendwave payment, with
+    Accept / Decline links. Never raises — a failed email shouldn't break
+    the user's submit flow, so callers just log/flash on failure."""
+    if not SMTP_USERNAME or not SMTP_PASSWORD:
+        raise RuntimeError("SMTP_USERNAME / SMTP_PASSWORD are not configured")
+
+    review_url = url_for('sendwave_email_review', payment_id=payment.id,
+                          token=payment.action_token, _external=True)
+
+    subject = f"Sendwave payment to confirm — {payment.user.email} (${payment.amount:.0f} {payment.plan_requested})"
+
+    text_body = (
+        f"Have you received this Sendwave payment?\n\n"
+        f"User: {payment.user.email}\n"
+        f"Plan: {payment.plan_requested}\n"
+        f"Amount: ${payment.amount:.2f}\n"
+        f"Reference code: {payment.reference_code}\n"
+        f"Sender name: {payment.sender_name or '—'}\n"
+        f"Submitted: {payment.submitted_at.strftime('%b %d, %Y %H:%M UTC')}\n\n"
+        f"Review and accept/decline here: {review_url}"
+    )
+
+    html_body = f"""
+    <div style="font-family:Arial,sans-serif;max-width:480px;margin:auto">
+      <h2 style="margin-bottom:4px;">Have you received this payment?</h2>
+      <p style="color:#555;margin-top:0;">A user submitted a Sendwave payment reference. Verify it against your Sendwave app before confirming.</p>
+      <table style="width:100%;border-collapse:collapse;margin:16px 0;">
+        <tr><td style="padding:4px 0;color:#888;">User</td><td style="padding:4px 0;"><b>{payment.user.email}</b></td></tr>
+        <tr><td style="padding:4px 0;color:#888;">Plan</td><td style="padding:4px 0;"><b>{payment.plan_requested}</b></td></tr>
+        <tr><td style="padding:4px 0;color:#888;">Amount</td><td style="padding:4px 0;"><b>${payment.amount:.2f}</b></td></tr>
+        <tr><td style="padding:4px 0;color:#888;">Reference code</td><td style="padding:4px 0;"><b>{payment.reference_code}</b></td></tr>
+        <tr><td style="padding:4px 0;color:#888;">Sender name</td><td style="padding:4px 0;">{payment.sender_name or '—'}</td></tr>
+      </table>
+      <p>
+        <a href="{review_url}" style="background:#0d6efd;color:#fff;text-decoration:none;padding:10px 20px;border-radius:6px;display:inline-block;">
+          Review &amp; Confirm
+        </a>
+      </p>
+      <p style="color:#999;font-size:12px;">This link takes you to a page where you'll pick Accept or Decline — it won't approve anything by itself.</p>
+    </div>
+    """
+
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = subject
+    msg["From"] = SMTP_FROM
+    msg["To"] = ADMIN_EMAIL
+    msg.attach(MIMEText(text_body, "plain"))
+    msg.attach(MIMEText(html_body, "html"))
+
+    with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
+        server.starttls()
+        server.login(SMTP_USERNAME, SMTP_PASSWORD)
+        server.sendmail(SMTP_FROM, [ADMIN_EMAIL], msg.as_string())
+
 @app.route('/sendwave/submit', methods=['POST'])
 @login_required
 def sendwave_submit():
@@ -653,10 +720,18 @@ def sendwave_submit():
         amount=SENDWAVE_PLAN_AMOUNTS[plan],
         reference_code=reference_code,
         sender_name=sender_name or None,
-        status="PENDING"
+        status="PENDING",
+        action_token=secrets.token_urlsafe(32)
     )
     db.session.add(payment)
     db.session.commit()
+
+    try:
+        send_sendwave_review_email(payment)
+    except Exception as e:
+        # Don't block the user's submission just because the email failed —
+        # the payment still shows up in /admin/sendwave either way.
+        app.logger.error(f"Failed to send Sendwave review email: {e}")
 
     flash("Got it — your payment is pending verification. This usually takes a few hours.", "success")
     return redirect(url_for('sendwave_status'))
@@ -696,6 +771,37 @@ def admin_sendwave_reject(payment_id):
     db.session.commit()
     flash("Marked as rejected.", "info")
     return redirect(url_for('admin_sendwave'))
+
+# --- ACCEPT/DECLINE STRAIGHT FROM THE REVIEW EMAIL (token-gated, no login needed) ---
+def _get_payment_by_token(payment_id, token):
+    payment = SendwavePayment.query.get_or_404(payment_id)
+    if not payment.action_token or not secrets.compare_digest(payment.action_token, token):
+        abort(404)
+    return payment
+
+@app.route('/sendwave/review/<int:payment_id>/<token>')
+def sendwave_email_review(payment_id, token):
+    payment = _get_payment_by_token(payment_id, token)
+    return render_template('sendwave_email_review.html', payment=payment)
+
+@app.route('/sendwave/review/<int:payment_id>/<token>/approve', methods=['POST'])
+def sendwave_email_approve(payment_id, token):
+    payment = _get_payment_by_token(payment_id, token)
+    if payment.status == "PENDING":
+        payment.status = "APPROVED"
+        payment.reviewed_at = datetime.utcnow()
+        payment.user.plan_tier = payment.plan_requested
+        db.session.commit()
+    return render_template('sendwave_email_review.html', payment=payment, just_actioned=True)
+
+@app.route('/sendwave/review/<int:payment_id>/<token>/decline', methods=['POST'])
+def sendwave_email_decline(payment_id, token):
+    payment = _get_payment_by_token(payment_id, token)
+    if payment.status == "PENDING":
+        payment.status = "REJECTED"
+        payment.reviewed_at = datetime.utcnow()
+        db.session.commit()
+    return render_template('sendwave_email_review.html', payment=payment, just_actioned=True)
 
 if __name__ == '__main__':
     app.run(debug=True)
