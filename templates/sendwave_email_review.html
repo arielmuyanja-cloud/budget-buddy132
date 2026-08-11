@@ -1,1 +1,55 @@
+{% extends "base.html" %}
 
+{% block content %}
+<div class="container py-5" style="max-width: 560px;">
+  <div class="card border-0 rounded-4 shadow-sm">
+    <div class="card-body p-4">
+
+      {% if just_actioned %}
+        {% if payment.status == 'APPROVED' %}
+          <h4 class="fw-bold text-success mb-2"><i class="bi bi-check-circle-fill me-2"></i>Payment approved</h4>
+          <p class="text-muted">{{ payment.user.email }} is now on {{ payment.plan_requested }}.</p>
+        {% else %}
+          <h4 class="fw-bold text-danger mb-2"><i class="bi bi-x-circle-fill me-2"></i>Payment declined</h4>
+          <p class="text-muted">The reference code was marked as rejected.</p>
+        {% endif %}
+
+      {% elif payment.status != 'PENDING' %}
+        <h4 class="fw-bold mb-2"><i class="bi bi-info-circle me-2"></i>Already reviewed</h4>
+        <p class="text-muted">
+          This payment was already marked
+          <b class="{{ 'text-success' if payment.status == 'APPROVED' else 'text-danger' }}">{{ payment.status|lower }}</b>
+          {% if payment.reviewed_at %}on {{ payment.reviewed_at.strftime('%b %d, %Y %H:%M') }}{% endif %}.
+        </p>
+
+      {% else %}
+        <h4 class="fw-bold mb-1">Have you received this payment?</h4>
+        <p class="text-muted mb-4">Double-check the reference code in your Sendwave app before confirming.</p>
+
+        <table class="table table-dark align-middle mb-4">
+          <tr><td class="text-muted">User</td><td class="text-end">{{ payment.user.email }}</td></tr>
+          <tr><td class="text-muted">Plan</td><td class="text-end">{{ payment.plan_requested }}</td></tr>
+          <tr><td class="text-muted">Amount</td><td class="text-end">${{ "%.2f"|format(payment.amount) }}</td></tr>
+          <tr><td class="text-muted">Reference code</td><td class="text-end"><code>{{ payment.reference_code }}</code></td></tr>
+          <tr><td class="text-muted">Sender name</td><td class="text-end">{{ payment.sender_name or "—" }}</td></tr>
+          <tr><td class="text-muted">Submitted</td><td class="text-end">{{ payment.submitted_at.strftime('%b %d, %Y %H:%M') }}</td></tr>
+        </table>
+
+        <div class="d-flex gap-3">
+          <form method="POST" action="{{ url_for('sendwave_email_approve', payment_id=payment.id, token=payment.action_token) }}" class="flex-fill">
+            <button type="submit" class="btn btn-success w-100 rounded-3 py-2">
+              <i class="bi bi-check-lg me-1"></i>Accept
+            </button>
+          </form>
+          <form method="POST" action="{{ url_for('sendwave_email_decline', payment_id=payment.id, token=payment.action_token) }}" class="flex-fill">
+            <button type="submit" class="btn btn-outline-danger w-100 rounded-3 py-2">
+              <i class="bi bi-x-lg me-1"></i>Decline
+            </button>
+          </form>
+        </div>
+      {% endif %}
+
+    </div>
+  </div>
+</div>
+{% endblock %}
