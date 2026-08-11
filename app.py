@@ -111,6 +111,18 @@ class SendwavePayment(db.Model):
 # Automatic Schema Initialization & Table Sync
 with app.app_context():
     db.create_all()
+    # Self-heal: if sendwave_payment already existed before action_token was
+    # added to the model, db.create_all() won't add the column on its own.
+    # This runs safely on every startup (IF NOT EXISTS = no-op once it's there).
+    try:
+        from sqlalchemy import text
+        db.session.execute(text(
+            "ALTER TABLE sendwave_payment ADD COLUMN IF NOT EXISTS action_token VARCHAR(64) UNIQUE"
+        ))
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        app.logger.warning(f"Skipping action_token auto-migration: {e}")
 
 # --- DECORATORS ---
 def login_required(f):
