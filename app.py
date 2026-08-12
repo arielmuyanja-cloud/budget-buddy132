@@ -143,6 +143,7 @@ with app.app_context():
     except Exception as e:
         db.session.rollback()
         app.logger.warning(f"Skipping action_token auto-migration: {e}")
+
 # --- DECORATORS ---
 def login_required(f):
     @wraps(f)
@@ -592,7 +593,7 @@ def pricing():
 def create_checkout_session():
     user = User.query.get(session['user_id'])
     plan = request.form.get('plan', 'STARTER')
-    amount = request.form.get('amount', '19')
+    amount = request.form.get('amount', '49')
 
     # Unique reference containing tier info (e.g. BB-GROWTH-1-a1b2c3)
     tx_ref = f"BB-{plan}-{user.id}-{uuid.uuid4().hex[:6]}"
@@ -667,7 +668,7 @@ def flutterwave_callback():
     return redirect(url_for('pricing'))
 
 # --- SENDWAVE MANUAL PAYMENT VERIFICATION ---
-SENDWAVE_PLAN_AMOUNTS = {"STARTER": 19, "GROWTH": 49, "PRO": 99}
+SENDWAVE_PLAN_AMOUNTS = {"STARTER": 49, "GROWTH": 149, "PRO": 299}
 
 def send_sendwave_review_email(payment):
     """Emails ADMIN_EMAIL asking them to confirm a Sendwave payment, with
