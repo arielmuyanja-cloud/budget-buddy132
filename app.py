@@ -136,7 +136,8 @@ with app.app_context():
     try:
         from sqlalchemy import text
         db.session.execute(text(
-            "ALTER TABLE sendwave_payment ADD COLUMN IF NOT EXISTS action_token VARCHAR(64) UNIQUE"
+           ALTER TABLE sendwave_payment
+ADD COLUMN IF NOT EXISTS action_token VARCHAR(64)
         ))
         db.session.commit()
     except Exception as e:
