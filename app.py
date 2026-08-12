@@ -25,12 +25,31 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "budget-buddy-super-secret-key-2026")
 
 # Database Configuration (PostgreSQL on Render / SQLite locally)
-db_url = os.environ.get('DATABASE_URL', f"sqlite:///{os.path.join(os.path.abspath(os.path.dirname(__file__)), 'budget.db')}")
+db_url = os.environ.get(
+    'DATABASE_URL',
+    f"sqlite:///{os.path.join(os.path.abspath(os.path.dirname(__file__)), 'budget.db')}"
+)
+
 if db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql://", 1)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# Keep Render PostgreSQL connections healthy.
+# This prevents stale/dead connections from causing:
+# psycopg2.OperationalError: SSL SYSCALL error: EOF detected
+if db_url.startswith("postgresql://"):
+    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+        "pool_pre_ping": True,
+        "pool_recycle": 300,
+        "pool_timeout": 30,
+        "pool_size": 5,
+        "max_overflow": 10,
+        "connect_args": {
+            "sslmode": "require"
+        }
+    }
 
 db = SQLAlchemy(app)
 
