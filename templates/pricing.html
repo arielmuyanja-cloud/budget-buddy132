@@ -8,7 +8,7 @@
   </div>
 
   <div class="row row-cols-1 row-cols-md-2 row-cols-xl-4 g-4 align-items-stretch">
-    
+
     <!-- FREE TIER -->
     <div class="col">
       <div class="card h-100 shadow-sm border-0 rounded-4">
@@ -36,12 +36,12 @@
     <div class="col">
       <div class="card h-100 shadow-sm border-0 rounded-4">
         <div class="card-body p-4 d-flex flex-column">
-          <h3 class="fw-bold fs-4">Starter</h3>
+          <h3 class="fw-bold fs-4">🚀 Starter</h3>
           <div class="my-3">
-            <span class="fs-1 fw-bold">$19</span>
+            <span class="fs-1 fw-bold">$49</span>
             <span class="text-muted">/mo</span>
           </div>
-          <p class="text-muted small">Automation tools for smart daily tracking and receipts.</p>
+          <p class="text-muted small">Understand where your money goes.</p>
           <hr class="my-3">
           <ul class="list-unstyled mb-4 flex-grow-1">
             <li class="mb-2 text-primary fw-semibold"><i class="bi bi-check-circle-fill me-2"></i>Everything in Free</li>
@@ -50,29 +50,33 @@
             <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Budget alerts</li>
             <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Subscription tracking</li>
             <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Monthly reports</li>
+            <li class="mb-2">💻 Software spend tracking</li>
+            <li class="mb-2">🔍 Recurring expense detection</li>
+            <li class="mb-2">📊 Business spending overview</li>
+            <li class="mb-2">💡 Basic savings recommendations</li>
           </ul>
           <form action="{{ url_for('create_checkout_session') }}" method="POST">
             <input type="hidden" name="plan" value="STARTER">
-            <input type="hidden" name="amount" value="19">
+            <input type="hidden" name="amount" value="49">
             <button type="submit" class="btn btn-primary w-100 rounded-3 py-2">Upgrade to Starter</button>
           </form>
         </div>
       </div>
     </div>
 
-    <!-- GROWTH TIER (HIGHLIGHTED) -->
+    <!-- GROWTH TIER (HIGHLIGHTED / MAIN PLAN) -->
     <div class="col">
       <div class="card h-100 shadow border-2 border-primary rounded-4 position-relative">
         <span class="position-absolute top-0 start-50 translate-middle badge rounded-pill bg-primary px-3 py-2">
           ⭐ Most Popular
         </span>
         <div class="card-body p-4 d-flex flex-column">
-          <h3 class="fw-bold fs-4">Growth</h3>
+          <h3 class="fw-bold fs-4">⭐ Growth</h3>
           <div class="my-3">
-            <span class="fs-1 fw-bold">$49</span>
+            <span class="fs-1 fw-bold">$149</span>
             <span class="text-muted">/mo</span>
           </div>
-          <p class="text-muted small">Deep AI insights and cost-cutting for agencies and businesses.</p>
+          <p class="text-muted small">Find where your agency is wasting money. ⭐</p>
           <hr class="my-3">
           <ul class="list-unstyled mb-4 flex-grow-1">
             <li class="mb-2 text-primary fw-semibold"><i class="bi bi-check-circle-fill me-2"></i>Everything in Starter</li>
@@ -83,10 +87,16 @@
             <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Expense benchmarking</li>
             <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Automated monthly reports</li>
             <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>More integrations</li>
+            <li class="mb-2">🧾 Duplicate charge detection</li>
+            <li class="mb-2">👥 Unused-seat detection</li>
+            <li class="mb-2">📈 Software price increase alerts</li>
+            <li class="mb-2">💰 Potential monthly savings calculator</li>
+            <li class="mb-2">🏢 Agency spending analytics</li>
+            <li class="mb-2">🔎 SaaS spend audit</li>
           </ul>
           <form action="{{ url_for('create_checkout_session') }}" method="POST">
             <input type="hidden" name="plan" value="GROWTH">
-            <input type="hidden" name="amount" value="49">
+            <input type="hidden" name="amount" value="149">
             <button type="submit" class="btn btn-primary w-100 rounded-3 py-2 fw-bold">Upgrade to Growth</button>
           </form>
         </div>
@@ -97,12 +107,12 @@
     <div class="col">
       <div class="card h-100 shadow-sm border-0 rounded-4">
         <div class="card-body p-4 d-flex flex-column">
-          <h3 class="fw-bold fs-4">Pro</h3>
+          <h3 class="fw-bold fs-4">🏆 Pro</h3>
           <div class="my-3">
-            <span class="fs-1 fw-bold">$99</span>
+            <span class="fs-1 fw-bold">$299</span>
             <span class="text-muted">/mo</span>
           </div>
-          <p class="text-muted small">Maximum analytics, multi-business support, and dedicated help.</p>
+          <p class="text-muted small">Control spending across your entire organization.</p>
           <hr class="my-3">
           <ul class="list-unstyled mb-4 flex-grow-1">
             <li class="mb-2 text-primary fw-semibold"><i class="bi bi-check-circle-fill me-2"></i>Everything in Growth</li>
@@ -112,10 +122,18 @@
             <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Unlimited AI analysis</li>
             <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Priority support</li>
             <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Advanced reports</li>
+            <li class="mb-2">🔥 Advanced software waste detection</li>
+            <li class="mb-2">💳 Duplicate subscription detection</li>
+            <li class="mb-2">👤 Employee/seat utilization analysis</li>
+            <li class="mb-2">📉 Advanced cost-saving opportunities</li>
+            <li class="mb-2">📊 Department/team spending breakdown</li>
+            <li class="mb-2">🚨 Significant price-change alerts</li>
+            <li class="mb-2">📑 Executive financial reports</li>
+            <li class="mb-2">🔗 Advanced integrations</li>
           </ul>
           <form action="{{ url_for('create_checkout_session') }}" method="POST">
             <input type="hidden" name="plan" value="PRO">
-            <input type="hidden" name="amount" value="99">
+            <input type="hidden" name="amount" value="299">
             <button type="submit" class="btn btn-dark w-100 rounded-3 py-2">Upgrade to Pro</button>
           </form>
         </div>
@@ -170,9 +188,9 @@
               <div class="flex-grow-1">
                 <label class="form-label text-white small mb-2">Select the plan you paid for</label>
                 <select name="plan" class="form-select py-3" required>
-                  <option value="STARTER">Starter — $19</option>
-                  <option value="GROWTH">Growth — $49</option>
-                  <option value="PRO" selected>Pro — $99</option>
+                  <option value="STARTER">Starter — $49</option>
+                  <option value="GROWTH">Growth — $149</option>
+                  <option value="PRO" selected>Pro — $299</option>
                 </select>
               </div>
             </div>
