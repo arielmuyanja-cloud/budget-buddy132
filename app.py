@@ -57,6 +57,7 @@ db = SQLAlchemy(app)
 FLW_PUBLIC_KEY = os.environ.get("FLW_PUBLIC_KEY", "FLWPUBK_TEST-xxxxxxxx")
 FLW_SECRET_KEY = os.environ.get("FLW_SECRET_KEY", "FLWSECK_TEST-xxxxxxxx")
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 
 # Owner email — used to gate the manual payment approval dashboard
 ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "amuyanja1314@gmail.com")
@@ -174,6 +175,11 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+@app.context_processor
+def inject_current_user():
+    user = User.query.get(session['user_id']) if 'user_id' in session else None
+    return {'current_user': user}
+
 # --- ANALYTICS & RECURRING ENGINE ---
 KNOWN_SUBSCRIPTIONS = ["adobe", "chatgpt", "canva", "google workspace", "slack", "zoom", "hubspot", "semrush", "github", "render", "meta", "linkedin"]
 
@@ -204,6 +210,379 @@ def compute_financial_health(revenue, expenses, budgets, user_id):
             score -= 10
 
     return max(0, min(100, score))
+
+# --- PRO AI FINANCIAL INTELLIGENCE ENGINE ---
+# Everything below computes real numbers from the user's own transactions.
+# No hardcoded/generic insight strings — if a section can't be backed by
+# actual data, it's omitted rather than filled with a placeholder.
+MARKETING_KEYWORDS = ["advertising", "marketing", "ads", "ppc", "paid media"]
+
+def _pct_change(new, old):
+    """% change from old -> new. None if there's no baseline to compare to."""
+    if not old:
+        return None
+    return (new - old) / old * 100.0
+
+def get_monthly_series(user_id):
+    """Buckets this user's transactions by calendar month, oldest to newest."""
+    txs = Transaction.query.filter_by(user_id=user_id).order_by(Transaction.date.asc()).all()
+    buckets = {}
+    for t in txs:
+        key = (t.date.year, t.date.month)
+        b = buckets.setdefault(key, {"income": 0.0, "expense": 0.0,
+                                      "expense_by_category": {}, "income_by_desc": {}})
+        if t.type == 'INCOME':
+            b["income"] += t.amount
+            desc_key = t.description.strip().lower()
+            b["income_by_desc"][desc_key] = b["income_by_desc"].get(desc_key, 0.0) + t.amount
+        else:
+            b["expense"] += t.amount
+            b["expense_by_category"][t.category] = b["expense_by_category"].get(t.category, 0.0) + t.amount
+
+    months = []
+    for (y, m) in sorted(buckets.keys()):
+        b = buckets[(y, m)]
+        income, expense = b["income"], b["expense"]
+        months.append({
+            "year": y, "month": m,
+            "label": datetime(y, m, 1).strftime("%b %Y"),
+            "income": income, "expense": expense, "profit": income - expense,
+            "margin": ((income - expense) / income * 100.0) if income > 0 else None,
+            "expense_by_category": b["expense_by_category"],
+            "income_by_desc": b["income_by_desc"],
+        })
+    return months
+
+def get_income_by_client(user_id):
+    """Groups all-time income by transaction description, as a proxy for
+    'client' — the schema doesn't have a dedicated client field. Grouping is
+    exact-match on description text, so this undercounts concentration if the
+    same client is logged under varying descriptions."""
+    rows = db.session.query(Transaction.description, db.func.sum(Transaction.amount)) \
+        .filter_by(user_id=user_id, type='INCOME').group_by(Transaction.description).all()
+    result = {}
+    for desc, total in rows:
+        key = desc.strip().lower()
+        result[key] = result.get(key, 0.0) + (total or 0.0)
+    return result
+
+def compute_profitability_diagnosis(months):
+    if len(months) < 2:
+        return None
+    current, prior = months[-1], months[-2]
+    margin_now, margin_prior = current["margin"], prior["margin"]
+    top_expense_categories = sorted(current["expense_by_category"].items(),
+                                     key=lambda kv: kv[1], reverse=True)[:3]
+    return {
+        "current_label": current["label"], "prior_label": prior["label"],
+        "revenue": current["income"], "expenses": current["expense"],
+        "revenue_change_pct": _pct_change(current["income"], prior["income"]),
+        "expense_change_pct": _pct_change(current["expense"], prior["expense"]),
+        "margin_now": margin_now, "margin_prior": margin_prior,
+        "margin_change": (margin_now - margin_prior) if (margin_now is not None and margin_prior is not None) else None,
+        "top_expense_categories": top_expense_categories,
+    }
+
+def compute_forecast(months):
+    """90-day (3-month) projection. Uses the last up to 3 months as a run
+    rate, and the growth rate observed across that same window as drift."""
+    if not months:
+        return None
+    window = months[-3:] if len(months) >= 3 else months
+    avg_rev = sum(m["income"] for m in window) / len(window)
+    avg_exp = sum(m["expense"] for m in window) / len(window)
+
+    rev_growth = _pct_change(window[-1]["income"], window[0]["income"]) if len(window) >= 2 else None
+    exp_growth = _pct_change(window[-1]["expense"], window[0]["expense"]) if len(window) >= 2 else None
+    rev_drift = (rev_growth / 100.0 / len(window)) if rev_growth is not None else 0.0
+    exp_drift = (exp_growth / 100.0 / len(window)) if exp_growth is not None else 0.0
+
+    projected_revenue = projected_expense = 0.0
+    rev_m, exp_m = avg_rev, avg_exp
+    for _ in range(3):
+        rev_m *= (1 + rev_drift)
+        exp_m *= (1 + exp_drift)
+        projected_revenue += rev_m
+        projected_expense += exp_m
+
+    projected_profit = projected_revenue - projected_expense
+    flat_run_rate_profit = (avg_rev - avg_exp) * 3
+
+    return {
+        "based_on_months": [m["label"] for m in window],
+        "projected_revenue": projected_revenue,
+        "projected_expense": projected_expense,
+        "projected_profit": projected_profit,
+        "profit_delta_vs_flat": projected_profit - flat_run_rate_profit,
+        "revenue_growth_pct": rev_growth,
+        "expense_growth_pct": exp_growth,
+    }
+
+def compute_budget_recommendation(months, categories):
+    """Marketing/advertising spend vs. a 12-15% of revenue agency
+    benchmark. Only returned when the user actually has marketing spend
+    logged this month, against real revenue."""
+    if not months:
+        return None
+    current = months[-1]
+    revenue = current["income"]
+    if revenue <= 0:
+        return None
+
+    spend, matched_name = 0.0, None
+    for cat_name, amt in current["expense_by_category"].items():
+        if any(kw in cat_name.lower() for kw in MARKETING_KEYWORDS):
+            spend += amt
+            matched_name = matched_name or cat_name
+    if spend <= 0:
+        return None
+
+    low_pct, high_pct = 12.0, 15.0
+    return {
+        "category_label": matched_name, "month_label": current["label"],
+        "current_spend": spend,
+        "current_pct_of_revenue": spend / revenue * 100.0,
+        "recommended_low_pct": low_pct, "recommended_high_pct": high_pct,
+        "suggested_low": revenue * low_pct / 100.0,
+        "suggested_high": revenue * high_pct / 100.0,
+    }
+
+def detect_financial_risks(months, income_by_client):
+    """Only flags risks that can be pinned to an actual number — nothing
+    generic. Order roughly reflects severity/likely impact."""
+    risks = []
+    if not months:
+        return risks
+    current = months[-1]
+    prior = months[-2] if len(months) >= 2 else None
+
+    # Client concentration
+    total_income = sum(income_by_client.values())
+    if total_income > 0 and len(income_by_client) > 1:
+        top_client, top_amt = max(income_by_client.items(), key=lambda kv: kv[1])
+        top_pct = top_amt / total_income * 100.0
+        if top_pct >= 30:
+            risks.append({
+                "title": "Client concentration risk",
+                "narrative": f"\"{top_client.title()}\" makes up {top_pct:.0f}% of your total recorded "
+                             f"revenue (${top_amt:,.0f} of ${total_income:,.0f}). Losing that account "
+                             f"would hit cash flow hard.",
+                "recommendation": "Aim to bring this below 30% by growing revenue from other accounts."
+            })
+
+    # Expenses outpacing revenue
+    if prior:
+        rev_chg, exp_chg = _pct_change(current["income"], prior["income"]), _pct_change(current["expense"], prior["expense"])
+        if rev_chg is not None and exp_chg is not None and exp_chg > rev_chg + 5:
+            risks.append({
+                "title": "Expenses growing faster than revenue",
+                "narrative": f"Revenue moved {rev_chg:+.0f}% from {prior['label']} to {current['label']}, "
+                             f"while expenses moved {exp_chg:+.0f}%.",
+                "recommendation": "Review your largest expense categories before taking on new recurring costs."
+            })
+
+    # Margin shrinking
+    if prior and current["margin"] is not None and prior["margin"] is not None:
+        margin_change = current["margin"] - prior["margin"]
+        if margin_change <= -3:
+            risks.append({
+                "title": "Profit margin shrinking",
+                "narrative": f"Margin fell from {prior['margin']:.0f}% to {current['margin']:.0f}% "
+                             f"between {prior['label']} and {current['label']}.",
+                "recommendation": "Pin down which cost or pricing change drove the drop before it compounds."
+            })
+
+    # Revenue volatility (needs a few months to mean anything)
+    if len(months) >= 3:
+        incomes = [m["income"] for m in months[-6:]]
+        mean = sum(incomes) / len(incomes)
+        if mean > 0:
+            stdev = (sum((x - mean) ** 2 for x in incomes) / len(incomes)) ** 0.5
+            cv = stdev / mean
+            if cv >= 0.3:
+                risks.append({
+                    "title": "Revenue volatility",
+                    "narrative": f"Monthly revenue has swung by an average of {cv*100:.0f}% around your "
+                                 f"{len(incomes)}-month mean of ${mean:,.0f}.",
+                    "recommendation": "Size a cash buffer to your worst recent month, not your average one."
+                })
+
+    # Single-category expense concentration
+    if current["expense"] > 0:
+        worst_cat, worst_amt = max(current["expense_by_category"].items(), key=lambda kv: kv[1], default=(None, 0))
+        if worst_cat:
+            pct = worst_amt / current["expense"] * 100.0
+            if pct >= 40:
+                risks.append({
+                    "title": f"Heavy spend concentration in {worst_cat}",
+                    "narrative": f"{worst_cat} is {pct:.0f}% of this month's total expenses "
+                                 f"(${worst_amt:,.0f} of ${current['expense']:,.0f}).",
+                    "recommendation": "Worth a line-by-line review for anything reducible."
+                })
+
+    # Sudden category spend spike
+    if prior:
+        for cat, amt in current["expense_by_category"].items():
+            prior_amt = prior["expense_by_category"].get(cat, 0.0)
+            change = _pct_change(amt, prior_amt)
+            if prior_amt > 0 and change is not None and change >= 50 and amt >= 100:
+                risks.append({
+                    "title": f"Sudden increase in {cat}",
+                    "narrative": f"{cat} spend jumped {change:.0f}% month-over-month "
+                                 f"(${prior_amt:,.0f} → ${amt:,.0f}).",
+                    "recommendation": "Confirm this is intentional and not a duplicate charge or missed cancellation."
+                })
+                break  # one spike example is enough; avoid flooding the list
+
+    return risks
+
+def build_ai_context(user):
+    months = get_monthly_series(user.id)
+    categories = Category.query.filter_by(user_id=user.id).all()
+    return {
+        "agency_name": user.agency_name or user.email,
+        "months_of_data": len(months),
+        "current_month": months[-1] if months else None,
+        "diagnosis": compute_profitability_diagnosis(months),
+        "forecast": compute_forecast(months),
+        "risks": detect_financial_risks(months, get_income_by_client(user.id)),
+        "budget_recommendation": compute_budget_recommendation(months, categories),
+    }
+
+def _serialize_ai_context(ctx):
+    """Trimmed, rounded version of build_ai_context() for the LLM prompt —
+    keeps token usage down and gives the model only clean, real numbers."""
+    out = {"agency_name": ctx["agency_name"], "months_of_data": ctx["months_of_data"]}
+    if ctx["current_month"]:
+        cm = ctx["current_month"]
+        out["current_month"] = {
+            "label": cm["label"], "revenue": round(cm["income"], 2), "expenses": round(cm["expense"], 2),
+            "profit": round(cm["profit"], 2),
+            "margin_pct": round(cm["margin"], 1) if cm["margin"] is not None else None,
+            "top_expense_categories": [[c, round(a, 2)] for c, a in
+                sorted(cm["expense_by_category"].items(), key=lambda kv: kv[1], reverse=True)[:5]],
+        }
+    if ctx["diagnosis"]:
+        d = ctx["diagnosis"]
+        out["month_over_month"] = {
+            "prior_label": d["prior_label"], "current_label": d["current_label"],
+            "revenue_change_pct": round(d["revenue_change_pct"], 1) if d["revenue_change_pct"] is not None else None,
+            "expense_change_pct": round(d["expense_change_pct"], 1) if d["expense_change_pct"] is not None else None,
+            "margin_prior_pct": round(d["margin_prior"], 1) if d["margin_prior"] is not None else None,
+            "margin_now_pct": round(d["margin_now"], 1) if d["margin_now"] is not None else None,
+        }
+    if ctx["forecast"]:
+        f = ctx["forecast"]
+        out["forecast_90_day"] = {
+            "projected_revenue": round(f["projected_revenue"], 2),
+            "projected_expenses": round(f["projected_expense"], 2),
+            "projected_profit": round(f["projected_profit"], 2),
+        }
+    if ctx["risks"]:
+        out["flagged_risks"] = [r["title"] + ": " + r["narrative"] for r in ctx["risks"]]
+    if ctx["budget_recommendation"]:
+        b = ctx["budget_recommendation"]
+        out["marketing_budget"] = {
+            "category": b["category_label"], "current_pct_of_revenue": round(b["current_pct_of_revenue"], 1),
+            "recommended_range_pct": [b["recommended_low_pct"], b["recommended_high_pct"]],
+        }
+    return out
+
+def rule_based_ai_answer(question, ctx):
+    """Deterministic fallback used when OPENAI_API_KEY isn't set or the API
+    call fails. Every number here comes straight from ctx — nothing invented."""
+    q = question.lower()
+    current, diagnosis = ctx["current_month"], ctx["diagnosis"]
+
+    if not current:
+        return ("You don't have any transactions logged yet, so there's nothing real for me to "
+                "calculate from. Add some income and expenses and ask again.")
+
+    profit, margin = current["profit"], current["margin"]
+
+    if any(k in q for k in ["hire", "afford", "headcount", "employee"]):
+        parts = [f"{ctx['agency_name']} is running at about ${profit:,.0f} profit this month"]
+        if margin is not None:
+            parts[0] += f" ({margin:.0f}% margin)"
+        if diagnosis and diagnosis["margin_change"] is not None:
+            if diagnosis["margin_change"] < 0:
+                parts.append(f"Margin has been declining ({diagnosis['margin_prior']:.0f}% → "
+                              f"{diagnosis['margin_now']:.0f}%), so I'd hold off on a new hire until it stabilizes.")
+            else:
+                parts.append(f"Margin has been steady or improving ({diagnosis['margin_prior']:.0f}% → "
+                              f"{diagnosis['margin_now']:.0f}%), which is a reasonable position to add headcount from.")
+        else:
+            parts.append("I only have one month of data so far, so I can't confirm this is a trend yet.")
+        return " ".join(parts)
+
+    if "margin" in q or "profit" in q:
+        if diagnosis:
+            return (f"Margin moved from {diagnosis['margin_prior']:.0f}% in {diagnosis['prior_label']} to "
+                    f"{diagnosis['margin_now']:.0f}% in {diagnosis['current_label']}. Revenue changed "
+                    f"{diagnosis['revenue_change_pct']:+.0f}% while expenses changed {diagnosis['expense_change_pct']:+.0f}%.")
+        return (f"This month's margin is {margin:.0f}% (${profit:,.0f} profit on ${current['income']:,.0f} "
+                f"revenue). Log another month and I can show you the trend.") if margin is not None else \
+               "No revenue logged yet this month, so margin isn't calculable."
+
+    if any(k in q for k in ["forecast", "90", "quarter", "next 3"]):
+        f = ctx["forecast"]
+        if f:
+            return (f"Based on your last {len(f['based_on_months'])} month(s), projected 90-day revenue is "
+                     f"${f['projected_revenue']:,.0f} against ${f['projected_expense']:,.0f} expenses — "
+                     f"about ${f['projected_profit']:,.0f} profit.")
+        return "Not enough transaction history yet to forecast — log at least one full month."
+
+    parts = [f"This month: ${current['income']:,.0f} revenue, ${current['expense']:,.0f} expenses, ${profit:,.0f} profit"]
+    if margin is not None:
+        parts[0] += f" ({margin:.0f}% margin)"
+    if ctx["risks"]:
+        parts.append(f"Biggest flag right now: {ctx['risks'][0]['narrative']}")
+    parts.append('Try asking "Can I afford to hire another employee?" or "How is my margin trending?"')
+    return " ".join(parts)
+
+def call_ai_provider(system_prompt, question):
+    """Tries Gemini first — it's the free-tier key you've actually got set
+    up — then falls back to OpenAI if that key happens to be configured too.
+    Returns None (never raises) if neither is available or both fail, so the
+    caller can drop to the deterministic rule-based answer."""
+    if GEMINI_API_KEY:
+        try:
+            from google import genai
+            from google.genai import types
+            client = genai.Client(api_key=GEMINI_API_KEY)
+            res = client.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=question,
+                config=types.GenerateContentConfig(
+                    system_instruction=system_prompt,
+                    max_output_tokens=300,
+                ),
+            )
+            text = (res.text or "").strip()
+            if text:
+                return text
+        except Exception as e:
+            app.logger.warning(f"Gemini call failed, trying next provider: {e}")
+
+    if OPENAI_API_KEY:
+        try:
+            client = openai.OpenAI(api_key=OPENAI_API_KEY)
+            res = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": question}
+                ],
+                max_tokens=300,
+            )
+            text = (res.choices[0].message.content or "").strip()
+            if text:
+                return text
+        except Exception as e:
+            app.logger.warning(f"OpenAI call failed: {e}")
+
+    return None
+
     # --- AUTH ROUTES ---
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -554,34 +933,89 @@ def advanced_reports():
 @login_required
 @pro_required
 def ai_insights():
-    txs = Transaction.query.filter_by(user_id=session['user_id']).all()
-    summary = f"Total transactions: {len(txs)}. Total expense sum: ${sum(t.amount for t in txs if t.type == 'EXPENSE'):.2f}."
+    """Powers the dashboard's 'AI Financial Insights' card. Deliberately NOT
+    an LLM free-text call — every line here is built from the user's actual
+    numbers via build_ai_context(), so there's no risk of generic filler
+    like "client revenue margins are steady" showing up for someone it
+    isn't true for."""
+    user = User.query.get(session['user_id'])
+    ctx = build_ai_context(user)
+    insights = []
 
-    if OPENAI_API_KEY:
-        try:
-            client = openai.OpenAI(api_key=OPENAI_API_KEY)
-            res = client.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {"role": "system", "content": "You are a financial advisor for digital agencies. Provide 3 short, actionable financial insights."},
-                    {"role": "user", "content": summary}
-                ]
+    if ctx["diagnosis"]:
+        d = ctx["diagnosis"]
+        if d["revenue_change_pct"] is not None and d["expense_change_pct"] is not None:
+            margin_bit = ""
+            if d["margin_prior"] is not None and d["margin_now"] is not None:
+                margin_bit = f" — margin {d['margin_prior']:.0f}% → {d['margin_now']:.0f}%"
+            insights.append(
+                f"Revenue {d['revenue_change_pct']:+.0f}% vs {d['prior_label']}, expenses "
+                f"{d['expense_change_pct']:+.0f}%{margin_bit}."
             )
-            insights = res.choices[0].message.content.split('\n')
-        except Exception:
-            insights = [
-                "Software costs are trending 12% higher than standard agency benchmarks.",
-                "Client revenue margins are steady.",
-                "Unused SaaS seats detected in Adobe and Canva accounts."
-            ]
-    else:
-        insights = [
-            "Your software spending increased 18% month-over-month.",
-            "Client revenue is scaling faster than operational overhead.",
-            "Recurring software subscriptions account for 34% of overall budget usage."
-        ]
 
-    return jsonify({"insights": insights})
+    if ctx["risks"]:
+        insights.append(ctx["risks"][0]["narrative"])
+
+    if ctx["budget_recommendation"]:
+        b = ctx["budget_recommendation"]
+        insights.append(
+            f"{b['category_label']} spend is {b['current_pct_of_revenue']:.0f}% of {b['month_label']} "
+            f"revenue (benchmark: {b['recommended_low_pct']:.0f}\u2013{b['recommended_high_pct']:.0f}%)."
+        )
+
+    if not insights:
+        if ctx["current_month"]:
+            cm = ctx["current_month"]
+            insights.append(f"{cm['label']} so far: ${cm['income']:,.0f} revenue, ${cm['expense']:,.0f} expenses.")
+        insights.append("Log a few weeks of transactions and trend-based insights will start showing up here.")
+
+    return jsonify({"insights": insights[:3]})
+
+@app.route('/pro')
+@login_required
+@pro_required
+def pro():
+    """AI Financial Insights — Pro: the AI-CFO view. Separate from the SaaS
+    Scanner (which finds wasted software spend); this is about the health
+    of the whole business and what to do next."""
+    user = User.query.get(session['user_id'])
+    ctx = build_ai_context(user)
+    return render_template(
+        'pro.html',
+        user=user,
+        current=ctx["current_month"],
+        diagnosis=ctx["diagnosis"],
+        forecast=ctx["forecast"],
+        risks=ctx["risks"],
+        budget_rec=ctx["budget_recommendation"],
+        has_data=bool(ctx["current_month"]),
+    )
+
+@app.route('/api/ask-ai', methods=['POST'])
+@login_required
+@pro_required
+def ask_ai():
+    user = User.query.get(session['user_id'])
+    payload = request.get_json(silent=True) or {}
+    question = payload.get('question', '').strip()[:500]
+    if not question:
+        return jsonify({"error": "Ask a question first."}), 400
+
+    ctx = build_ai_context(user)
+    system_prompt = (
+        "You are Budget Buddy AI, a financial strategist for a marketing/digital agency. "
+        "Below is this agency's real financial data, computed directly from their books. "
+        "Only use numbers that appear in this data — never invent or estimate a figure that "
+        "isn't given. If the question needs a number that isn't present, say plainly what "
+        "data is missing instead of guessing. Answer in under 120 words, direct and specific, "
+        "plain text (no markdown headers or bullet lists).\n\n"
+        f"AGENCY DATA:\n{json.dumps(_serialize_ai_context(ctx))}"
+    )
+    answer = call_ai_provider(system_prompt, question)
+    if not answer:
+        answer = rule_based_ai_answer(question, ctx)
+
+    return jsonify({"answer": answer})
 
 # --- FLUTTERWAVE BILLING INTEGRATION ---
 @app.route('/pricing')
