@@ -50,7 +50,7 @@
         <div class="col-md-6">
             <div class="card p-3 h-100">
                 <h5 class="fw-bold text-primary"><i class="bi bi-cpu me-2"></i>AI Financial Insights</h5>
-                {% if user.plan_tier == 'PRO' %}
+                {% if user.plan_tier in ['GROWTH', 'PRO'] %}
                 <div id="ai-container" class="mt-2 small text-secondary">Loading AI audit...</div>
                 <script>
                     fetch('/api/ai-insights').then(r => r.json()).then(d => {
@@ -59,6 +59,7 @@
                         document.getElementById('ai-container').innerHTML = html + '</ul>';
                     });
                 </script>
+                <a href="{{ url_for('pro') }}" class="btn btn-outline-primary btn-sm mt-3">View full Pro analysis &rarr;</a>
                 {% else %}
                 <p class="small text-secondary mt-2">Upgrade to PRO to unlock real-time automated AI spend analysis.</p>
                 <a href="{{ url_for('pricing') }}" class="btn btn-warning btn-sm mt-auto">Upgrade ($29/mo)</a>
