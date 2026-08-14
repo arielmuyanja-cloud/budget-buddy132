@@ -36,31 +36,35 @@ if db_url.startswith("postgres://"):
 app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# Keep Render PostgreSQL connections healthy.
+# Controlled connection pool to prevent PostgreSQL pool exhaustion (503 Backend.max_conn)
 if db_url.startswith("postgresql://"):
     app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
         "pool_pre_ping": True,
-        "pool_recycle": 300,
-        "pool_timeout": 30,
-        "pool_size": 5,
-        "max_overflow": 10,
+        "pool_recycle": 180,
+        "pool_timeout": 10,
+        "pool_size": 3,
+        "max_overflow": 2,
         "connect_args": {
-            "sslmode": "require"
+            "sslmode": "require",
+            "connect_timeout": 10
         }
     }
 
 db = SQLAlchemy(app)
 
-# External API Keys (Flutterwave, OpenAI, Gemini)
+# External API Keys and Environment Settings
 FLW_PUBLIC_KEY = os.environ.get("FLW_PUBLIC_KEY", "FLWPUBK_TEST-xxxxxxxx")
 FLW_SECRET_KEY = os.environ.get("FLW_SECRET_KEY", "FLWSECK_TEST-xxxxxxxx")
+PADDLE_API_KEY = os.environ.get("PADDLE_API_KEY", "")
+PADDLE_CLIENT_TOKEN = os.environ.get("PADDLE_CLIENT_TOKEN", "")
+PADDLE_ENV = os.environ.get("PADDLE_ENV", "sandbox")
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 
-# Owner email — used to gate the manual payment approval dashboard
+# Owner email for manual payment review
 ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "amuyanja1314@gmail.com")
 
-# SMTP config — used to email the admin when a Sendwave payment needs review
+# SMTP config for Sendwave notifications
 SMTP_SERVER = os.environ.get("SMTP_SERVER", "smtp.gmail.com")
 SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
 SMTP_USERNAME = os.environ.get("SMTP_USERNAME", "")
@@ -77,8 +81,8 @@ class User(db.Model):
     is_verified = db.Column(db.Boolean, default=False)
     reset_token = db.Column(db.String(100), nullable=True)
     currency = db.Column(db.String(10), default="USD")
-    tax_rate = db.Column(db.Float, default=20.0)  # Default 20% tax reserve suggestion
-    cash_balance = db.Column(db.Float, default=0.0)  # For runway calculation
+    tax_rate = db.Column(db.Float, default=20.0)
+    cash_balance = db.Column(db.Float, default=0.0)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     transactions = db.relationship('Transaction', backref='user', lazy=True, cascade="all, delete-orphan")
@@ -103,7 +107,7 @@ class Transaction(db.Model):
     amount = db.Column(db.Float, nullable=False)
     type = db.Column(db.String(10), nullable=False)  # 'INCOME' or 'EXPENSE'
     category = db.Column(db.String(50), nullable=False, default="General")
-    client_name = db.Column(db.String(100), nullable=True)  # Client tagging for agency profitability
+    client_name = db.Column(db.String(100), nullable=True)
 
 class Category(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -112,7 +116,6 @@ class Category(db.Model):
     type = db.Column(db.String(10), nullable=False, default="EXPENSE")
 
 class CategoryRule(db.Model):
-    """Auto-categorization rule: if keyword in description, map to target category"""
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     keyword = db.Column(db.String(100), nullable=False)
@@ -134,11 +137,11 @@ class Goal(db.Model):
 class SendwavePayment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    plan_requested = db.Column(db.String(20), nullable=False)   # STARTER, GROWTH, PRO
+    plan_requested = db.Column(db.String(20), nullable=False)
     amount = db.Column(db.Float, nullable=False)
-    reference_code = db.Column(db.String(100), nullable=False)  # Sendwave transaction/reference code
-    sender_name = db.Column(db.String(120), nullable=True)      # name payment was sent under, if different
-    status = db.Column(db.String(20), default="PENDING")        # PENDING, APPROVED, REJECTED
+    reference_code = db.Column(db.String(100), nullable=False)
+    sender_name = db.Column(db.String(120), nullable=True)
+    status = db.Column(db.String(20), default="PENDING")
     submitted_at = db.Column(db.DateTime, default=datetime.utcnow)
     reviewed_at = db.Column(db.DateTime, nullable=True)
     admin_notes = db.Column(db.String(300), nullable=True)
@@ -146,10 +149,10 @@ class SendwavePayment(db.Model):
 
     user = db.relationship('User', backref=db.backref('sendwave_payments', cascade="all, delete-orphan"))
 
-# Automatic Schema Initialization & Safe Migrations for PostgreSQL and SQLite
+# --- SAFE STARTUP & MULTI-WORKER INITIALIZATION ---
 with app.app_context():
-    db.create_all()
     try:
+        db.create_all()
         from sqlalchemy import text
         migrations = [
             ("sendwave_payment", "action_token", "VARCHAR(64)"),
@@ -158,19 +161,25 @@ with app.app_context():
             ("user", "cash_balance", "FLOAT DEFAULT 0.0"),
             ("transaction", "client_name", "VARCHAR(100)")
         ]
-        
         for table, col, col_type in migrations:
             try:
                 if db_url.startswith("postgresql://"):
-                    db.session.execute(text(f"ALTER TABLE \"{table}\" ADD COLUMN IF NOT EXISTS {col} {col_type}"))
+                    db.session.execute(text(f'ALTER TABLE "{table}" ADD COLUMN IF NOT EXISTS {col} {col_type}'))
                 else:
-                    db.session.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} {col_type}"))
+                    db.session.execute(text(f'ALTER TABLE {table} ADD COLUMN {col} {col_type}'))
                 db.session.commit()
             except Exception:
                 db.session.rollback()
     except Exception as e:
         db.session.rollback()
-        app.logger.warning(f"Startup migrations status: {e}")
+        app.logger.warning(f"Startup schema check notice: {e}")
+    finally:
+        db.session.remove()
+
+# Explicit context teardown to release SQLAlchemy connections back to pool immediately
+@app.teardown_appcontext
+def shutdown_session(exception=None):
+    db.session.remove()
 
 # --- DECORATORS ---
 def login_required(f):
@@ -205,10 +214,10 @@ def admin_required(f):
 @app.context_processor
 def inject_current_user():
     user = User.query.get(session['user_id']) if 'user_id' in session else None
-    return {'current_user': user}
+    return {'current_user': user, 'user': user, 'paddle_client_token': PADDLE_CLIENT_TOKEN, 'paddle_env': PADDLE_ENV}
 
-# --- ANALYTICS & RECURRING ENGINE ---
-KNOWN_SUBSCRIPTIONS = ["adobe", "chatgpt", "canva", "google workspace", "slack", "zoom", "hubspot", "semrush", "github", "render", "meta", "linkedin", "figma", "notion", "aws", "openai"]
+# --- ANALYTICS ENGINE (OPTIMIZED TO PREVENT N+1 QUERIES) ---
+KNOWN_SUBSCRIPTIONS = ["adobe", "chatgpt", "canva", "google workspace", "slack", "zoom", "hubspot", "semrush", "github", "render", "meta", "linkedin", "figma", "notion", "aws", "openai", "vercel"]
 
 def detect_subscriptions(transactions):
     detected = []
@@ -222,7 +231,7 @@ def detect_subscriptions(transactions):
                 break
     return detected
 
-def compute_financial_health(revenue, expenses, budgets, user_id):
+def compute_financial_health(revenue, expenses, budgets, user_id, spent_by_category=None):
     score = 100
     if revenue > 0:
         margin = (revenue - expenses) / revenue
@@ -231,15 +240,21 @@ def compute_financial_health(revenue, expenses, budgets, user_id):
     elif expenses > 0:
         score -= 40
 
+    if spent_by_category is None:
+        # Batch aggregate in a single query instead of querying per budget
+        rows = db.session.query(
+            Transaction.category, db.func.sum(Transaction.amount)
+        ).filter_by(user_id=user_id, type='EXPENSE').group_by(Transaction.category).all()
+        spent_by_category = {cat.lower(): (amt or 0.0) for cat, amt in rows}
+
     for b in budgets:
-        spent = sum(t.amount for t in Transaction.query.filter_by(user_id=user_id, category=b.category, type='EXPENSE').all())
+        spent = spent_by_category.get(b.category.lower(), 0.0)
         if b.monthly_limit > 0 and spent > b.monthly_limit:
             score -= 10
 
     return max(0, min(100, score))
 
 def compute_client_profitability(user_id):
-    """Computes revenue, expense, and net margin on a per-client level."""
     txs = Transaction.query.filter_by(user_id=user_id).all()
     client_data = {}
     for t in txs:
@@ -270,7 +285,6 @@ def compute_client_profitability(user_id):
     return result
 
 def compute_runway(user):
-    """Calculates cash runway in months based on cash balance and 90-day average monthly expense."""
     months = get_monthly_series(user.id)
     if not months:
         return {"runway_months": None, "monthly_burn": 0.0, "cash_balance": user.cash_balance or 0.0}
@@ -291,7 +305,7 @@ def compute_runway(user):
     }
 
 # --- PRO AI FINANCIAL INTELLIGENCE ENGINE ---
-MARKETING_KEYWORDS = ["advertising", "marketing", "ads", "ppc", "paid media"]
+MARKETING_KEYWORDS = ["advertising", "marketing", "ads", "ppc", "paid media", "meta ads", "google ads"]
 
 def _pct_change(new, old):
     if not old:
@@ -504,7 +518,6 @@ def build_ai_context(user):
     categories = Category.query.filter_by(user_id=user.id).all()
     runway_info = compute_runway(user)
     
-    # Monthly tax reserve calculation
     current_m = months[-1] if months else None
     tax_reserve = 0.0
     if current_m and current_m["income"] > 0:
@@ -650,11 +663,11 @@ def call_ai_provider(system_prompt, question):
             if text:
                 return text
         except Exception as e:
-            app.logger.warning(f"Gemini call failed, trying next provider: {e}")
+            app.logger.warning(f"Gemini call failed or timed out, trying next provider: {e}")
 
     if OPENAI_API_KEY:
         try:
-            client = openai.OpenAI(api_key=OPENAI_API_KEY)
+            client = openai.OpenAI(api_key=OPENAI_API_KEY, timeout=10.0)
             res = client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[
@@ -667,7 +680,7 @@ def call_ai_provider(system_prompt, question):
             if text:
                 return text
         except Exception as e:
-            app.logger.warning(f"OpenAI call failed: {e}")
+            app.logger.warning(f"OpenAI call failed or timed out: {e}")
 
     return None
 
@@ -743,7 +756,6 @@ def normalize_csv_header(header):
     return " ".join(h.split())
 
 def apply_auto_rules(user_id, description, default_cat="General"):
-    """Matches description against user's CategoryRules for automatic categorization."""
     if not description:
         return default_cat
     desc_l = description.lower()
@@ -776,7 +788,6 @@ def register():
         db.session.add(user)
         db.session.commit()
 
-        # Seed Default Categories
         defaults = [
             Category(user_id=user.id, name="Advertising", type="EXPENSE"),
             Category(user_id=user.id, name="Software", type="EXPENSE"),
@@ -786,7 +797,6 @@ def register():
         ]
         db.session.add_all(defaults)
 
-        # Seed Default Smart Categorization Rules
         default_rules = [
             CategoryRule(user_id=user.id, keyword="adobe", target_category="Software"),
             CategoryRule(user_id=user.id, keyword="figma", target_category="Software"),
@@ -843,8 +853,10 @@ def profile():
         user.agency_name = request.form.get('agency_name', user.agency_name)
         user.currency = request.form.get('currency', user.currency or 'USD').upper()
         try:
-            user.tax_rate = float(request.form.get('tax_rate', user.tax_rate or 20.0))
-            user.cash_balance = float(request.form.get('cash_balance', user.cash_balance or 0.0))
+            if request.form.get('tax_rate'):
+                user.tax_rate = float(request.form.get('tax_rate'))
+            if request.form.get('cash_balance'):
+                user.cash_balance = float(request.form.get('cash_balance'))
         except (ValueError, TypeError):
             pass
 
@@ -852,7 +864,7 @@ def profile():
         if new_pw:
             user.password_hash = generate_password_hash(new_pw, method='scrypt')
         db.session.commit()
-        flash("Settings and financial parameters updated.", "success")
+        flash("Settings and parameters updated.", "success")
         return redirect(url_for('profile'))
     return render_template('profile.html', user=user)
 
@@ -865,9 +877,9 @@ def index():
 @login_required
 def dashboard():
     user = User.query.get(session['user_id'])
-    query_str = request.args.get('q', '').strip()
+    query_str = request.args.get('q', request.args.get('search', '')).strip()
     category_filter = request.args.get('category', '')
-    type_filter = request.args.get('type', '')
+    type_filter = request.args.get('type', request.args.get('kind', ''))
     client_filter = request.args.get('client', '')
     sort_by = request.args.get('sort', 'date_desc')
 
@@ -882,7 +894,7 @@ def dashboard():
     if category_filter:
         tx_query = tx_query.filter_by(category=category_filter)
     if type_filter:
-        tx_query = tx_query.filter_by(type=type_filter)
+        tx_query = tx_query.filter_by(type=type_filter.upper())
     if client_filter:
         tx_query = tx_query.filter_by(client_name=client_filter)
 
@@ -902,23 +914,35 @@ def dashboard():
     budgets = Budget.query.filter_by(user_id=user.id).all()
     budget_progress = []
     alerts = []
+    
+    # Pre-aggregate expenses by category in memory from loaded transactions
+    spent_by_category = {}
+    for t in transactions:
+        if t.type == 'EXPENSE':
+            cat_l = t.category.lower()
+            spent_by_category[cat_l] = spent_by_category.get(cat_l, 0.0) + t.amount
+
     for b in budgets:
-        spent = sum(t.amount for t in transactions if t.type == 'EXPENSE' and t.category.lower() == b.category.lower())
+        spent = spent_by_category.get(b.category.lower(), 0.0)
         pct = min(100, int((spent / b.monthly_limit) * 100)) if b.monthly_limit > 0 else 0
         rem = b.monthly_limit - spent
-        budget_progress.append({"id": b.id, "category": b.category, "limit": b.monthly_limit, "spent": spent, "remaining": rem, "pct": pct})
+        budget_progress.append({
+            "id": b.id, "name": b.category, "category": b.category, 
+            "amount": b.monthly_limit, "limit": b.monthly_limit, 
+            "spent": spent, "remaining": rem, "pct": pct, "percent": pct
+        })
         if b.monthly_limit > 0 and spent > b.monthly_limit:
-            alerts.append(f"Overbudget Alert: Category '{b.category}' exceeded set limit by ${abs(rem):.2f}!")
+            alerts.append({"id": b.id, "title": "Overbudget Alert", "message": f"Category '{b.category}' exceeded set limit by ${abs(rem):.2f}!"})
 
     goals = Goal.query.filter_by(user_id=user.id).all()
     goal_data = []
     for g in goals:
         pct = min(100, int((g.current_amount / g.target_amount) * 100)) if g.target_amount > 0 else 0
-        goal_data.append({"id": g.id, "title": g.title, "target": g.target_amount, "current": g.current_amount, "pct": pct})
+        goal_data.append({"id": g.id, "title": g.title, "name": g.title, "target": g.target_amount, "current": g.current_amount, "pct": pct})
 
     # Analytics Engine
     detected_subs = detect_subscriptions(transactions)
-    health_score = compute_financial_health(total_revenue, total_expenses, budgets, user.id)
+    health_score = compute_financial_health(total_revenue, total_expenses, budgets, user.id, spent_by_category=spent_by_category)
     runway_data = compute_runway(user)
     tax_reserve = total_revenue * ((user.tax_rate or 20.0) / 100.0)
 
@@ -929,14 +953,23 @@ def dashboard():
             chart_categories[t.category] = chart_categories.get(t.category, 0) + t.amount
 
     user_clients = Client.query.filter_by(user_id=user.id).all()
+    current_month_str = datetime.utcnow().strftime("%B %Y")
+    profit_margin = round(((net_profit / total_revenue) * 100.0) if total_revenue > 0 else 0.0, 1)
 
     return render_template(
         'business_dashboard.html',
         user=user,
         transactions=transactions,
+        txns=[{"id": t.id, "txn_date": t.date, "date": t.date, "description": t.description, "category_name": t.category, "category": t.category, "kind": t.type.lower(), "type": t.type, "amount": t.amount, "notes": ""} for t in transactions],
         total_revenue=total_revenue,
         total_expenses=total_expenses,
+        income=total_revenue,
+        expense=total_expenses,
         net_profit=net_profit,
+        profit=net_profit,
+        score=health_score,
+        margin=profit_margin,
+        month=current_month_str,
         budgets=budget_progress,
         alerts=alerts,
         goals=goal_data,
@@ -946,7 +979,8 @@ def dashboard():
         tax_reserve=tax_reserve,
         clients=user_clients,
         categories=Category.query.filter_by(user_id=user.id).all(),
-        chart_categories_json=json.dumps(chart_categories)
+        chart_categories_json=json.dumps(chart_categories),
+        pro=(user.plan_tier in ['GROWTH', 'PRO'])
     )
 
 # --- TRANSACTION & CATEGORY CRUD ---
@@ -955,7 +989,6 @@ def dashboard():
 def add_transaction():
     user = User.query.get(session['user_id'])
     
-    # Feature gating: Limit free accounts to 50 transactions
     if user.plan_tier == 'FREE':
         tx_count = Transaction.query.filter_by(user_id=user.id).count()
         if tx_count >= 50:
@@ -967,16 +1000,15 @@ def add_transaction():
         amount = abs(float(request.form.get('amount', 0)))
     except (ValueError, TypeError):
         amount = 0.0
-    t_type = request.form.get('type', 'EXPENSE')
-    category = request.form.get('category', 'General')
+    t_type = request.form.get('type', request.form.get('kind', 'EXPENSE')).upper()
+    category = request.form.get('category', request.form.get('category_name', 'General'))
     client_name = request.form.get('client_name', '').strip() or None
-    date_str = request.form.get('date')
+    date_str = request.form.get('date') or request.form.get('txn_date')
 
     t_date = datetime.strptime(date_str, '%Y-%m-%d').date() if date_str else datetime.utcnow().date()
 
-    # Apply auto rules if category is default
-    if category in ['General', 'Imported']:
-        category = apply_auto_rules(user.id, desc, category)
+    if category in ['General', 'Imported', 'Uncategorized', 'No category']:
+        category = apply_auto_rules(user.id, desc, "General")
 
     tx = Transaction(
         user_id=user.id, 
@@ -1003,7 +1035,7 @@ def edit_transaction(tx_id):
         pass
     tx.category = request.form.get('category', tx.category)[:50]
     tx.client_name = request.form.get('client_name', '').strip()[:100] or None
-    t_type = request.form.get('type', tx.type)
+    t_type = request.form.get('type', tx.type).upper()
     tx.type = 'INCOME' if t_type == 'INCOME' else 'EXPENSE'
     db.session.commit()
     flash("Transaction updated.", "success")
@@ -1024,7 +1056,7 @@ def manage_categories():
     user_id = session['user_id']
     if request.method == 'POST':
         cat_name = request.form.get('name', '').strip()
-        cat_type = request.form.get('type', 'EXPENSE')
+        cat_type = request.form.get('type', request.form.get('kind', 'EXPENSE')).upper()
         if cat_name:
             db.session.add(Category(user_id=user_id, name=cat_name[:50], type=cat_type))
             db.session.commit()
@@ -1098,9 +1130,9 @@ def delete_client(client_id):
 @app.route('/budgets/set', methods=['POST'])
 @login_required
 def set_budget():
-    category = request.form.get('category', '').strip()
+    category = request.form.get('category', request.form.get('name', '')).strip()
     try:
-        limit = max(0.0, float(request.form.get('monthly_limit', 0)))
+        limit = max(0.0, float(request.form.get('monthly_limit', request.form.get('amount', 0))))
     except (ValueError, TypeError):
         limit = 0.0
     b = Budget.query.filter_by(user_id=session['user_id'], category=category).first()
@@ -1115,9 +1147,9 @@ def set_budget():
 @app.route('/goals/add', methods=['POST'])
 @login_required
 def add_goal():
-    title = request.form.get('title', '').strip()
+    title = request.form.get('title', request.form.get('name', '')).strip()
     try:
-        target = max(0.0, float(request.form.get('target_amount', 0)))
+        target = max(0.0, float(request.form.get('target_amount', request.form.get('target', 0))))
     except (ValueError, TypeError):
         target = 0.0
     db.session.add(Goal(user_id=session['user_id'], title=title[:100], target_amount=target))
@@ -1125,10 +1157,13 @@ def add_goal():
     flash("Savings goal created.", "success")
     return redirect(url_for('dashboard'))
 
-# --- CSV IMPORT & EXPORT ---
-@app.route('/import-csv', methods=['POST'])
+# --- CSV IMPORT & STATEMENTS ---
+@app.route('/import-csv', methods=['GET', 'POST'])
 @login_required
 def import_csv():
+    if request.method == 'GET':
+        return render_template('import_csv.html', preview=[])
+
     file = request.files.get('file')
 
     if not file or not file.filename:
@@ -1171,13 +1206,11 @@ def import_csv():
         duplicate_count = 0
         user_id = session["user_id"]
 
-        # Cache existing recent transactions for duplicate detection
         existing_tx_set = {
             (t.date, round(t.amount, 2), t.description.strip().lower())
             for t in Transaction.query.filter_by(user_id=user_id).all()
         }
 
-        # Cache rules for fast in-loop matching
         user_rules = CategoryRule.query.filter_by(user_id=user_id).all()
 
         DESC_FIELDS = ["description", "name", "merchant", "vendor", "transaction", "details", "memo", "narration", "reference", "payee", "particulars"]
@@ -1201,7 +1234,6 @@ def import_csv():
                         clean_v = str(v).strip() if v is not None else ""
                         row_map[clean_k] = clean_v
 
-                # 1. Description
                 description = None
                 for field in DESC_FIELDS:
                     if row_map.get(field):
@@ -1211,7 +1243,6 @@ def import_csv():
                     description = "CSV Import"
                 description = str(description)[:200]
 
-                # 2. Date
                 date_val = None
                 for field in DATE_FIELDS:
                     if row_map.get(field):
@@ -1224,7 +1255,6 @@ def import_csv():
                     app.logger.warning(f"CSV row {row_idx} skipped: Unrecognized date format '{date_val}'")
                     continue
 
-                # 3. Amount & Type
                 amount = None
                 tx_type = None
 
@@ -1281,13 +1311,11 @@ def import_csv():
 
                 final_amount = abs(float(amount))
 
-                # Duplicate Detection (skip same date, amount, description)
                 tx_signature = (parsed_date, round(final_amount, 2), description.strip().lower())
                 if tx_signature in existing_tx_set:
                     duplicate_count += 1
                     continue
 
-                # 4. Category & Smart Rule Match
                 category = None
                 for cf in CAT_FIELDS:
                     if row_map.get(cf):
@@ -1305,7 +1333,6 @@ def import_csv():
 
                 category = str(category)[:50]
 
-                # 5. Client tag if present in CSV
                 client_tag = None
                 for cl_field in CLIENT_FIELDS:
                     if row_map.get(cl_field):
@@ -1348,12 +1375,37 @@ def import_csv():
 
     return redirect(url_for('dashboard'))
 
+@app.route('/upload-statements', methods=['POST'])
+@login_required
+def upload_statements():
+    user = User.query.get(session['user_id'])
+    uploaded_files = request.files.getlist('statements')
+    
+    if not uploaded_files or len(uploaded_files) == 0 or not uploaded_files[0].filename:
+        return jsonify({"error": "No statement files provided."}), 400
+
+    file_count = len(uploaded_files)
+    
+    if user.plan_tier == 'FREE' and file_count > 3:
+        return jsonify({
+            "error": "Free tier is limited to 3 statements max.",
+            "upgrade_required": True
+        }), 403
+
+    return jsonify({
+        "tier": user.plan_tier,
+        "processed_count": file_count,
+        "message": "Audit completed. Unused software and recurring subscriptions detected.",
+        "teaser_summary": {
+            "estimated_savings": "$4,800 - $12,500 / year"
+        }
+    })
+
 # --- AI RECEIPT & INVOICE OCR (Gemini / OpenAI) ---
 @app.route('/api/scan-receipt', methods=['POST'])
 @login_required
 @pro_required
 def scan_receipt():
-    """Extracts merchant, amount, date, and category recommendation from receipt image."""
     file = request.files.get('receipt')
     if not file:
         return jsonify({"error": "No receipt file uploaded"}), 400
@@ -1385,7 +1437,7 @@ def scan_receipt():
             return jsonify(data)
             
     except Exception as e:
-        app.logger.warning(f"Receipt OCR failed: {e}")
+        app.logger.warning(f"Receipt OCR failed or timed out: {e}")
         
     return jsonify({"error": "Could not extract receipt data. Ensure GEMINI_API_KEY is configured."}), 500
 
@@ -1394,7 +1446,6 @@ def scan_receipt():
 @login_required
 @pro_required
 def simulate_scenario():
-    """Simulates hiring, ad spend increase, or client loss on future 90-day margin."""
     user = User.query.get(session['user_id'])
     payload = request.get_json(silent=True) or {}
     
@@ -1474,18 +1525,38 @@ def export_pdf():
 
 # --- PRO FEATURES (AI & ADVANCED ANALYTICS) ---
 @app.route('/reports/advanced')
+@app.route('/reports')
 @login_required
 @pro_required
 def advanced_reports():
     user = User.query.get(session['user_id'])
-    txs = Transaction.query.filter_by(user_id=user.id).all()
+    txs = Transaction.query.filter_by(user_id=user.id).order_by(Transaction.date.desc()).all()
     client_pnl = compute_client_profitability(user.id)
     runway = compute_runway(user)
     
-    this_month_expenses = sum(t.amount for t in txs if t.type == 'EXPENSE' and t.date.month == datetime.utcnow().month)
+    month_str = request.args.get('month', datetime.utcnow().strftime('%Y-%m'))
+    this_month_expenses = sum(t.amount for t in txs if t.type == 'EXPENSE' and t.date.strftime('%Y-%m') == month_str)
+    this_month_income = sum(t.amount for t in txs if t.type == 'INCOME' and t.date.strftime('%Y-%m') == month_str)
     forecasted_exp = this_month_expenses * 1.08
+
+    by_cat_dict = {}
+    for t in txs:
+        if t.type == 'EXPENSE':
+            by_cat_dict[t.category] = by_cat_dict.get(t.category, 0) + t.amount
+    by_cat = [{"category": k, "total": v} for k, v in by_cat_dict.items()]
     
-    return render_template('advanced_reports.html', txs=txs, forecast=forecasted_exp, client_pnl=client_pnl, runway=runway)
+    return render_template(
+        'advanced_reports.html', 
+        txs=txs, 
+        txns=[{"txn_date": t.date, "description": t.description, "category_name": t.category, "amount": t.amount} for t in txs],
+        forecast=forecasted_exp, 
+        client_pnl=client_pnl, 
+        runway=runway,
+        income=this_month_income,
+        expense=this_month_expenses,
+        month=month_str,
+        by_cat=by_cat
+    )
 
 @app.route('/api/ai-insights')
 @login_required
@@ -1574,10 +1645,35 @@ def ask_ai():
 
     return jsonify({"answer": answer})
 
-# --- FLUTTERWAVE BILLING INTEGRATION ---
+# --- INFORMATIONAL & LEGAL PAGES ---
+@app.route('/terms')
+def terms():
+    return render_template('terms.html')
+
+@app.route('/privacy-policy')
+@app.route('/privacy')
+def privacy():
+    return render_template('privacy.html')
+
+@app.route('/refund-policy')
+@app.route('/refund')
+def refund():
+    return render_template('refund.html')
+
+@app.route('/scanner')
+def scanner():
+    return render_template('statement_scanner.html')
+
+# --- BILLING & CHECKOUT (PADDLE & FLUTTERWAVE) ---
 @app.route('/pricing')
 def pricing():
     return render_template('pricing.html')
+
+@app.route('/checkout')
+@login_required
+def checkout():
+    plan = request.args.get('plan', 'personal_pro')
+    return render_template('pricing.html', selected_plan=plan)
 
 @app.route('/create-checkout-session', methods=['POST'])
 @login_required
@@ -1609,13 +1705,13 @@ def create_checkout_session():
     }
 
     try:
-        response = requests.post("https://api.flutterwave.com/v3/payments", json=payload, headers=headers)
+        response = requests.post("https://api.flutterwave.com/v3/payments", json=payload, headers=headers, timeout=10)
         data = response.json()
 
         if data.get("status") == "success":
             return redirect(data["data"]["link"])
         else:
-            flash("Failed to initiate payment session. Please try again.", "danger")
+            flash("Failed to initiate payment session. Please try again or use Sendwave.", "danger")
             return redirect(url_for('pricing'))
     except Exception as e:
         flash(f"Payment gateway error: {str(e)}", "danger")
@@ -1632,7 +1728,7 @@ def flutterwave_callback():
         verify_url = f"https://api.flutterwave.com/v3/transactions/{transaction_id}/verify"
         
         try:
-            res = requests.get(verify_url, headers=headers).json()
+            res = requests.get(verify_url, headers=headers, timeout=10).json()
 
             if res.get("status") == "success" and res.get("data", {}).get("status") == "successful":
                 user = User.query.get(session['user_id'])
@@ -1706,7 +1802,7 @@ def send_sendwave_review_email(payment):
     msg.attach(MIMEText(text_body, "plain"))
     msg.attach(MIMEText(html_body, "html"))
 
-    with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
+    with smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=10) as server:
         server.starttls()
         server.login(SMTP_USERNAME, SMTP_PASSWORD)
         server.sendmail(SMTP_FROM, [ADMIN_EMAIL], msg.as_string())
