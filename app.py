@@ -837,42 +837,473 @@ def add_goal():
     return redirect(url_for('dashboard'))
 
 # --- CSV IMPORT & EXPORT ---
+
 @app.route('/import-csv', methods=['POST'])
 @login_required
 def import_csv():
     file = request.files.get('file')
-    if not file or not file.filename.endswith('.csv'):
+
+    if not file or not file.filename:
+        flash("Please select a CSV file.", "danger")
+        return redirect(url_for('dashboard'))
+
+    if not file.filename.lower().endswith('.csv'):
         flash("Upload a valid CSV statement file.", "danger")
         return redirect(url_for('dashboard'))
 
-    stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
-    csv_input = csv.DictReader(stream)
+    try:
+        # Read uploaded file
+        raw_data = file.stream.read()
 
-    imported_count = 0
-    for row in csv_input:
-        row_keys = {k.lower().strip(): v for k, v in row.items()}
-        desc = row_keys.get('description') or row_keys.get('name') or row_keys.get('vendor') or 'CSV Import'
-        amt_str = str(row_keys.get('amount', '0')).replace('$', '').replace(',', '')
+        # Handle UTF-8 BOM and fallback encodings
         try:
-            amt = float(amt_str)
-        except ValueError:
-            continue
+            text = raw_data.decode("utf-8-sig")
+        except UnicodeDecodeError:
+            text = raw_data.decode("latin-1")
 
-        t_type = 'INCOME' if row_keys.get('type', '').lower() == 'credit' or amt > 0 else 'EXPENSE'
-        category = row_keys.get('category', 'Imported')
+        stream = io.StringIO(text, newline="")
 
-        db.session.add(Transaction(
-            user_id=session['user_id'],
-            description=desc,
-            amount=abs(amt),
-            type=t_type,
-            category=category
-        ))
-        imported_count += 1
+        csv_input = csv.DictReader(stream)
 
-    db.session.commit()
-    flash(f"Successfully processed {imported_count} CSV records.", "success")
-    return redirect(url_for('dashboard'))
+        if not csv_input.fieldnames:
+            flash("The CSV file has no headers.", "danger")
+            return redirect(url_for('dashboard'))
+
+        imported_count = 0
+        skipped_count = 0
+
+        # Normalize CSV headers
+        normalized_headers = [
+            str(header).strip().lower()
+            if header is not None else ""
+            for header in csv_input.fieldnames
+        ]
+
+        app.logger.info(
+            f"CSV import headers: {normalized_headers}"
+        )
+
+        for row_number, row in enumerate(csv_input, start=2):
+
+            try:
+                # --------------------------------
+                # NORMALIZE ROW
+                # --------------------------------
+
+                row_keys = {}
+
+                for key, value in row.items():
+                    if key is None:
+                        continue
+
+                    clean_key = str(key).strip().lower()
+
+                    if value is None:
+                        value = ""
+
+                    row_keys[clean_key] = str(value).strip()
+
+                # --------------------------------
+                # DESCRIPTION
+                # --------------------------------
+
+                description = (
+                    row_keys.get("description")
+                    or row_keys.get("name")
+                    or row_keys.get("merchant")
+                    or row_keys.get("vendor")
+                    or row_keys.get("transaction")
+                    or row_keys.get("details")
+                    or row_keys.get("memo")
+                    or "CSV Import"
+                )
+
+                description = description[:200]
+
+                # --------------------------------
+                # DATE
+                # --------------------------------
+
+                date_value = (
+                    row_keys.get("date")
+                    or row_keys.get("transaction date")
+                    or row_keys.get("trans date")
+                    or row_keys.get("posted date")
+                    or row_keys.get("transaction_date")
+                )
+
+                transaction_date = datetime.utcnow().date()
+
+                if date_value:
+
+                    date_formats = [
+                        "%Y-%m-%d",
+                        "%m/%d/%Y",
+                        "%d/%m/%Y",
+                        "%m-%d-%Y",
+                        "%d-%m-%Y",
+                        "%Y/%m/%d",
+                        "%m/%d/%y",
+                        "%d/%m/%y"
+                    ]
+
+                    parsed_date = None
+
+                    for date_format in date_formats:
+                        try:
+                            parsed_date = datetime.strptime(
+                                date_value,
+                                date_format
+                            ).date()
+                            break
+                        except ValueError:
+                            pass
+
+                    if parsed_date:
+                        transaction_date = parsed_date
+
+                # --------------------------------
+                # MONEY PARSER
+                # --------------------------------
+
+                def parse_money(value):
+                    if value is None:
+                        return None
+
+                    value = str(value).strip()
+
+                    if not value:
+                        return None
+
+                    # Remove currency symbols
+                    value = (
+                        value
+                        .replace("$", "")
+                        .replace("€", "")
+                        .replace("£", "")
+                        .replace("UGX", "")
+                        .replace(",", "")
+                        .strip()
+                    )
+
+                    # Accounting format:
+                    # ($500.00) = -500
+                    if value.startswith("(") and value.endswith(")"):
+                        value = "-" + value[1:-1]
+
+                    # Remove spaces
+                    value = value.replace(" ", "")
+
+                    try:
+                        return float(value)
+                    except (ValueError, TypeError):
+                        return None
+
+                # --------------------------------
+                # AMOUNT
+                # --------------------------------
+
+                amount = None
+
+                # Standard amount columns
+                amount_fields = [
+                    "amount",
+                    "transaction amount",
+                    "value",
+                    "total",
+                    "transaction_amount"
+                ]
+
+                for field in amount_fields:
+                    if row_keys.get(field):
+                        amount = parse_money(row_keys[field])
+
+                        if amount is not None:
+                            break
+
+                # --------------------------------
+                # DEBIT / CREDIT
+                # --------------------------------
+
+                if amount is None:
+
+                    debit = parse_money(
+                        row_keys.get("debit")
+                    )
+
+                    credit = parse_money(
+                        row_keys.get("credit")
+                    )
+
+                    if credit is not None and credit != 0:
+                        amount = abs(credit)
+
+                    elif debit is not None and debit != 0:
+                        amount = -abs(debit)
+
+                # --------------------------------
+                # SKIP INVALID AMOUNT
+                # --------------------------------
+
+                if amount is None:
+                    skipped_count += 1
+
+                    app.logger.warning(
+                        f"CSV row {row_number} skipped: "
+                        f"could not determine amount. "
+                        f"Data={row_keys}"
+                    )
+
+                    continue
+
+                # --------------------------------
+                # TYPE
+                # --------------------------------
+
+                explicit_type = (
+                    row_keys.get("type")
+                    or row_keys.get("transaction type")
+                    or row_keys.get("transaction_type")
+                    or ""
+                ).lower().strip()
+
+                if explicit_type in [
+                    "credit",
+                    "income",
+                    "deposit",
+                    "refund"
+                ]:
+                    transaction_type = "INCOME"
+
+                elif explicit_type in [
+                    "debit",
+                    "expense",
+                    "withdrawal",
+                    "payment"
+                ]:
+                    transaction_type = "EXPENSE"
+
+                else:
+                    # Positive = income
+                    # Negative = expense
+                    transaction_type = (
+                        "INCOME"
+                        if amount > 0
+                        else "EXPENSE"
+                    )
+
+                # --------------------------------
+                # CATEGORY
+                # --------------------------------
+
+                category = (
+                    row_keys.get("category")
+                    or row_keys.get("type of expense")
+                    or row_keys.get("expense category")
+                    or row_keys.get("account")
+                    or "Imported"
+                )
+
+                category = category[:50]
+
+                # --------------------------------
+                # CREATE TRANSACTION
+                # --------------------------------
+
+                transaction = Transaction(
+                    user_id=session["user_id"],
+                    description=description,
+                    amount=abs(amount),
+                    type=transaction_type,
+                    category=category,
+                    date=transaction_date
+                )
+
+                db.session.add(transaction)
+
+                imported_count += 1
+
+            except Exception as row_error:
+
+                skipped_count += 1
+
+                app.logger.warning(
+                    f"CSV row {row_number} failed: {row_error}"
+                )
+
+                continue
+
+        # --------------------------------
+        # COMMIT EVERYTHING
+        # --------------------------------
+
+        db.session.commit()
+
+        message = (
+            f"Successfully imported "
+            f"{imported_count} transaction"
+            f"{'s' if imported_count != 1 else ''}."
+        )
+
+        if skipped_count:
+            message += (
+                f" {skipped_count} row"
+                f"{'s' if skipped_count != 1 else ''} "
+                f"were skipped because they could not be read."
+            )
+
+        flash(message, "success")
+
+        app.logger.info(
+            f"CSV import completed: "
+            f"{imported_count} imported, "
+            f"{skipped_count} skipped."
+        )
+
+    except Exception as e:
+
+        # VERY IMPORTANT:
+        # If anything goes wrong, undo the database transaction.
+        db.session.rollback()
+
+        app.logger.exception(
+            f"CSV import failed: {e}"
+        )
+
+        flash(
+            "CSV import failed. Please make sure your file "
+            "is a valid CSV statement.",
+            "danger"
+        )
+
+    return redirect(url_for("dashboard"))
+
+
+# --- EXPORTS (PDF & CSV) ---
+
+@app.route('/reports/export/csv')
+@login_required
+def export_csv():
+
+    txs = Transaction.query.filter_by(
+        user_id=session['user_id']
+    ).all()
+
+    output = io.StringIO()
+
+    writer = csv.writer(output)
+
+    writer.writerow([
+        'ID',
+        'Date',
+        'Description',
+        'Amount',
+        'Type',
+        'Category'
+    ])
+
+    for t in txs:
+
+        writer.writerow([
+            t.id,
+            t.date,
+            t.description,
+            t.amount,
+            t.type,
+            t.category
+        ])
+
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv",
+        headers={
+            "Content-Disposition":
+                "attachment; filename=budget_buddy_report.csv"
+        }
+    )
+
+
+@app.route('/reports/export/pdf')
+@login_required
+def export_pdf():
+
+    txs = Transaction.query.filter_by(
+        user_id=session['user_id']
+    ).all()
+
+    buffer = io.BytesIO()
+
+    p = canvas.Canvas(
+        buffer,
+        pagesize=letter
+    )
+
+    p.setFont(
+        "Helvetica-Bold",
+        16
+    )
+
+    p.drawString(
+        100,
+        750,
+        "Budget Buddy - Financial Statement Report"
+    )
+
+    p.setFont(
+        "Helvetica",
+        10
+    )
+
+    y = 710
+
+    p.drawString(
+        50,
+        y,
+        "Date | Description | Type | Category | Amount"
+    )
+
+    p.line(
+        50,
+        y - 5,
+        550,
+        y - 5
+    )
+
+    y -= 20
+
+    for t in txs[:30]:
+
+        line = (
+            f"{t.date} | "
+            f"{t.description[:20]} | "
+            f"{t.type} | "
+            f"{t.category} | "
+            f"${t.amount:.2f}"
+        )
+
+        p.drawString(
+            50,
+            y,
+            line
+        )
+
+        y -= 18
+
+        if y < 50:
+            break
+
+    p.showPage()
+    p.save()
+
+    buffer.seek(0)
+
+    return send_file(
+        buffer,
+        as_attachment=True,
+        download_name="budget_report.pdf",
+        mimetype="application/pdf"
+    )
+
     # --- EXPORTS (PDF & CSV) ---
 @app.route('/reports/export/csv')
 @login_required
