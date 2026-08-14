@@ -4,10 +4,7 @@ import io
 import json
 import uuid
 import secrets
-import smtplib
 import logging
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 import requests
 from datetime import datetime, timedelta
 from functools import wraps
@@ -69,12 +66,9 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 # Owner email for manual payment review
 ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "amuyanja1314@gmail.com")
 
-# Robust SMTP Configuration Supporting Common Environment Variable Names
-SMTP_SERVER = os.environ.get("SMTP_HOST") or os.environ.get("SMTP_SERVER", "smtp.gmail.com")
-SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
-SMTP_USERNAME = os.environ.get("SMTP_USERNAME", "")
-SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
-SMTP_FROM = os.environ.get("MAIL_FROM") or os.environ.get("SMTP_FROM", SMTP_USERNAME or ADMIN_EMAIL)
+# HTTPS Email Configuration (Resend API)
+RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
+MAIL_FROM = os.getenv("MAIL_FROM") or os.getenv("SMTP_FROM", "Budget Buddy <onboarding@resend.dev>")
 
 # --- DATABASE MODELS ---
 class User(db.Model):
@@ -223,6 +217,70 @@ def admin_required(f):
 def inject_current_user():
     user = User.query.get(session['user_id']) if 'user_id' in session else None
     return {'current_user': user, 'user': user, 'paddle_client_token': PADDLE_CLIENT_TOKEN, 'paddle_env': PADDLE_ENV}
+
+# --- HTTPS EMAIL ENGINE (RESEND REST API) ---
+def send_email_via_resend(to_email, subject, html_content, text_content=None):
+    """
+    Sends an email using Resend's HTTPS REST API over port 443.
+    Bypasses blocked outbound SMTP ports on Render.
+    """
+    logger.info("EMAIL SEND STARTED")
+    
+    if not RESEND_API_KEY:
+        logger.warning("EMAIL ERROR: RESEND_API_KEY is not configured in environment.")
+        return False, "RESEND_API_KEY is not set."
+
+    if not to_email:
+        logger.warning("EMAIL ERROR: Recipient email address is missing.")
+        return False, "Recipient email is missing."
+
+    headers = {
+        "Authorization": f"Bearer {RESEND_API_KEY}",
+        "Content-Type": "application/json"
+    }
+
+    payload = {
+        "from": MAIL_FROM,
+        "to": [to_email] if isinstance(to_email, str) else to_email,
+        "subject": subject,
+        "html": html_content
+    }
+    if text_content:
+        payload["text"] = text_content
+
+    try:
+        logger.info("EMAIL API REQUEST STARTED")
+        response = requests.post(
+            "https://api.resend.com/emails",
+            json=payload,
+            headers=headers,
+            timeout=15
+        )
+        logger.info("EMAIL API RESPONSE RECEIVED")
+
+        if response.status_code in [200, 201, 202]:
+            res_data = response.json()
+            email_id = res_data.get("id", "ok")
+            logger.info(f"EMAIL SEND SUCCESS (id: {email_id})")
+            return True, "Email sent successfully."
+        else:
+            try:
+                err_data = response.json()
+                err_msg = err_data.get("message") or err_data.get("name") or str(err_data)
+            except Exception:
+                err_msg = response.text[:200]
+            logger.error(f"EMAIL ERROR: Resend API returned status {response.status_code}: {err_msg}")
+            return False, f"Resend API error: {err_msg}"
+
+    except requests.exceptions.Timeout:
+        logger.error("EMAIL ERROR: Resend HTTPS request timed out after 15 seconds.")
+        return False, "Email service timed out."
+    except requests.exceptions.RequestException as e:
+        logger.error(f"EMAIL ERROR: HTTPS request failed: {type(e).__name__}: {str(e)}")
+        return False, f"Network error during email dispatch: {type(e).__name__}"
+    except Exception as e:
+        logger.error(f"EMAIL ERROR: Unexpected error: {type(e).__name__}: {str(e)}")
+        return False, "Unexpected error during email dispatch."
 
 # --- ANALYTICS ENGINE ---
 KNOWN_SUBSCRIPTIONS = ["adobe", "chatgpt", "canva", "google workspace", "slack", "zoom", "hubspot", "semrush", "github", "render", "meta", "linkedin", "figma", "notion", "aws", "openai", "vercel"]
@@ -487,7 +545,7 @@ def detect_financial_risks(months, income_by_client):
                 risks.append({
                     "title": "Revenue volatility",
                     "narrative": f"Monthly revenue has swung by an average of {cv*100:.0f}% around your "
-                                 f"{len(incomes)}-month mean of ${mean:,.0f}.",
+                    f"{len(incomes)}-month mean of ${mean:,.0f}.",
                     "recommendation": "Size a cash buffer to your worst recent month, not your average one."
                 })
 
@@ -1760,13 +1818,7 @@ def flutterwave_callback():
 SENDWAVE_PLAN_AMOUNTS = {"STARTER": 49, "GROWTH": 149, "PRO": 299}
 
 def send_sendwave_review_email(payment):
-    """Sends notification email to administrator when a code is submitted."""
-    logger.info("EMAIL SEND STARTED")
-    
-    if not SMTP_USERNAME or not SMTP_PASSWORD:
-        logger.warning("EMAIL NOTICE: SMTP credentials not set. Review email skipped.")
-        return False, "SMTP credentials (SMTP_USERNAME / SMTP_PASSWORD) not configured."
-
+    """Formats and dispatches the verification email to the admin via Resend HTTPS API."""
     review_url = url_for('sendwave_email_review', payment_id=payment.id,
                           token=payment.action_token, _external=True)
 
@@ -1802,29 +1854,12 @@ def send_sendwave_review_email(payment):
     </div>
     """
 
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = subject
-    msg["From"] = SMTP_FROM
-    msg["To"] = ADMIN_EMAIL
-    msg.attach(MIMEText(text_body, "plain"))
-    msg.attach(MIMEText(html_body, "html"))
-
-    try:
-        if SMTP_PORT == 465:
-            with smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT, timeout=10) as server:
-                server.login(SMTP_USERNAME, SMTP_PASSWORD)
-                server.sendmail(SMTP_FROM, [ADMIN_EMAIL], msg.as_string())
-        else:
-            with smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=10) as server:
-                server.starttls()
-                server.login(SMTP_USERNAME, SMTP_PASSWORD)
-                server.sendmail(SMTP_FROM, [ADMIN_EMAIL], msg.as_string())
-        
-        logger.info("EMAIL SEND SUCCESS")
-        return True, "Email sent successfully."
-    except Exception as e:
-        logger.error(f"EMAIL ERROR: {type(e).__name__}: {str(e)}")
-        return False, str(e)
+    return send_email_via_resend(
+        to_email=ADMIN_EMAIL,
+        subject=subject,
+        html_content=html_body,
+        text_content=text_body
+    )
 
 @app.route('/sendwave/submit', methods=['POST'])
 @login_required
@@ -1899,12 +1934,12 @@ def sendwave_submit():
 
         logger.info("DATABASE COMMIT SUCCESS")
 
-        # Isolated email dispatch
+        # Isolated Resend HTTPS email dispatch (Failure will NOT revert the pending database status)
         email_sent, email_msg = send_sendwave_review_email(payment)
         
         success_message = "Code submitted successfully. Your payment is now Pending verification."
         if not email_sent:
-            success_message += f" (Note: Review notification queued: {email_msg})"
+            success_message += f" (Note: Admin notification queued: {email_msg})"
 
         if is_ajax:
             return jsonify({
