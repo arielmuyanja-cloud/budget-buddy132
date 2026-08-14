@@ -35,6 +35,9 @@
                     {% if session.get('user_id') %}
                         <li class="nav-item"><a class="nav-link" href="{{ url_for('dashboard') }}">Dashboard</a></li>
                         <li class="nav-item"><a class="nav-link" href="{{ url_for('manage_categories') }}">Categories</a></li>
+                        {% if current_user and current_user.plan_tier in ['GROWTH', 'PRO'] %}
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('pro') }}"><i class="bi bi-cpu me-1"></i>AI Insights</a></li>
+                        {% endif %}
                         <li class="nav-item"><a class="nav-link text-warning" href="{{ url_for('pricing') }}"><i class="bi bi-star-fill me-1"></i>PRO Plan</a></li>
                         <li class="nav-item"><a class="nav-link" href="{{ url_for('profile') }}">Profile</a></li>
                         <li class="nav-item ms-2"><a class="btn btn-outline-light btn-sm" href="{{ url_for('logout') }}">Logout</a></li>
