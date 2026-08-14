@@ -5,6 +5,7 @@ import json
 import uuid
 import secrets
 import smtplib
+import logging
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import requests
@@ -21,6 +22,10 @@ from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 import openai
 
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("budget_buddy")
+
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "budget-buddy-super-secret-key-2026")
 
@@ -36,7 +41,7 @@ if db_url.startswith("postgres://"):
 app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# Controlled connection pool to prevent PostgreSQL pool exhaustion (503 Backend.max_conn)
+# Controlled SQLAlchemy Connection Pool to prevent 503 Backend.max_conn
 if db_url.startswith("postgresql://"):
     app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
         "pool_pre_ping": True,
@@ -64,12 +69,12 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 # Owner email for manual payment review
 ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "amuyanja1314@gmail.com")
 
-# SMTP config for Sendwave notifications
-SMTP_SERVER = os.environ.get("SMTP_SERVER", "smtp.gmail.com")
+# Robust SMTP Configuration Supporting Common Environment Variable Names
+SMTP_SERVER = os.environ.get("SMTP_HOST") or os.environ.get("SMTP_SERVER", "smtp.gmail.com")
 SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
 SMTP_USERNAME = os.environ.get("SMTP_USERNAME", "")
 SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
-SMTP_FROM = os.environ.get("SMTP_FROM", SMTP_USERNAME)
+SMTP_FROM = os.environ.get("MAIL_FROM") or os.environ.get("SMTP_FROM", SMTP_USERNAME or ADMIN_EMAIL)
 
 # --- DATABASE MODELS ---
 class User(db.Model):
@@ -149,7 +154,7 @@ class SendwavePayment(db.Model):
 
     user = db.relationship('User', backref=db.backref('sendwave_payments', cascade="all, delete-orphan"))
 
-# --- SAFE STARTUP & MULTI-WORKER INITIALIZATION ---
+# Safe Startup Database Initialization
 with app.app_context():
     try:
         db.create_all()
@@ -172,11 +177,10 @@ with app.app_context():
                 db.session.rollback()
     except Exception as e:
         db.session.rollback()
-        app.logger.warning(f"Startup schema check notice: {e}")
+        logger.warning(f"Startup schema notice: {e}")
     finally:
         db.session.remove()
 
-# Explicit context teardown to release SQLAlchemy connections back to pool immediately
 @app.teardown_appcontext
 def shutdown_session(exception=None):
     db.session.remove()
@@ -186,6 +190,8 @@ def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'user_id' not in session:
+            if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({"success": False, "message": "Please log in to perform this action."}), 401
             flash("Please log in to access this page.", "warning")
             return redirect(url_for('login'))
         return f(*args, **kwargs)
@@ -196,6 +202,8 @@ def pro_required(f):
     def decorated_function(*args, **kwargs):
         user = User.query.get(session.get('user_id'))
         if not user or user.plan_tier not in ['GROWTH', 'PRO']:
+            if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({"success": False, "message": "This feature requires a Growth or Pro subscription."}), 403
             flash("This feature is exclusive to GROWTH and PRO subscribers. Upgrade to unlock!", "warning")
             return redirect(url_for('pricing'))
         return f(*args, **kwargs)
@@ -216,7 +224,7 @@ def inject_current_user():
     user = User.query.get(session['user_id']) if 'user_id' in session else None
     return {'current_user': user, 'user': user, 'paddle_client_token': PADDLE_CLIENT_TOKEN, 'paddle_env': PADDLE_ENV}
 
-# --- ANALYTICS ENGINE (OPTIMIZED TO PREVENT N+1 QUERIES) ---
+# --- ANALYTICS ENGINE ---
 KNOWN_SUBSCRIPTIONS = ["adobe", "chatgpt", "canva", "google workspace", "slack", "zoom", "hubspot", "semrush", "github", "render", "meta", "linkedin", "figma", "notion", "aws", "openai", "vercel"]
 
 def detect_subscriptions(transactions):
@@ -241,7 +249,6 @@ def compute_financial_health(revenue, expenses, budgets, user_id, spent_by_categ
         score -= 40
 
     if spent_by_category is None:
-        # Batch aggregate in a single query instead of querying per budget
         rows = db.session.query(
             Transaction.category, db.func.sum(Transaction.amount)
         ).filter_by(user_id=user_id, type='EXPENSE').group_by(Transaction.category).all()
@@ -663,7 +670,7 @@ def call_ai_provider(system_prompt, question):
             if text:
                 return text
         except Exception as e:
-            app.logger.warning(f"Gemini call failed or timed out, trying next provider: {e}")
+            logger.warning(f"Gemini call failed or timed out: {e}")
 
     if OPENAI_API_KEY:
         try:
@@ -680,7 +687,7 @@ def call_ai_provider(system_prompt, question):
             if text:
                 return text
         except Exception as e:
-            app.logger.warning(f"OpenAI call failed or timed out: {e}")
+            logger.warning(f"OpenAI call failed or timed out: {e}")
 
     return None
 
@@ -915,7 +922,6 @@ def dashboard():
     budget_progress = []
     alerts = []
     
-    # Pre-aggregate expenses by category in memory from loaded transactions
     spent_by_category = {}
     for t in transactions:
         if t.type == 'EXPENSE':
@@ -940,13 +946,11 @@ def dashboard():
         pct = min(100, int((g.current_amount / g.target_amount) * 100)) if g.target_amount > 0 else 0
         goal_data.append({"id": g.id, "title": g.title, "name": g.title, "target": g.target_amount, "current": g.current_amount, "pct": pct})
 
-    # Analytics Engine
     detected_subs = detect_subscriptions(transactions)
     health_score = compute_financial_health(total_revenue, total_expenses, budgets, user.id, spent_by_category=spent_by_category)
     runway_data = compute_runway(user)
     tax_reserve = total_revenue * ((user.tax_rate or 20.0) / 100.0)
 
-    # Monthly Trends Data for Charts
     chart_categories = {}
     for t in transactions:
         if t.type == 'EXPENSE':
@@ -1199,7 +1203,7 @@ def import_csv():
             return redirect(url_for('dashboard'))
 
         normalized_headers = [normalize_csv_header(h) for h in csv_reader.fieldnames if h is not None]
-        app.logger.info(f"User {session['user_id']} starting CSV import. Detected headers: {normalized_headers}")
+        logger.info(f"User {session['user_id']} starting CSV import. Detected headers: {normalized_headers}")
 
         imported_count = 0
         skipped_count = 0
@@ -1252,7 +1256,7 @@ def import_csv():
                 parsed_date, date_valid = parse_csv_date(date_val)
                 if not date_valid:
                     skipped_count += 1
-                    app.logger.warning(f"CSV row {row_idx} skipped: Unrecognized date format '{date_val}'")
+                    logger.warning(f"CSV row {row_idx} skipped: Unrecognized date format '{date_val}'")
                     continue
 
                 amount = None
@@ -1292,7 +1296,7 @@ def import_csv():
 
                 if amount is None:
                     skipped_count += 1
-                    app.logger.warning(f"CSV row {row_idx} skipped: Missing or invalid numeric amount.")
+                    logger.warning(f"CSV row {row_idx} skipped: Missing or invalid numeric amount.")
                     continue
 
                 if tx_type is None:
@@ -1354,7 +1358,7 @@ def import_csv():
 
             except Exception as row_err:
                 skipped_count += 1
-                app.logger.warning(f"CSV row {row_idx} error: {row_err}")
+                logger.warning(f"CSV row {row_idx} error: {row_err}")
                 continue
 
         db.session.commit()
@@ -1366,11 +1370,11 @@ def import_csv():
             msg += f" {skipped_count} row{'s' if skipped_count != 1 else ''} skipped due to invalid data."
         
         flash(msg, "success" if imported_count > 0 else "info")
-        app.logger.info(f"CSV import completed for user {user_id}: {imported_count} imported, {duplicate_count} dupes, {skipped_count} skipped.")
+        logger.info(f"CSV import completed for user {user_id}: {imported_count} imported, {duplicate_count} dupes, {skipped_count} skipped.")
 
     except Exception as e:
         db.session.rollback()
-        app.logger.exception(f"CSV import failed: {e}")
+        logger.exception(f"CSV import failed: {e}")
         flash("Failed to process CSV statement.", "danger")
 
     return redirect(url_for('dashboard'))
@@ -1437,7 +1441,7 @@ def scan_receipt():
             return jsonify(data)
             
     except Exception as e:
-        app.logger.warning(f"Receipt OCR failed or timed out: {e}")
+        logger.warning(f"Receipt OCR failed or timed out: {e}")
         
     return jsonify({"error": "Could not extract receipt data. Ensure GEMINI_API_KEY is configured."}), 500
 
@@ -1752,46 +1756,49 @@ def flutterwave_callback():
     flash("Payment failed or was cancelled.", "danger")
     return redirect(url_for('pricing'))
 
-# --- SENDWAVE MANUAL PAYMENT VERIFICATION ---
+# --- SENDWAVE MANUAL PAYMENT VERIFICATION FLOW ---
 SENDWAVE_PLAN_AMOUNTS = {"STARTER": 49, "GROWTH": 149, "PRO": 299}
 
 def send_sendwave_review_email(payment):
+    """Sends notification email to administrator when a code is submitted."""
+    logger.info("EMAIL SEND STARTED")
+    
     if not SMTP_USERNAME or not SMTP_PASSWORD:
-        raise RuntimeError("SMTP_USERNAME / SMTP_PASSWORD are not configured")
+        logger.warning("EMAIL NOTICE: SMTP credentials not set. Review email skipped.")
+        return False, "SMTP credentials (SMTP_USERNAME / SMTP_PASSWORD) not configured."
 
     review_url = url_for('sendwave_email_review', payment_id=payment.id,
                           token=payment.action_token, _external=True)
 
-    subject = f"Sendwave payment to confirm — {payment.user.email} (${payment.amount:.0f} {payment.plan_requested})"
+    subject = f"Sendwave payment verification requested — {payment.user.email} (${payment.amount:.0f} {payment.plan_requested})"
 
     text_body = (
         f"Have you received this Sendwave payment?\n\n"
         f"User: {payment.user.email}\n"
         f"Plan: {payment.plan_requested}\n"
         f"Amount: ${payment.amount:.2f}\n"
-        f"Reference code: {payment.reference_code}\n"
-        f"Sender name: {payment.sender_name or '—'}\n"
+        f"Reference Code: {payment.reference_code}\n"
+        f"Sender Name: {payment.sender_name or '—'}\n"
         f"Submitted: {payment.submitted_at.strftime('%b %d, %Y %H:%M UTC')}\n\n"
-        f"Review and accept/decline here: {review_url}"
+        f"Review and approve/decline here: {review_url}\n"
     )
 
     html_body = f"""
-    <div style="font-family:Arial,sans-serif;max-width:480px;margin:auto">
-      <h2 style="margin-bottom:4px;">Have you received this payment?</h2>
-      <p style="color:#555;margin-top:0;">A user submitted a Sendwave payment reference. Verify it against your Sendwave app before confirming.</p>
-      <table style="width:100%;border-collapse:collapse;margin:16px 0;">
-        <tr><td style="padding:4px 0;color:#888;">User</td><td style="padding:4px 0;"><b>{payment.user.email}</b></td></tr>
-        <tr><td style="padding:4px 0;color:#888;">Plan</td><td style="padding:4px 0;"><b>{payment.plan_requested}</b></td></tr>
-        <tr><td style="padding:4px 0;color:#888;">Amount</td><td style="padding:4px 0;"><b>${payment.amount:.2f}</b></td></tr>
-        <tr><td style="padding:4px 0;color:#888;">Reference code</td><td style="padding:4px 0;"><b>{payment.reference_code}</b></td></tr>
-        <tr><td style="padding:4px 0;color:#888;">Sender name</td><td style="padding:4px 0;">{payment.sender_name or '—'}</td></tr>
+    <div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;background:#0f172a;color:#f8fafc;padding:24px;border-radius:12px;border:1px solid #334155;">
+      <h2 style="color:#38bdf8;margin-bottom:8px;">Sendwave Payment Verification</h2>
+      <p style="color:#94a3b8;font-size:14px;">A user has submitted a reference code for manual verification.</p>
+      <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:14px;">
+        <tr style="border-bottom:1px solid #1e293b;"><td style="padding:8px 0;color:#94a3b8;">User</td><td style="padding:8px 0;text-align:right;"><b>{payment.user.email}</b></td></tr>
+        <tr style="border-bottom:1px solid #1e293b;"><td style="padding:8px 0;color:#94a3b8;">Plan</td><td style="padding:8px 0;text-align:right;"><b>{payment.plan_requested}</b></td></tr>
+        <tr style="border-bottom:1px solid #1e293b;"><td style="padding:8px 0;color:#94a3b8;">Amount</td><td style="padding:8px 0;text-align:right;"><b>${payment.amount:.2f}</b></td></tr>
+        <tr style="border-bottom:1px solid #1e293b;"><td style="padding:8px 0;color:#94a3b8;">Reference Code</td><td style="padding:8px 0;text-align:right;"><code style="background:#1e293b;padding:3px 6px;border-radius:4px;color:#38bdf8;">{payment.reference_code}</code></td></tr>
+        <tr><td style="padding:8px 0;color:#94a3b8;">Sender Name</td><td style="padding:8px 0;text-align:right;">{payment.sender_name or '—'}</td></tr>
       </table>
-      <p>
-        <a href="{review_url}" style="background:#0d6efd;color:#fff;text-decoration:none;padding:10px 20px;border-radius:6px;display:inline-block;">
-          Review &amp; Confirm
+      <div style="margin-top:20px;text-align:center;">
+        <a href="{review_url}" style="background:#0284c7;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:bold;display:inline-block;">
+          Open Review Portal
         </a>
-      </p>
-      <p style="color:#999;font-size:12px;">This link takes you to a page where you'll pick Accept or Decline — it won't approve anything by itself.</p>
+      </div>
     </div>
     """
 
@@ -1802,51 +1809,121 @@ def send_sendwave_review_email(payment):
     msg.attach(MIMEText(text_body, "plain"))
     msg.attach(MIMEText(html_body, "html"))
 
-    with smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=10) as server:
-        server.starttls()
-        server.login(SMTP_USERNAME, SMTP_PASSWORD)
-        server.sendmail(SMTP_FROM, [ADMIN_EMAIL], msg.as_string())
+    try:
+        if SMTP_PORT == 465:
+            with smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT, timeout=10) as server:
+                server.login(SMTP_USERNAME, SMTP_PASSWORD)
+                server.sendmail(SMTP_FROM, [ADMIN_EMAIL], msg.as_string())
+        else:
+            with smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=10) as server:
+                server.starttls()
+                server.login(SMTP_USERNAME, SMTP_PASSWORD)
+                server.sendmail(SMTP_FROM, [ADMIN_EMAIL], msg.as_string())
+        
+        logger.info("EMAIL SEND SUCCESS")
+        return True, "Email sent successfully."
+    except Exception as e:
+        logger.error(f"EMAIL ERROR: {type(e).__name__}: {str(e)}")
+        return False, str(e)
 
 @app.route('/sendwave/submit', methods=['POST'])
 @login_required
 def sendwave_submit():
-    user = User.query.get(session['user_id'])
-    plan = request.form.get('plan', '').strip().upper()
-    reference_code = request.form.get('reference_code', '').strip()
-    sender_name = request.form.get('sender_name', '').strip()
+    logger.info("CODE SUBMISSION STARTED")
+    is_ajax = request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.accept_mimetypes.best == 'application/json'
+    
+    try:
+        user = User.query.get(session['user_id'])
+        if not user:
+            logger.error("CODE SUBMISSION ERROR: User session invalid")
+            if is_ajax:
+                return jsonify({"success": False, "message": "User session not found. Please log in again."}), 401
+            flash("User session not found.", "danger")
+            return redirect(url_for('login'))
 
-    if plan not in SENDWAVE_PLAN_AMOUNTS:
-        flash("Please select a valid plan.", "danger")
-        return redirect(url_for('pricing'))
+        # Support both form post and JSON payloads
+        data = request.get_json(silent=True) if request.is_json else request.form
+        if not data:
+            data = request.form
 
-    if not reference_code:
-        flash("Please enter the Sendwave reference code from your transfer.", "danger")
-        return redirect(url_for('pricing'))
+        plan = str(data.get('plan', '')).strip().upper()
+        reference_code = str(data.get('reference_code', '')).strip()
+        sender_name = str(data.get('sender_name', '')).strip()
 
-    existing = SendwavePayment.query.filter_by(reference_code=reference_code).first()
-    if existing:
-        flash("That reference code has already been submitted. If this is a mistake, contact support.", "warning")
+        if plan not in SENDWAVE_PLAN_AMOUNTS:
+            logger.warning("CODE SUBMISSION ERROR: Invalid plan requested")
+            if is_ajax:
+                return jsonify({"success": False, "message": "Please select a valid plan (Starter, Growth, or Pro)."}), 400
+            flash("Please select a valid plan.", "danger")
+            return redirect(url_for('pricing'))
+
+        if not reference_code or len(reference_code) < 3:
+            logger.warning("CODE SUBMISSION ERROR: Invalid or missing reference code")
+            if is_ajax:
+                return jsonify({"success": False, "message": "Please enter a valid Sendwave reference code."}), 400
+            flash("Please enter the Sendwave reference code from your transfer.", "danger")
+            return redirect(url_for('pricing'))
+
+        logger.info("CODE VALIDATED")
+
+        # Duplicate detection / update
+        existing = SendwavePayment.query.filter_by(reference_code=reference_code).first()
+        if existing:
+            if existing.user_id == user.id:
+                logger.info("DATABASE STATUS UPDATED (Existing record)")
+                existing.plan_requested = plan
+                existing.amount = SENDWAVE_PLAN_AMOUNTS[plan]
+                existing.sender_name = sender_name or existing.sender_name
+                existing.status = "PENDING"
+                db.session.commit()
+                payment = existing
+            else:
+                logger.warning("CODE SUBMISSION ERROR: Duplicate reference code by different account")
+                if is_ajax:
+                    return jsonify({"success": False, "message": "That reference code has already been registered."}), 400
+                flash("That reference code has already been registered.", "warning")
+                return redirect(url_for('sendwave_status'))
+        else:
+            payment = SendwavePayment(
+                user_id=user.id,
+                plan_requested=plan,
+                amount=SENDWAVE_PLAN_AMOUNTS[plan],
+                reference_code=reference_code,
+                sender_name=sender_name or None,
+                status="PENDING",
+                action_token=secrets.token_urlsafe(32)
+            )
+            db.session.add(payment)
+            db.session.commit()
+            logger.info("DATABASE STATUS UPDATED")
+
+        logger.info("DATABASE COMMIT SUCCESS")
+
+        # Isolated email dispatch
+        email_sent, email_msg = send_sendwave_review_email(payment)
+        
+        success_message = "Code submitted successfully. Your payment is now Pending verification."
+        if not email_sent:
+            success_message += f" (Note: Review notification queued: {email_msg})"
+
+        if is_ajax:
+            return jsonify({
+                "success": True,
+                "status": "pending",
+                "message": success_message,
+                "redirect_url": url_for('sendwave_status')
+            }), 200
+
+        flash(success_message, "success")
         return redirect(url_for('sendwave_status'))
 
-    payment = SendwavePayment(
-        user_id=user.id,
-        plan_requested=plan,
-        amount=SENDWAVE_PLAN_AMOUNTS[plan],
-        reference_code=reference_code,
-        sender_name=sender_name or None,
-        status="PENDING",
-        action_token=secrets.token_urlsafe(32)
-    )
-    db.session.add(payment)
-    db.session.commit()
-
-    try:
-        send_sendwave_review_email(payment)
     except Exception as e:
-        app.logger.error(f"Failed to send Sendwave review email: {e}")
-
-    flash("Got it — your payment is pending verification. This usually takes a few hours.", "success")
-    return redirect(url_for('sendwave_status'))
+        db.session.rollback()
+        logger.error(f"DATABASE ERROR / CODE SUBMISSION ERROR: {type(e).__name__}: {str(e)}")
+        if is_ajax:
+            return jsonify({"success": False, "message": f"Server error: {str(e)}"}), 500
+        flash("An unexpected error occurred while processing your request.", "danger")
+        return redirect(url_for('pricing'))
 
 @app.route('/sendwave/status')
 @login_required
@@ -1884,7 +1961,7 @@ def admin_sendwave_reject(payment_id):
     flash("Marked as rejected.", "info")
     return redirect(url_for('admin_sendwave'))
 
-# --- ACCEPT/DECLINE STRAIGHT FROM THE REVIEW EMAIL (token-gated) ---
+# --- TOKEN-GATED REVIEW ACTIONS FROM EMAIL ---
 def _get_payment_by_token(payment_id, token):
     payment = SendwavePayment.query.get_or_404(payment_id)
     if not payment.action_token or not secrets.compare_digest(payment.action_token, token):
