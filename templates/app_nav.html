@@ -1,0 +1,18 @@
+{% set active_page = active_page|default('dashboard') %}
+<header class="bb-nav">
+  <a class="bb-brand" href="{{ url_for('dashboard') }}"><span class="bb-mark">✓</span><span><strong>Budget Buddy</strong><small>Agency Software Auditor</small></span></a>
+  <nav class="bb-links">
+    <a class="{{ 'active' if active_page == 'dashboard' else '' }}" href="{{ url_for('dashboard') }}">Dashboard</a>
+    <a class="{{ 'active' if active_page == 'import' else '' }}" href="{{ url_for('import_csv') }}">Import</a>
+    <a class="{{ 'active' if active_page == 'categories' else '' }}" href="{{ url_for('manage_categories') }}">Categories</a>
+    <a class="{{ 'active' if active_page == 'clients' else '' }}" href="{{ url_for('manage_clients') }}">Clients</a>
+    <a href="{{ url_for('advanced_reports') }}">Reports</a>
+    <a href="{{ url_for('pro') }}">AI & Pro</a>
+    <a href="{{ url_for('pricing') }}">Plans</a>
+  </nav>
+  <div class="bb-right">
+    <a class="bb-plan" href="{{ url_for('pricing') }}">{{ current_user.plan_tier|default('FREE') }} PLAN</a>
+    <a class="bb-btn" href="{{ url_for('profile') }}">Account</a>
+    <a class="bb-btn" href="{{ url_for('logout') }}">Log out</a>
+  </div>
+</header>
