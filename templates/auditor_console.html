@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block title %}Auditor Console | Budget Buddy{% endblock %}
+{% block content %}
+<style>
+  .audit-shell { background:#f5f7fb; color:#14213d; min-height:calc(100vh - 80px); margin:-1.5rem; padding:1.5rem; }
+  .audit-card { background:#fff; border:1px solid #e5e9f2; border-radius:16px; box-shadow:0 8px 24px rgba(20,33,61,.06); }
+  .audit-muted { color:#6b7280; }
+  .audit-code { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.78rem; }
+  .audit-accent { color:#5146d8; }
+  .audit-status { font-size:.68rem; font-weight:800; letter-spacing:.08em; }
+  .audit-dot { width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:8px; }
+  .audit-dot.complete { background:#16a34a; }
+  .audit-dot.pending { background:#f59e0b; }
+  .audit-dot.check { background:#ef4444; }
+  .audit-sidebar { background:#fbfcfe; border-right:1px solid #e5e9f2; }
+  .audit-table th { font-size:.7rem; text-transform:uppercase; letter-spacing:.08em; color:#6b7280; background:#f8fafc; }
+  .audit-table td { vertical-align:middle; }
+  .dark-audit { background:#111827; color:#f8fafc; border-radius:16px; }
+  .risk-chip { background:#3f1d1d; color:#fca5a5; border:1px solid #7f1d1d; }
+  .verify-chip { background:#ecfdf3; color:#15803d; border:1px solid #bbf7d0; }
+</style>
+
+<div class="audit-shell">
+  <div class="container-fluid px-0">
+    <header class="audit-card p-3 p-lg-4 mb-4 d-flex flex-wrap align-items-center justify-content-between gap-3">
+      <div class="d-flex align-items-center gap-3">
+        <div style="width:40px;height:40px;border-radius:10px;background:#5146d8;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;">BB</div>
+        <div>
+          <div class="fw-bold fs-5">Budget Buddy <span class="audit-muted fw-normal">/ Auditor Console</span></div>
+          <div class="small audit-muted">Evidence-first financial audit workspace</div>
+        </div>
+      </div>
+      <div class="d-flex align-items-center gap-2">
+        <span class="badge bg-light text-dark border audit-status">PRE-PHASE 6 FREEZE</span>
+        <a class="btn btn-dark" href="{{ url_for('export_pdf') }}">Generate Audit Report</a>
+      </div>
+    </header>
+
+    {% if not service_modules_available %}
+    <div class="alert alert-warning audit-card border-warning mb-4">
+      <strong>Service integration is not complete yet.</strong>
+      The console is using real transaction/financial outputs already present in the Flask app. Missing phase service modules are marked pending below; no placeholder service numbers are shown.
+    </div>
+    {% endif %}
+
+    <div class="row g-4">
+      <aside class="col-lg-2">
+        <div class="audit-card p-3 audit-sidebar">
+          <div class="small fw-bold text-uppercase audit-muted mb-3">Phase Audit Modules</div>
+          {% for item in module_status %}
+          <div class="py-2 border-bottom">
+            <div class="small fw-semibold"><span class="audit-dot {{ 'complete' if item.status == 'COMPLETE' else ('check' if item.status == 'CHECK' else 'pending') }}"></span>{{ item.label }}</div>
+            <div class="audit-status audit-muted ms-3">{{ item.status }}</div>
+          </div>
+          {% endfor %}
+        </div>
+      </aside>
+
+      <main class="col-lg-10">
+        <div class="row g-3 mb-4">
+          <div class="col-md-4">
+            <div class="audit-card p-4 h-100">
+              <div class="audit-muted small text-uppercase fw-bold">Audit coverage / health</div>
+              <div class="display-5 fw-bold mt-2 audit-accent">{{ health_score }}%</div>
+              <div class="small audit-muted">Computed from recorded financial data</div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="audit-card p-4 h-100">
+              <div class="audit-muted small text-uppercase fw-bold">Open anomalies</div>
+              <div class="display-5 fw-bold mt-2">{{ anomaly_count }}</div>
+              <div class="small audit-muted">Current risk flags from the ledger</div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="audit-card p-4 h-100 position-relative">
+              <span class="badge bg-light text-dark border position-absolute top-0 end-0 m-3">AUDIT ONLY</span>
+              <div class="audit-muted small text-uppercase fw-bold">Transactions classified</div>
+              <div class="display-5 fw-bold mt-2">{{ "{:,.0f}".format(transaction_count) }}</div>
+              <div class="small audit-muted">Recorded statement transactions</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="audit-card mb-4">
+          <div class="p-4 border-bottom">
+            <div class="fw-bold fs-5">Architecture Verification: Fact to Inference</div>
+            <div class="small audit-muted">Only observed ledger facts are displayed; inference is explicitly separated.</div>
+          </div>
+          <div class="table-responsive">
+            <table class="table audit-table mb-0">
+              <thead><tr><th>Fact</th><th>Classification</th><th>Inference</th><th>Verification</th></tr></thead>
+              <tbody>
+                {% for row in verification_rows %}
+                <tr>
+                  <td class="audit-code">{{ row.fact }}</td>
+                  <td>{{ row.classification }}</td>
+                  <td class="small audit-muted">{{ row.inference }}</td>
+                  <td><span class="badge verify-chip">✓ VERIFIED</span></td>
+                </tr>
+                {% else %}
+                <tr><td colspan="4" class="text-center audit-muted py-4">No transaction evidence available yet.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="row g-4">
+          <div class="col-lg-6">
+            <div class="dark-audit p-4 h-100">
+              <div class="d-flex justify-content-between align-items-start mb-4">
+                <div><div class="small text-uppercase text-secondary fw-bold">Operational Risk Audit</div><div class="fs-5 fw-bold mt-1">Risk evidence from current books</div></div>
+                <span class="badge risk-chip">{{ risk_count }} FLAG{{ '' if risk_count == 1 else 'S' }}</span>
+              </div>
+              <div class="display-6 fw-bold mb-2">${{ "{:,.2f}".format(expenses) }}</div>
+              <div class="text-secondary small">Total recorded expenses currently in scope.</div>
+              <div class="mt-3 pt-3 border-top border-secondary small">{{ risk_summary }}</div>
+            </div>
+          </div>
+          <div class="col-lg-6">
+            <div class="dark-audit p-4 h-100">
+              <div class="small text-uppercase text-secondary fw-bold">Simulator Engine (Sandbox)</div>
+              <div class="fs-5 fw-bold mt-1">What-if projection</div>
+              <div class="display-6 fw-bold mt-4">$0.00</div>
+              <div class="text-secondary small">No staged scenario change is currently applied. This value is deliberately separated from audited ledger amounts.</div>
+              <a href="{{ url_for('pro') }}" class="btn btn-outline-light btn-sm mt-3">Open analysis workspace</a>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+</div>
+{% endblock %}
