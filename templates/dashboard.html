@@ -4,418 +4,1478 @@
 <meta charset="UTF-8">
 <title>Budget Buddy — Dashboard</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600;8..60,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
 <style>
-  :root{
-    --bg: #FAF9F5;
-    --surface: #FFFFFF;
-    --border: #E6E2D8;
-    --ink: #16202B;
-    --ink-soft: #5C6570;
-    --ink-faint: #8A9099;
-    --navy: #1B3A5C;
-    --navy-dark: #0E1B2A;
-    --navy-dark-soft: #B9C6D4;
-    --brass: #A2792C;
-    --brass-soft: #F3EBD8;
-    --green: #1F6E45;
-    --green-soft: #E4F0E8;
-    --red: #9C3B2E;
-    --red-soft: #F6E7E3;
-    --amber: #B8822A;
-    --amber-soft: #FBF0DD;
-    --radius: 12px;
-    --shadow: 0 1px 2px rgba(22,32,43,0.04), 0 4px 16px rgba(22,32,43,0.05);
-  }
-  *{ box-sizing: border-box; }
-  body{
-    margin:0;
-    background: var(--bg);
-    background-image:
-      linear-gradient(var(--border) 1px, transparent 1px);
-    background-size: 100% 42px;
-    background-position: 0 96px;
-    color: var(--ink);
-    font-family: 'Inter', system-ui, sans-serif;
-    -webkit-font-smoothing: antialiased;
-  }
-  .serif{ font-family: 'Source Serif 4', Georgia, serif; }
-  .mono{ font-family: 'IBM Plex Mono', monospace; }
+:root{
+  --bg:#FAF9F5;
+  --surface:#FFFFFF;
+  --border:#E6E2D8;
+  --ink:#16202B;
+  --ink-soft:#5C6570;
+  --ink-faint:#8A9099;
+  --navy:#1B3A5C;
+  --navy-dark:#0E1B2A;
+  --navy-dark-soft:#B9C6D4;
+  --brass:#A2792C;
+  --brass-soft:#F3EBD8;
+  --green:#1F6E45;
+  --green-soft:#E4F0E8;
+  --red:#9C3B2E;
+  --red-soft:#F6E7E3;
+  --amber:#B8822A;
+  --amber-soft:#FBF0DD;
+  --radius:12px;
+  --shadow:0 1px 2px rgba(22,32,43,.04),
+           0 4px 16px rgba(22,32,43,.05);
+}
 
-  /* Topbar */
-  .topbar{
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-    padding: 16px 32px;
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    position: sticky;
-    top:0;
-    z-index: 10;
-  }
-  .brand{ display:flex; align-items:center; gap:10px; }
-  .brand-mark{
-    width:32px; height:32px; border-radius:8px;
-    background: var(--navy);
-    display:flex; align-items:center; justify-content:center;
-    flex-shrink:0;
-  }
-  .brand-mark svg{ width:17px; height:17px; }
-  .brand-name{ font-size:18px; font-weight:600; letter-spacing:-0.01em; }
-  .brand-sub{ font-size:11px; color: var(--ink-faint); letter-spacing:0.06em; text-transform:uppercase; margin-top:1px; }
+*{
+  box-sizing:border-box;
+}
 
-  nav{ display:flex; align-items:center; gap:28px; }
-  nav a{
-    color: var(--ink-soft); text-decoration:none; font-size:14px; font-weight:500;
-    padding: 6px 2px; border-bottom: 2px solid transparent;
+body{
+  margin:0;
+  background:var(--bg);
+  background-image:
+    linear-gradient(var(--border) 1px,transparent 1px);
+  background-size:100% 42px;
+  background-position:0 96px;
+  color:var(--ink);
+  font-family:'Inter',system-ui,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+
+.serif{
+  font-family:'Source Serif 4',Georgia,serif;
+}
+
+.mono{
+  font-family:'IBM Plex Mono',monospace;
+}
+
+button,
+a{
+  font-family:inherit;
+}
+
+/* =========================
+   TOPBAR
+========================= */
+
+.topbar{
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+  padding:16px 32px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  position:sticky;
+  top:0;
+  z-index:20;
+}
+
+.brand{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+.brand-mark{
+  width:32px;
+  height:32px;
+  border-radius:8px;
+  background:var(--navy);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex-shrink:0;
+}
+
+.brand-mark svg{
+  width:17px;
+  height:17px;
+}
+
+.brand-name{
+  font-size:18px;
+  font-weight:600;
+  letter-spacing:-.01em;
+}
+
+.brand-sub{
+  font-size:11px;
+  color:var(--ink-faint);
+  letter-spacing:.06em;
+  text-transform:uppercase;
+  margin-top:1px;
+}
+
+nav{
+  display:flex;
+  align-items:center;
+  gap:28px;
+}
+
+nav a{
+  color:var(--ink-soft);
+  text-decoration:none;
+  font-size:14px;
+  font-weight:500;
+  padding:6px 2px;
+  border-bottom:2px solid transparent;
+}
+
+nav a:hover{
+  color:var(--navy);
+}
+
+nav a.active{
+  color:var(--navy);
+  border-bottom-color:var(--navy);
+}
+
+nav a.pro{
+  color:var(--brass);
+}
+
+.topbar-right{
+  display:flex;
+  align-items:center;
+  gap:16px;
+}
+
+.btn{
+  font-family:inherit;
+  font-size:13px;
+  font-weight:600;
+  border-radius:8px;
+  padding:9px 16px;
+  cursor:pointer;
+  border:1px solid transparent;
+  text-decoration:none;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.btn-ghost{
+  background:transparent;
+  border-color:var(--border);
+  color:var(--ink);
+}
+
+.btn-navy{
+  background:var(--navy);
+  border-color:var(--navy);
+  color:white;
+}
+
+.btn-navy:hover{
+  background:var(--navy-dark);
+}
+
+/* =========================
+   MAIN
+========================= */
+
+main{
+  max-width:1180px;
+  margin:0 auto;
+  padding:32px;
+  display:flex;
+  flex-direction:column;
+  gap:20px;
+}
+
+.card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+}
+
+/* =========================
+   BADGES
+========================= */
+
+.badge{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  font-size:11px;
+  font-weight:600;
+  letter-spacing:.03em;
+  padding:4px 10px;
+  border-radius:20px;
+}
+
+.badge-pro{
+  background:var(--brass-soft);
+  color:var(--brass);
+}
+
+.badge-free{
+  background:#EAF0F7;
+  color:var(--navy);
+}
+
+.badge-verified{
+  background:var(--green-soft);
+  color:var(--green);
+}
+
+.badge-audit{
+  background:#EAF0F7;
+  color:var(--navy);
+}
+
+/* =========================
+   WELCOME
+========================= */
+
+.welcome{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:24px;
+  padding:26px 30px;
+}
+
+.welcome-left .eyebrow{
+  font-size:11px;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  color:var(--ink-faint);
+  margin-bottom:6px;
+}
+
+.welcome-left h1{
+  font-size:26px;
+  margin:0 0 8px;
+  font-weight:600;
+}
+
+.stamp{
+  width:112px;
+  height:112px;
+  border-radius:50%;
+  border:2px solid var(--brass);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  position:relative;
+  flex-shrink:0;
+}
+
+.stamp::before{
+  content:"";
+  position:absolute;
+  inset:6px;
+  border-radius:50%;
+  border:1px dashed var(--brass);
+  opacity:.55;
+}
+
+.stamp .score{
+  font-size:28px;
+  font-weight:600;
+  color:var(--navy);
+  line-height:1;
+}
+
+.stamp .of100{
+  font-size:10px;
+  color:var(--ink-faint);
+  margin-top:2px;
+}
+
+.stamp .label{
+  font-size:8.5px;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+  color:var(--brass);
+  margin-top:5px;
+  font-weight:600;
+}
+
+/* =========================
+   KPI
+========================= */
+
+.kpi-row{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:20px;
+}
+
+.kpi{
+  padding:22px 24px;
+}
+
+.kpi-top{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:14px;
+}
+
+.kpi-label{
+  font-size:12px;
+  color:var(--ink-soft);
+  text-transform:uppercase;
+  letter-spacing:.05em;
+}
+
+.kpi-trend{
+  font-size:11px;
+  font-weight:600;
+  padding:2px 7px;
+  border-radius:6px;
+}
+
+.trend-up{
+  color:var(--green);
+  background:var(--green-soft);
+}
+
+.trend-down{
+  color:var(--red);
+  background:var(--red-soft);
+}
+
+.kpi-value{
+  font-size:30px;
+  font-weight:600;
+  letter-spacing:-.01em;
+}
+
+.kpi-sub{
+  font-size:12px;
+  color:var(--ink-faint);
+  margin-top:6px;
+}
+
+/* =========================
+   SPLIT
+========================= */
+
+.split-row{
+  display:grid;
+  grid-template-columns:1.1fr 1fr;
+  gap:20px;
+  align-items:start;
+}
+
+.card-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:20px 24px 4px;
+}
+
+.card-head h2{
+  font-size:15px;
+  font-weight:600;
+  margin:0;
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
+.card-body{
+  padding:16px 24px 22px;
+}
+
+/* =========================
+   INSIGHTS
+========================= */
+
+.insight-list{
+  list-style:none;
+  margin:0;
+  padding:0;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+
+.insight-list li{
+  font-size:13.5px;
+  color:var(--ink);
+  line-height:1.5;
+  padding-left:16px;
+  position:relative;
+}
+
+.insight-list li::before{
+  content:"›";
+  position:absolute;
+  left:0;
+  color:var(--brass);
+  font-weight:700;
+}
+
+.link-btn{
+  margin-top:16px;
+  width:100%;
+  text-align:center;
+  padding:10px;
+  border-radius:8px;
+  border:1px solid var(--border);
+  color:var(--navy);
+  font-size:13px;
+  font-weight:600;
+  background:#F7F9FB;
+  cursor:pointer;
+}
+
+/* =========================
+   SUBSCRIPTIONS
+========================= */
+
+.sub-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:10px 0;
+  border-bottom:1px solid var(--border);
+}
+
+.sub-row:last-child{
+  border-bottom:none;
+}
+
+.sub-left{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+.sub-avatar{
+  width:28px;
+  height:28px;
+  border-radius:7px;
+  background:var(--brass-soft);
+  color:var(--brass);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:11px;
+  font-weight:700;
+}
+
+.sub-name{
+  font-size:13.5px;
+  font-weight:500;
+}
+
+.sub-flag{
+  font-size:10.5px;
+  color:var(--red);
+  background:var(--red-soft);
+  padding:1px 6px;
+  border-radius:5px;
+  margin-left:8px;
+}
+
+.sub-amount{
+  font-size:13.5px;
+  font-weight:600;
+}
+
+/* =========================
+   RISK
+========================= */
+
+.risk-card .card-body{
+  display:flex;
+  flex-direction:column;
+  padding-top:6px;
+}
+
+.risk-item{
+  display:flex;
+  gap:14px;
+  padding:16px 0;
+  border-bottom:1px solid var(--border);
+}
+
+.risk-item:last-child{
+  border-bottom:none;
+}
+
+.risk-tier{
+  flex-shrink:0;
+  width:64px;
+  text-align:center;
+  height:22px;
+  border-radius:6px;
+  font-size:10px;
+  font-weight:700;
+  letter-spacing:.04em;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-transform:uppercase;
+}
+
+.tier-high{
+  background:var(--red-soft);
+  color:var(--red);
+}
+
+.tier-med{
+  background:var(--amber-soft);
+  color:var(--amber);
+}
+
+.tier-low{
+  background:var(--green-soft);
+  color:var(--green);
+}
+
+.risk-text strong{
+  font-size:13.5px;
+}
+
+.risk-text p{
+  margin:4px 0 0;
+  font-size:13px;
+  color:var(--ink-soft);
+  line-height:1.5;
+}
+
+.risk-text .rec{
+  color:var(--ink-faint);
+  font-size:12px;
+  margin-top:4px;
+}
+
+/* =========================
+   CHART
+========================= */
+
+.chart-row{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  margin-bottom:10px;
+}
+
+.chart-cat{
+  width:130px;
+  font-size:12.5px;
+  color:var(--ink-soft);
+  flex-shrink:0;
+}
+
+.chart-track{
+  flex:1;
+  height:10px;
+  background:#F0EEE7;
+  border-radius:6px;
+  overflow:hidden;
+}
+
+.chart-fill{
+  height:100%;
+  border-radius:6px;
+  background:var(--navy);
+}
+
+.chart-pct{
+  width:44px;
+  text-align:right;
+  font-size:12px;
+  font-weight:600;
+  font-family:'IBM Plex Mono',monospace;
+  flex-shrink:0;
+}
+
+/* =========================
+   TABLE
+========================= */
+
+table{
+  width:100%;
+  border-collapse:collapse;
+  font-size:13px;
+}
+
+thead th{
+  text-align:left;
+  font-size:11px;
+  text-transform:uppercase;
+  letter-spacing:.05em;
+  color:var(--ink-faint);
+  font-weight:600;
+  padding:0 0 10px;
+  border-bottom:1px solid var(--border);
+}
+
+tbody td{
+  padding:13px 0;
+  border-bottom:1px solid var(--border);
+  vertical-align:middle;
+}
+
+tbody tr:last-child td{
+  border-bottom:none;
+}
+
+td.date,
+td.amt{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:12.5px;
+  color:var(--ink-soft);
+}
+
+td.amt{
+  text-align:right;
+  font-weight:600;
+  color:var(--ink);
+}
+
+.cat-tag{
+  font-size:11px;
+  padding:3px 9px;
+  border-radius:20px;
+  background:#F0F2F4;
+  color:var(--ink-soft);
+}
+
+.status-ok{
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  font-size:12px;
+  color:var(--green);
+  font-weight:600;
+}
+
+.status-ok::before{
+  content:"●";
+  font-size:8px;
+}
+
+/* =========================
+   DARK ANCHOR CARDS
+========================= */
+
+.anchor-row{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:20px;
+}
+
+.anchor-card{
+  background:var(--navy-dark);
+  color:white;
+  border-radius:var(--radius);
+  padding:24px 26px;
+}
+
+.anchor-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:16px;
+}
+
+.anchor-title{
+  font-size:13.5px;
+  font-weight:600;
+  color:#E4E9EE;
+}
+
+.anchor-pill{
+  font-size:10px;
+  font-weight:700;
+  letter-spacing:.05em;
+  padding:3px 9px;
+  border-radius:6px;
+  text-transform:uppercase;
+}
+
+.anchor-pill.recover{
+  background:rgba(178,138,58,.22);
+  color:#E8CE9A;
+}
+
+.anchor-pill.sandbox{
+  background:rgba(255,255,255,.1);
+  color:var(--navy-dark-soft);
+}
+
+.anchor-value{
+  font-size:32px;
+  font-weight:600;
+  font-family:'Source Serif 4',serif;
+}
+
+.anchor-note{
+  font-size:12.5px;
+  color:var(--navy-dark-soft);
+  margin-top:8px;
+  line-height:1.5;
+}
+
+/* =========================
+   EMPTY STATE
+========================= */
+
+.empty{
+  text-align:center;
+  padding:40px 20px;
+}
+
+.empty h3{
+  margin:0 0 8px;
+  font-size:18px;
+}
+
+.empty p{
+  margin:0 auto 18px;
+  max-width:480px;
+  color:var(--ink-soft);
+  font-size:13px;
+  line-height:1.6;
+}
+
+/* =========================
+   FOOTER
+========================= */
+
+footer{
+  text-align:center;
+  padding:28px;
+  font-size:11.5px;
+  color:var(--ink-faint);
+}
+
+/* =========================
+   RESPONSIVE
+========================= */
+
+@media(max-width:900px){
+
+  nav{
+    display:none;
   }
-  nav a.active{ color: var(--navy); border-bottom-color: var(--navy); }
-  nav a.pro{ color: var(--brass); }
 
-  .topbar-right{ display:flex; align-items:center; gap:16px; }
-  .btn{
-    font-family:inherit; font-size:13px; font-weight:600; border-radius:8px;
-    padding:9px 16px; cursor:pointer; border:1px solid transparent;
-  }
-  .btn-ghost{ background:transparent; border-color:var(--border); color:var(--ink); }
-
-  main{ max-width:1180px; margin:0 auto; padding:32px; display:flex; flex-direction:column; gap:20px; }
-
-  .card{
-    background: var(--surface);
-    border:1px solid var(--border);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow);
+  .kpi-row,
+  .split-row,
+  .anchor-row{
+    grid-template-columns:1fr;
   }
 
-  /* Welcome / stamp row */
   .welcome{
-    display:flex; align-items:center; justify-content:space-between; gap:24px;
-    padding: 26px 30px;
+    flex-direction:column;
+    align-items:flex-start;
   }
-  .welcome-left .eyebrow{ font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color: var(--ink-faint); margin-bottom:6px; }
-  .welcome-left h1{ font-size:26px; margin:0 0 8px; font-weight:600; }
-  .badge{
-    display:inline-flex; align-items:center; gap:6px;
-    font-size:11px; font-weight:600; letter-spacing:0.03em;
-    padding:4px 10px; border-radius:20px;
+
+  .topbar{
+    padding:14px 18px;
   }
-  .badge-pro{ background: var(--brass-soft); color: var(--brass); }
-  .badge-verified{ background: var(--green-soft); color: var(--green); }
-  .badge-audit{ background:#EAF0F7; color:var(--navy); }
+
+  main{
+    padding:18px;
+  }
+}
+
+@media(max-width:600px){
+
+  .topbar-right .badge{
+    display:none;
+  }
+
+  .brand-sub{
+    display:none;
+  }
+
+  .kpi-value{
+    font-size:25px;
+  }
 
   .stamp{
-    width:112px; height:112px; border-radius:50%;
-    border:2px solid var(--brass);
-    display:flex; flex-direction:column; align-items:center; justify-content:center;
-    position:relative; flex-shrink:0;
-  }
-  .stamp::before{
-    content:""; position:absolute; inset:6px; border-radius:50%; border:1px dashed var(--brass);
-    opacity:0.55;
-  }
-  .stamp .score{ font-size:28px; font-weight:600; color:var(--navy); line-height:1; }
-  .stamp .of100{ font-size:10px; color:var(--ink-faint); margin-top:2px; }
-  .stamp .label{
-    font-size:8.5px; letter-spacing:0.14em; text-transform:uppercase; color:var(--brass);
-    margin-top:5px; font-weight:600;
+    width:90px;
+    height:90px;
   }
 
-  /* KPI row */
-  .kpi-row{ display:grid; grid-template-columns: repeat(3, 1fr); gap:20px; }
-  .kpi{ padding:22px 24px; }
-  .kpi-top{ display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
-  .kpi-label{ font-size:12px; color:var(--ink-soft); text-transform:uppercase; letter-spacing:0.05em; }
-  .kpi-trend{ font-size:11px; font-weight:600; padding:2px 7px; border-radius:6px; }
-  .trend-up{ color:var(--green); background:var(--green-soft); }
-  .trend-down{ color:var(--red); background:var(--red-soft); }
-  .kpi-value{ font-size:30px; font-weight:600; letter-spacing:-0.01em; }
-  .kpi-sub{ font-size:12px; color:var(--ink-faint); margin-top:6px; }
-
-  /* Split row */
-  .split-row{ display:grid; grid-template-columns: 1.1fr 1fr; gap:20px; align-items:start; }
-  .card-head{ display:flex; align-items:center; justify-content:space-between; padding:20px 24px 4px; }
-  .card-head h2{ font-size:15px; font-weight:600; margin:0; display:flex; align-items:center; gap:8px; }
-  .card-body{ padding:16px 24px 22px; }
-
-  .insight-list{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:12px; }
-  .insight-list li{ font-size:13.5px; color:var(--ink); line-height:1.5; padding-left:16px; position:relative; }
-  .insight-list li::before{ content:"›"; position:absolute; left:0; color:var(--brass); font-weight:700; }
-  .link-btn{
-    margin-top:16px; width:100%; text-align:center; padding:10px; border-radius:8px;
-    border:1px solid var(--border); color:var(--navy); font-size:13px; font-weight:600;
-    background:#F7F9FB; cursor:pointer;
+  table{
+    min-width:700px;
   }
 
-  .sub-row{ display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--border); }
-  .sub-row:last-child{ border-bottom:none; }
-  .sub-left{ display:flex; align-items:center; gap:10px; }
-  .sub-avatar{
-    width:28px; height:28px; border-radius:7px; background:var(--brass-soft); color:var(--brass);
-    display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700;
+  .card-body{
+    overflow-x:auto;
   }
-  .sub-name{ font-size:13.5px; font-weight:500; }
-  .sub-flag{ font-size:10.5px; color:var(--red); background:var(--red-soft); padding:1px 6px; border-radius:5px; margin-left:8px; }
-  .sub-amount{ font-size:13.5px; font-weight:600; }
-  .sub-amount.mono-num{ font-family:'IBM Plex Mono', monospace; }
-
-  /* Risk card */
-  .risk-card .card-body{ display:flex; flex-direction:column; gap:0; padding-top:6px; }
-  .risk-item{ display:flex; gap:14px; padding:16px 0; border-bottom:1px solid var(--border); }
-  .risk-item:last-child{ border-bottom:none; }
-  .risk-tier{
-    flex-shrink:0; width:64px; text-align:center; height:22px; border-radius:6px;
-    font-size:10px; font-weight:700; letter-spacing:0.04em; display:flex; align-items:center; justify-content:center;
-    text-transform:uppercase;
-  }
-  .tier-high{ background:var(--red-soft); color:var(--red); }
-  .tier-med{ background:var(--amber-soft); color:var(--amber); }
-  .tier-low{ background:var(--green-soft); color:var(--green); }
-  .risk-text strong{ font-size:13.5px; }
-  .risk-text p{ margin:4px 0 0; font-size:13px; color:var(--ink-soft); line-height:1.5; }
-  .risk-text .rec{ color:var(--ink-faint); font-size:12px; margin-top:4px; }
-
-  /* Chart card */
-  .chart-row{ display:flex; align-items:center; gap:14px; margin-bottom:10px; }
-  .chart-cat{ width:130px; font-size:12.5px; color:var(--ink-soft); flex-shrink:0; }
-  .chart-track{ flex:1; height:10px; background:#F0EEE7; border-radius:6px; overflow:hidden; }
-  .chart-fill{ height:100%; border-radius:6px; background:var(--navy); }
-  .chart-pct{ width:44px; text-align:right; font-size:12px; font-weight:600; font-family:'IBM Plex Mono', monospace; flex-shrink:0; }
-
-  /* Table */
-  table{ width:100%; border-collapse:collapse; font-size:13px; }
-  thead th{
-    text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:0.05em;
-    color:var(--ink-faint); font-weight:600; padding:0 0 10px; border-bottom:1px solid var(--border);
-  }
-  tbody td{ padding:13px 0; border-bottom:1px solid var(--border); vertical-align:middle; }
-  tbody tr:last-child td{ border-bottom:none; }
-  td.date, td.amt{ font-family:'IBM Plex Mono', monospace; font-size:12.5px; color:var(--ink-soft); }
-  td.amt{ text-align:right; font-weight:600; color:var(--ink); }
-  .cat-tag{ font-size:11px; padding:3px 9px; border-radius:20px; background:#F0F2F4; color:var(--ink-soft); }
-  .status-ok{ display:inline-flex; align-items:center; gap:5px; font-size:12px; color:var(--green); font-weight:600; }
-  .status-ok::before{ content:"●"; font-size:8px; }
-  .table-export{ display:flex; gap:8px; }
-  .table-export button{
-    font-size:12px; font-weight:600; padding:7px 12px; border-radius:7px; border:1px solid var(--border);
-    background:transparent; color:var(--ink-soft); cursor:pointer;
-  }
-
-  /* Anchor row (dark) */
-  .anchor-row{ display:grid; grid-template-columns:1fr 1fr; gap:20px; }
-  .anchor-card{
-    background: var(--navy-dark); color:#fff; border-radius: var(--radius); padding:24px 26px;
-  }
-  .anchor-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
-  .anchor-title{ font-size:13.5px; font-weight:600; color:#E4E9EE; }
-  .anchor-pill{ font-size:10px; font-weight:700; letter-spacing:0.05em; padding:3px 9px; border-radius:6px; text-transform:uppercase; }
-  .anchor-pill.recover{ background:rgba(178,138,58,0.22); color:#E8CE9A; }
-  .anchor-pill.sandbox{ background:rgba(255,255,255,0.1); color:var(--navy-dark-soft); }
-  .anchor-value{ font-size:32px; font-weight:600; font-family:'Source Serif 4', serif; }
-  .anchor-note{ font-size:12.5px; color:var(--navy-dark-soft); margin-top:8px; line-height:1.5; }
-
-  footer{ text-align:center; padding:28px; font-size:11.5px; color:var(--ink-faint); }
-
-  @media (max-width: 860px){
-    .kpi-row, .split-row, .anchor-row{ grid-template-columns:1fr; }
-    nav{ display:none; }
-    .welcome{ flex-direction:column; align-items:flex-start; }
-  }
+}
 </style>
 </head>
+
 <body>
 
+<!-- =========================
+     TOP NAVIGATION
+========================= -->
+
 <div class="topbar">
+
   <div class="brand">
+
     <div class="brand-mark">
-      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M4 12L9.5 17.5L20 6" stroke="white" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+      <svg viewBox="0 0 24 24" fill="none">
+        <path
+          d="M4 12L9.5 17.5L20 6"
+          stroke="white"
+          stroke-width="2.4"
+          stroke-linecap="round"
+          stroke-linejoin="round"/>
       </svg>
     </div>
+
     <div>
       <div class="brand-name">Budget Buddy</div>
       <div class="brand-sub">Agency Software Auditor</div>
     </div>
+
   </div>
+
   <nav>
-    <a href="#" class="active">Dashboard</a>
-    <a href="#">Auditor Console</a>
-    <a href="#">Categories</a>
-    <a href="#" class="pro">AI Insights</a>
+    <a href="{{ url_for('dashboard') }}" class="active">
+      Dashboard
+    </a>
+
+    <a href="#">
+      Auditor Console
+    </a>
+
+    <a href="#">
+      Categories
+    </a>
+
+    <a href="#" class="pro">
+      AI Insights
+    </a>
   </nav>
+
   <div class="topbar-right">
-    <span class="badge badge-pro">★ PRO PLAN</span>
-    <button class="btn btn-ghost">Log out</button>
+
+    {% if current_user and current_user.plan %}
+      <span class="badge badge-pro">
+        ★ {{ current_user.plan|upper }} PLAN
+      </span>
+    {% else %}
+      <span class="badge badge-free">
+        FREE PLAN
+      </span>
+    {% endif %}
+
+    <a
+      href="{{ url_for('logout') }}"
+      class="btn btn-ghost">
+      Log out
+    </a>
+
   </div>
+
 </div>
+
 
 <main>
 
-  <!-- Welcome / health stamp -->
-  <section class="card welcome">
-    <div class="welcome-left">
-      <div class="eyebrow">Audit period · August 2026</div>
-      <h1>Northline Creative <span style="font-weight:400; color:var(--ink-faint); font-size:16px;">(sample account)</span></h1>
-      <span class="badge badge-verified">✓ Last synced 2 hours ago</span>
-    </div>
-    <div class="stamp">
-      <div class="score serif">82</div>
-      <div class="of100">/ 100</div>
-      <div class="label">Stack Health</div>
-    </div>
-  </section>
+<!-- =========================
+     WELCOME
+========================= -->
 
-  <!-- KPI row -->
-  <section class="kpi-row">
-    <div class="card kpi">
-      <div class="kpi-top">
-        <span class="kpi-label">Total Revenue</span>
-        <span class="kpi-trend trend-up">▲ 6.2%</span>
-      </div>
-      <div class="kpi-value mono">$184,230.00</div>
-      <div class="kpi-sub">vs. $173,510 last month</div>
-    </div>
-    <div class="card kpi">
-      <div class="kpi-top">
-        <span class="kpi-label">Total Expenses</span>
-        <span class="kpi-trend trend-down">▲ 3.1%</span>
-      </div>
-      <div class="kpi-value mono">$126,540.50</div>
-      <div class="kpi-sub">vs. $122,750 last month</div>
-    </div>
-    <div class="card kpi">
-      <div class="kpi-top">
-        <span class="kpi-label">Net Profit</span>
-        <span class="kpi-trend trend-up">▲ 12.8%</span>
-      </div>
-      <div class="kpi-value mono">$57,689.50</div>
-      <div class="kpi-sub">18.9% margin this month</div>
-    </div>
-  </section>
+<section class="card welcome">
 
-  <!-- Insights + Subscriptions -->
-  <section class="split-row">
-    <div class="card">
-      <div class="card-head"><h2>◆ AI Financial Insights</h2></div>
-      <div class="card-body">
-        <ul class="insight-list">
-          <li>Recoverable software spend this month is estimated at <strong>$2,340</strong> — mostly duplicate project-management tools.</li>
-          <li>Your largest client makes up <strong>42%</strong> of revenue. Consider growing 2–3 new accounts to reduce concentration risk.</li>
-          <li>Marketing tooling spend is <strong>9%</strong> of revenue, in line with the 8–12% agency benchmark.</li>
-        </ul>
-        <button class="link-btn">View full audit report →</button>
-      </div>
+  <div class="welcome-left">
+
+    <div class="eyebrow">
+      Audit period · {{ audit_period|default('Current period') }}
     </div>
 
-    <div class="card">
-      <div class="card-head"><h2>◆ Detected Subscriptions</h2></div>
-      <div class="card-body" style="padding-top:2px;">
-        <div class="sub-row">
-          <div class="sub-left"><div class="sub-avatar">AW</div><span class="sub-name">Asana</span></div>
-          <span class="sub-amount mono-num">$65.00/mo</span>
-        </div>
-        <div class="sub-row">
-          <div class="sub-left"><div class="sub-avatar">MO</div><span class="sub-name">Monday.com</span><span class="sub-flag">overlap</span></div>
-          <span class="sub-amount mono-num">$72.00/mo</span>
-        </div>
-        <div class="sub-row">
-          <div class="sub-left"><div class="sub-avatar">SL</div><span class="sub-name">Slack</span></div>
-          <span class="sub-amount mono-num">$84.88/mo</span>
-        </div>
-        <div class="sub-row">
-          <div class="sub-left"><div class="sub-avatar">AC</div><span class="sub-name">Adobe Creative Cloud</span></div>
-          <span class="sub-amount mono-num">$59.99/mo</span>
-        </div>
-        <div class="sub-row">
-          <div class="sub-left"><div class="sub-avatar">CV</div><span class="sub-name">Canva</span><span class="sub-flag">2 unused seats</span></div>
-          <span class="sub-amount mono-num">$14.70/mo</span>
-        </div>
-      </div>
-    </div>
-  </section>
+    <h1>
+      {{ agency_name|default(current_user.name if current_user else 'Your Agency') }}
+    </h1>
 
-  <!-- Risk / findings -->
-  <section class="card risk-card">
-    <div class="card-head"><h2>◆ Financial Risk Findings</h2><span class="badge badge-audit">3 flagged</span></div>
-    <div class="card-body">
-      <div class="risk-item">
-        <span class="risk-tier tier-high">High</span>
-        <div class="risk-text">
-          <strong>Client concentration risk</strong>
-          <p>One client accounts for 42% of recorded revenue ($77,377 of $184,230). Losing that account would hit cash flow hard.</p>
-          <p class="rec">Recommendation: aim to bring this below 30% by growing revenue from other accounts.</p>
-        </div>
-      </div>
-      <div class="risk-item">
-        <span class="risk-tier tier-med">Medium</span>
-        <div class="risk-text">
-          <strong>Duplicate project-management tools</strong>
-          <p>Both Asana ($65/mo) and Monday.com ($72/mo) are active with overlapping team usage.</p>
-          <p class="rec">Recommendation: consolidate to one tool — projected savings of $864/yr.</p>
-        </div>
-      </div>
-      <div class="risk-item">
-        <span class="risk-tier tier-low">Low</span>
-        <div class="risk-text">
-          <strong>Vendor price increase</strong>
-          <p>AWS billing rose 12% month-over-month ($164 → $183).</p>
-          <p class="rec">Recommendation: confirm the increase matches expected usage growth.</p>
-        </div>
-      </div>
-    </div>
-  </section>
+    <span class="badge badge-verified">
+      ✓
+      {% if last_synced %}
+        Last synced {{ last_synced }}
+      {% else %}
+        Audit ready
+      {% endif %}
+    </span>
 
-  <!-- Expense breakdown -->
-  <section class="card">
-    <div class="card-head"><h2>◆ Expense Category Breakdown</h2></div>
-    <div class="card-body">
-      <div class="chart-row"><span class="chart-cat">Software &amp; tools</span><div class="chart-track"><div class="chart-fill" style="width:76%"></div></div><span class="chart-pct">34%</span></div>
-      <div class="chart-row"><span class="chart-cat">Marketing</span><div class="chart-track"><div class="chart-fill" style="width:49%"></div></div><span class="chart-pct">22%</span></div>
-      <div class="chart-row"><span class="chart-cat">Cloud hosting</span><div class="chart-track"><div class="chart-fill" style="width:31%"></div></div><span class="chart-pct">14%</span></div>
-      <div class="chart-row"><span class="chart-cat">Office &amp; ops</span><div class="chart-track"><div class="chart-fill" style="width:27%"></div></div><span class="chart-pct">12%</span></div>
-      <div class="chart-row"><span class="chart-cat">Subscriptions</span><div class="chart-track"><div class="chart-fill" style="width:22%"></div></div><span class="chart-pct">10%</span></div>
-      <div class="chart-row"><span class="chart-cat">Other</span><div class="chart-track"><div class="chart-fill" style="width:16%"></div></div><span class="chart-pct">8%</span></div>
-    </div>
-  </section>
+  </div>
 
-  <!-- Transaction records -->
-  <section class="card">
+  <div class="stamp">
+
+    <div class="score serif">
+      {{ health_score|default(0) }}
+    </div>
+
+    <div class="of100">
+      / 100
+    </div>
+
+    <div class="label">
+      Stack Health
+    </div>
+
+  </div>
+
+</section>
+
+
+<!-- =========================
+     KPI ROW
+========================= -->
+
+<section class="kpi-row">
+
+  <div class="card kpi">
+
+    <div class="kpi-top">
+
+      <span class="kpi-label">
+        Total Revenue
+      </span>
+
+      {% if revenue_change is defined %}
+        <span class="kpi-trend trend-up">
+          {{ revenue_change }}
+        </span>
+      {% endif %}
+
+    </div>
+
+    <div class="kpi-value mono">
+      ${{ "%.2f"|format(total_revenue|default(0)) }}
+    </div>
+
+    <div class="kpi-sub">
+      Recorded revenue
+    </div>
+
+  </div>
+
+
+  <div class="card kpi">
+
+    <div class="kpi-top">
+
+      <span class="kpi-label">
+        Total Expenses
+      </span>
+
+      {% if expense_change is defined %}
+        <span class="kpi-trend trend-down">
+          {{ expense_change }}
+        </span>
+      {% endif %}
+
+    </div>
+
+    <div class="kpi-value mono">
+      ${{ "%.2f"|format(total_expenses|default(0)) }}
+    </div>
+
+    <div class="kpi-sub">
+      Recorded expenses
+    </div>
+
+  </div>
+
+
+  <div class="card kpi">
+
+    <div class="kpi-top">
+
+      <span class="kpi-label">
+        Net Profit
+      </span>
+
+    </div>
+
+    <div class="kpi-value mono">
+      ${{ "%.2f"|format(net_profit|default(0)) }}
+    </div>
+
+    <div class="kpi-sub">
+      Current calculated margin
+    </div>
+
+  </div>
+
+</section>
+
+
+<!-- =========================
+     INSIGHTS + SUBSCRIPTIONS
+========================= -->
+
+<section class="split-row">
+
+
+  <!-- INSIGHTS -->
+
+  <div class="card">
+
     <div class="card-head">
-      <h2>◆ Transaction Records</h2>
-      <div class="table-export"><button>⭳ CSV</button><button>⭳ PDF</button></div>
+      <h2>◆ AI Financial Insights</h2>
     </div>
-    <div class="card-body">
-      <table>
-        <thead><tr><th>Date</th><th>Description</th><th>Category</th><th style="text-align:right;">Amount</th><th>Status</th></tr></thead>
-        <tbody>
-          <tr><td class="date">2026-08-19</td><td>Monday.com — team plan</td><td><span class="cat-tag">Software</span></td><td class="amt">$72.00</td><td><span class="status-ok">Verified</span></td></tr>
-          <tr><td class="date">2026-08-17</td><td>Meta Ads — client campaigns</td><td><span class="cat-tag">Marketing</span></td><td class="amt">$1,240.00</td><td><span class="status-ok">Verified</span></td></tr>
-          <tr><td class="date">2026-08-12</td><td>AWS — hosting</td><td><span class="cat-tag">Cloud</span></td><td class="amt">$183.47</td><td><span class="status-ok">Verified</span></td></tr>
-          <tr><td class="date">2026-08-05</td><td>Adobe Creative Cloud</td><td><span class="cat-tag">Subscriptions</span></td><td class="amt">$59.99</td><td><span class="status-ok">Verified</span></td></tr>
-        </tbody>
-      </table>
-    </div>
-  </section>
 
-  <!-- Anchor: risk audit + simulator -->
-  <section class="anchor-row">
-    <div class="anchor-card">
-      <div class="anchor-head"><span class="anchor-title">Recoverable Spend This Month</span><span class="anchor-pill recover">Audit finding</span></div>
-      <div class="anchor-value">$2,340.00</div>
-      <div class="anchor-note">Identified across 2 overlapping tools and 2 unused seats. Confirmed savings only count once you cancel — this is a potential estimate.</div>
+    <div class="card-body">
+
+      {% if insights %}
+
+      <ul class="insight-list">
+
+        {% for insight in insights %}
+
+        <li>
+          {{ insight|safe }}
+        </li>
+
+        {% endfor %}
+
+      </ul>
+
+      {% else %}
+
+      <div class="empty">
+
+        <h3>No insights yet</h3>
+
+        <p>
+          Upload a transaction CSV and Budget Buddy will generate
+          financial and software-spend insights here.
+        </p>
+
+      </div>
+
+      {% endif %}
+
+      <a
+        href="{{ url_for('dashboard') }}"
+        class="link-btn">
+        View full audit report →
+      </a>
+
     </div>
-    <div class="anchor-card">
-      <div class="anchor-head"><span class="anchor-title">Simulator Engine</span><span class="anchor-pill sandbox">Sandbox — not audited</span></div>
-      <div class="anchor-value">$0.00</div>
-      <div class="anchor-note">Model "what if we cut this tool" scenarios here without affecting your real audit numbers above.</div>
+
+  </div>
+
+
+  <!-- SUBSCRIPTIONS -->
+
+  <div class="card">
+
+    <div class="card-head">
+      <h2>◆ Detected Subscriptions</h2>
     </div>
-  </section>
+
+    <div class="card-body" style="padding-top:2px;">
+
+      {% if subscriptions %}
+
+        {% for sub in subscriptions %}
+
+        <div class="sub-row">
+
+          <div class="sub-left">
+
+            <div class="sub-avatar">
+              {{ sub.name[:2]|upper }}
+            </div>
+
+            <span class="sub-name">
+              {{ sub.name }}
+            </span>
+
+            {% if sub.flag %}
+              <span class="sub-flag">
+                {{ sub.flag }}
+              </span>
+            {% endif %}
+
+          </div>
+
+          <span class="sub-amount mono">
+            ${{ "%.2f"|format(sub.amount|default(0)) }}/mo
+          </span>
+
+        </div>
+
+        {% endfor %}
+
+      {% else %}
+
+        <div class="empty">
+
+          <h3>No subscriptions detected</h3>
+
+          <p>
+            Upload your transaction export to detect recurring
+            software expenses.
+          </p>
+
+        </div>
+
+      {% endif %}
+
+    </div>
+
+  </div>
+
+</section>
+
+
+<!-- =========================
+     RISK FINDINGS
+========================= -->
+
+<section class="card risk-card">
+
+  <div class="card-head">
+
+    <h2>
+      ◆ Financial Risk Findings
+    </h2>
+
+    <span class="badge badge-audit">
+      {{ findings|length if findings else 0 }} flagged
+    </span>
+
+  </div>
+
+  <div class="card-body">
+
+    {% if findings %}
+
+      {% for finding in findings %}
+
+      <div class="risk-item">
+
+        <span class="risk-tier
+          {% if finding.severity|lower == 'high' %}
+            tier-high
+          {% elif finding.severity|lower == 'medium' %}
+            tier-med
+          {% else %}
+            tier-low
+          {% endif %}
+        ">
+          {{ finding.severity }}
+        </span>
+
+        <div class="risk-text">
+
+          <strong>
+            {{ finding.title }}
+          </strong>
+
+          <p>
+            {{ finding.description }}
+          </p>
+
+          {% if finding.recommendation %}
+
+          <p class="rec">
+            Recommendation:
+            {{ finding.recommendation }}
+          </p>
+
+          {% endif %}
+
+        </div>
+
+      </div>
+
+      {% endfor %}
+
+    {% else %}
+
+      <div class="empty">
+
+        <h3>No risk findings</h3>
+
+        <p>
+          Budget Buddy hasn't found any financial or software
+          risks yet. Upload transactions to run an audit.
+        </p>
+
+      </div>
+
+    {% endif %}
+
+  </div>
+
+</section>
+
+
+<!-- =========================
+     EXPENSE BREAKDOWN
+========================= -->
+
+<section class="card">
+
+  <div class="card-head">
+    <h2>◆ Expense Category Breakdown</h2>
+  </div>
+
+  <div class="card-body">
+
+    {% if categories %}
+
+      {% for category in categories %}
+
+      <div class="chart-row">
+
+        <span class="chart-cat">
+          {{ category.name }}
+        </span>
+
+        <div class="chart-track">
+
+          <div
+            class="chart-fill"
+            style="width:{{ category.percent|default(0) }}%">
+          </div>
+
+        </div>
+
+        <span class="chart-pct">
+          {{ category.percent|default(0) }}%
+        </span>
+
+      </div>
+
+      {% endfor %}
+
+    {% else %}
+
+      <div class="empty">
+
+        <h3>No expense data</h3>
+
+        <p>
+          Upload transactions to generate your expense breakdown.
+        </p>
+
+      </div>
+
+    {% endif %}
+
+  </div>
+
+</section>
+
+
+<!-- =========================
+     TRANSACTIONS
+========================= -->
+
+<section class="card">
+
+  <div class="card-head">
+
+    <h2>
+      ◆ Transaction Records
+    </h2>
+
+    <div style="display:flex;gap:8px;">
+
+      <a
+        href="{{ url_for('export_csv') }}"
+        class="btn btn-ghost">
+        ⭳ CSV
+      </a>
+
+      {% if export_pdf_url %}
+      <a
+        href="{{ export_pdf_url }}"
+        class="btn btn-ghost">
+        ⭳ PDF
+      </a>
+      {% endif %}
+
+    </div>
+
+  </div>
+
+
+  <div class="card-body">
+
+    {% if transactions %}
+
+    <div style="overflow-x:auto;">
+
+      <table>
+
+        <thead>
+
+          <tr>
+            <th>Date</th>
+            <th>Description</th>
+            <th>Category</th>
+            <th style="text-align:right;">Amount</th>
+            <th>Status</th>
+          </tr>
+
+        </thead>
+
+        <tbody>
+
+          {% for tx in transactions %}
+
+          <tr>
+
+            <td class="date">
+              {{ tx.date }}
+            </td>
+
+            <td>
+              {{ tx.description }}
+            </td>
+
+            <td>
+
+              <span class="cat-tag">
+                {{ tx.category|default('Uncategorized') }}
+              </span>
+
+            </td>
+
+            <td class="amt">
+              ${{ "%.2f"|format(tx.amount|default(0)) }}
+            </td>
+
+            <td>
+
+              <span class="status-ok">
+                Verified
+              </span>
+
+            </td>
+
+          </tr>
+
+          {% endfor %}
+
+        </tbody>
+
+      </table>
+
+    </div>
+
+    {% else %}
+
+    <div class="empty">
+
+      <h3>No transactions yet</h3>
+
+      <p>
+        Upload a bank or credit-card CSV to begin your first
+        Budget Buddy audit.
+      </p>
+
+      <a
+        href="{{ url_for('import_csv') }}"
+        class="btn btn-navy">
+        Upload CSV
+      </a>
+
+    </div>
+
+    {% endif %}
+
+  </div>
+
+</section>
+
+
+<!-- =========================
+     RECOVERABLE SPEND + SIMULATOR
+========================= -->
+
+<section class="anchor-row">
+
+
+  <div class="anchor-card">
+
+    <div class="anchor-head">
+
+      <span class="anchor-title">
+        Recoverable Spend This Month
+      </span>
+
+      <span class="anchor-pill recover">
+        Audit finding
+      </span>
+
+    </div>
+
+    <div class="anchor-value">
+
+      ${{ "%.2f"|format(recoverable_spend|default(0)) }}
+
+    </div>
+
+    <div class="anchor-note">
+
+      Potential savings identified from duplicate,
+      recurring, or suspicious software expenses.
+      Savings are only confirmed after the user reviews
+      and cancels the relevant charges.
+
+    </div>
+
+  </div>
+
+
+  <div class="anchor-card">
+
+    <div class="anchor-head">
+
+      <span class="anchor-title">
+        Simulator Engine
+      </span>
+
+      <span class="anchor-pill sandbox">
+        Sandbox
+      </span>
+
+    </div>
+
+    <div class="anchor-value">
+      $0.00
+    </div>
+
+    <div class="anchor-note">
+
+      Model "what if we cut this tool" scenarios without
+      changing your actual audit numbers.
+
+    </div>
+
+  </div>
+
+</section>
 
 </main>
 
-<footer>Sample data shown for design purposes · Budget Buddy — Agency Software Auditor</footer>
+
+<footer>
+  Budget Buddy · Agency Software Auditor
+</footer>
 
 </body>
 </html>
