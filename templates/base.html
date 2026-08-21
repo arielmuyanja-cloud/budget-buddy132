@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Budget Buddy - SaaS Financial Audit</title>
-    <!-- Google tag (gtag.js) -->
+    <title>{% block title %}Budget Buddy - SaaS Financial Audit{% endblock %}</title>
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-XHK5KLN2RM"></script>
     <script>
       window.dataLayer = window.dataLayer || [];
@@ -12,23 +11,57 @@
       gtag('js', new Date());
       gtag('config', 'G-XHK5KLN2RM');
     </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { background-color: #0f172a; color: #f8fafc; font-family: system-ui, -apple-system, sans-serif; }
-        .card { background-color: #1e293b; border: 1px solid #334155; color: #f8fafc; }
-        .navbar { background-color: #0f172a; border-bottom: 1px solid #334155; }
-        .form-control, .form-select { background-color: #0f172a; border-color: #334155; color: #f8fafc; }
-        .form-control:focus, .form-select:focus { background-color: #0f172a; color: #f8fafc; border-color: #3b82f6; }
-        .table { color: #f8fafc; }
-        .table-dark { --bs-table-bg: #1e293b; }
+      :root {
+        --bb-bg:#f7f8fb;
+        --bb-surface:#fff;
+        --bb-ink:#1a2332;
+        --bb-muted:#667085;
+        --bb-border:#e4e7ec;
+        --bb-accent:#4f46e5;
+      }
+      html,body { margin:0; padding:0; }
+      body { background:var(--bb-bg); color:var(--bb-ink); font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; -webkit-font-smoothing:antialiased; }
+      .navbar { background:rgba(255,255,255,.97)!important; border-bottom:1px solid var(--bb-border); box-shadow:0 1px 3px rgba(16,24,40,.03); }
+      .navbar-brand { color:var(--bb-ink)!important; letter-spacing:-.02em; }
+      .navbar-brand i { color:var(--bb-accent); }
+      .navbar .nav-link { color:#475467!important; font-weight:600; font-size:.88rem; }
+      .navbar .nav-link:hover { color:var(--bb-accent)!important; }
+      .navbar-toggler { border-color:#d0d5dd; }
+      .navbar-toggler-icon { filter:invert(1); }
+      .card { background:var(--bb-surface); border:1px solid var(--bb-border); color:var(--bb-ink); border-radius:12px; box-shadow:0 4px 16px rgba(16,24,40,.045); }
+      .metric { background:var(--bb-surface); border:1px solid var(--bb-border); border-radius:12px; padding:1.15rem; box-shadow:0 4px 16px rgba(16,24,40,.045); }
+      .metric .label { color:var(--bb-muted); font-size:.68rem; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
+      .metric .value { margin-top:.3rem; font-size:1.8rem; line-height:1.1; font-weight:800; letter-spacing:-.04em; }
+      .small-muted { color:var(--bb-muted)!important; }
+      .sidebar-link { display:block; color:#475467; text-decoration:none; padding:.6rem .65rem; border-radius:8px; font-size:.86rem; font-weight:600; }
+      .sidebar-link:hover { color:var(--bb-accent); background:#eef2ff; }
+      .form-control,.form-select { background:#fff; border-color:#d0d5dd; color:var(--bb-ink); }
+      .form-control::placeholder { color:#98a2b3; }
+      .form-control:focus,.form-select:focus { background:#fff; color:var(--bb-ink); border-color:var(--bb-accent); box-shadow:0 0 0 .2rem rgba(79,70,229,.12); }
+      .table { --bs-table-color:var(--bb-ink); --bs-table-bg:transparent; }
+      .table thead th { color:var(--bb-muted); font-size:.68rem; text-transform:uppercase; letter-spacing:.07em; border-bottom-color:var(--bb-border); }
+      .table td { border-bottom-color:#eef0f3; }
+      .btn-primary { background:var(--bb-accent); border-color:var(--bb-accent); }
+      .btn-primary:hover { background:#4338ca; border-color:#4338ca; }
+      .btn-outline-light { color:#344054; border-color:#d0d5dd; }
+      .btn-outline-light:hover { color:var(--bb-ink); background:#f2f4f7; border-color:#cbd5e1; }
+      .btn-dark { background:#101828; border-color:#101828; }
+      .modal-content { background:#fff; color:var(--bb-ink); border:1px solid var(--bb-border); }
+      .btn-close-white { filter:none; }
+      @media(max-width:768px){ .navbar .nav-link { padding:.6rem .25rem; } }
     </style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark py-3">
+    <nav class="navbar navbar-expand-lg py-3">
         <div class="container">
-            <a class="navbar-brand fw-bold text-primary" href="{{ url_for('index') }}"><i class="bi bi-wallet2 me-2"></i>Budget Buddy</a>
+            <a class="navbar-brand fw-bold" href="{{ url_for('index') }}"><i class="bi bi-wallet2 me-2"></i>Budget Buddy</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"><span class="navbar-toggler-icon"></span></button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto align-items-center">
@@ -41,7 +74,7 @@
                         {% endif %}
                         <li class="nav-item"><a class="nav-link text-warning" href="{{ url_for('pricing') }}"><i class="bi bi-star-fill me-1"></i>PRO Plan</a></li>
                         <li class="nav-item"><a class="nav-link" href="{{ url_for('profile') }}">Profile</a></li>
-                        <li class="nav-item ms-2"><a class="btn btn-outline-light btn-sm" href="{{ url_for('logout') }}">Logout</a></li>
+                        <li class="nav-item ms-2"><a class="btn btn-outline-secondary btn-sm" href="{{ url_for('logout') }}">Logout</a></li>
                     {% else %}
                         <li class="nav-item"><a class="nav-link" href="{{ url_for('login') }}">Login</a></li>
                         <li class="nav-item ms-2"><a class="btn btn-primary btn-sm" href="{{ url_for('register') }}">Sign Up Free</a></li>
@@ -65,7 +98,6 @@
     </div>
 
     {% block content %}{% endblock %}
-
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
