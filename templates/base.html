@@ -3,69 +3,44 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Budget Buddy - SaaS Financial Audit</title>
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XHK5KLN2RM"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-      gtag('config', 'G-XHK5KLN2RM');
-    </script>
+    <title>{% block title %}Budget Buddy - Agency Software Auditor{% endblock %}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { background-color: #0f172a; color: #f8fafc; font-family: system-ui, -apple-system, sans-serif; }
-        .card { background-color: #1e293b; border: 1px solid #334155; color: #f8fafc; }
-        .navbar { background-color: #0f172a; border-bottom: 1px solid #334155; }
-        .form-control, .form-select { background-color: #0f172a; border-color: #334155; color: #f8fafc; }
-        .form-control:focus, .form-select:focus { background-color: #0f172a; color: #f8fafc; border-color: #3b82f6; }
-        .table { color: #f8fafc; }
-        .table-dark { --bs-table-bg: #1e293b; }
+        :root{--bb-bg:#FAF9F5;--bb-surface:#FFFFFF;--bb-border:#E6E2D8;--bb-ink:#16202B;--bb-muted:#5C6570;--bb-faint:#8A9099;--bb-navy:#1B3A5C;--bb-dark:#0E1B2A;--bb-brass:#A2792C;--bb-brass-soft:#F3EBD8;--bb-green:#1F6E45}
+        *{box-sizing:border-box}html,body{overflow-x:hidden}body{background:var(--bb-bg);color:var(--bb-ink);font-family:Inter,system-ui,-apple-system,sans-serif}.container{max-width:1180px}
+        .navbar{background:var(--bb-surface)!important;border-bottom:1px solid var(--bb-border);box-shadow:0 1px 8px rgba(22,32,43,.03)}.navbar-brand{color:var(--bb-navy)!important}.navbar .nav-link{color:var(--bb-muted)!important;font-size:.88rem;font-weight:500}.navbar .nav-link:hover{color:var(--bb-navy)!important}.card{background:var(--bb-surface);border:1px solid var(--bb-border);color:var(--bb-ink);box-shadow:0 4px 16px rgba(22,32,43,.05)}.text-muted{color:var(--bb-muted)!important}.text-primary{color:var(--bb-navy)!important}.bg-primary{background-color:var(--bb-navy)!important}.border-primary{border-color:var(--bb-navy)!important}.btn-primary{background:var(--bb-navy)!important;border-color:var(--bb-navy)!important;color:#fff!important}.btn-primary:hover{background:#142d47!important;border-color:#142d47!important}.btn-outline-primary{color:var(--bb-navy)!important;border-color:var(--bb-navy)!important}.btn-outline-primary:hover{background:var(--bb-navy)!important;color:#fff!important}.form-control,.form-select{background:#fff;border-color:var(--bb-border);color:var(--bb-ink)}.form-control:focus,.form-select:focus{background:#fff;color:var(--bb-ink);border-color:var(--bb-navy);box-shadow:0 0 0 .2rem rgba(27,58,92,.12)}.table{--bs-table-color:var(--bb-ink);--bs-table-bg:transparent;color:var(--bb-ink)}.table-dark{--bs-table-bg:var(--bb-dark);--bs-table-color:#fff}.list-group-item{border-color:var(--bb-border)}.alert{border-radius:10px}.btn{border-radius:8px;font-weight:600}
+        /* Shared responsive guard: no page should force horizontal scrolling. */
+        main{width:100%;max-width:1180px!important;margin-left:auto!important;margin-right:auto!important;overflow-x:hidden}main,main>*,main *{min-width:0}.table-responsive,.tablewrap{max-width:100%;overflow-x:auto}
+        /* Auditor Console uses the same Budget Buddy navy/brass visual system. */
+        body:has(.audit-shell) .audit-shell{background:var(--bb-bg)!important;color:var(--bb-ink)!important;--audit-accent:var(--bb-navy)!important;--audit-accent-soft:var(--bb-brass-soft)!important;--audit-dark:var(--bb-dark)!important}
+        body:has(.audit-shell) .audit-card{background:#fff!important;border-color:var(--bb-border)!important;box-shadow:0 4px 16px rgba(22,32,43,.05)!important}
+        body:has(.audit-shell) .audit-brand-mark{background:var(--bb-navy)!important}.audit-shell .audit-muted{color:var(--bb-muted)!important}.audit-shell .audit-sidebar-title{color:var(--bb-muted)!important}.audit-shell .audit-status{color:var(--bb-muted)!important;background:#fff!important;border-color:var(--bb-border)!important}.audit-shell .audit-report-btn{background:var(--bb-navy)!important;border-color:var(--bb-navy)!important;color:#fff!important}.audit-shell .audit-only{background:var(--bb-brass-soft)!important;color:var(--bb-brass)!important;border-color:#ddcfaa!important}.audit-shell .audit-kpi-accent{color:var(--bb-brass)!important}
     </style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark py-3">
+    <nav class="navbar navbar-expand-lg py-3">
         <div class="container">
-            <a class="navbar-brand fw-bold text-primary" href="{{ url_for('index') }}"><i class="bi bi-wallet2 me-2"></i>Budget Buddy</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"><span class="navbar-toggler-icon"></span></button>
+            <a class="navbar-brand fw-bold" href="{{ url_for('index') }}"><i class="bi bi-wallet2 me-2"></i>Budget Buddy</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-label="Toggle navigation"><span class="navbar-toggler-icon"></span></button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto align-items-center">
                     {% if session.get('user_id') %}
                         <li class="nav-item"><a class="nav-link" href="{{ url_for('dashboard') }}">Dashboard</a></li>
                         <li class="nav-item"><a class="nav-link" href="{{ url_for('auditor_console') }}"><i class="bi bi-shield-check me-1"></i>Auditor Console</a></li>
                         <li class="nav-item"><a class="nav-link" href="{{ url_for('manage_categories') }}">Categories</a></li>
-                        {% if current_user and current_user.plan_tier in ['GROWTH', 'PRO'] %}
-                        <li class="nav-item"><a class="nav-link" href="{{ url_for('pro') }}"><i class="bi bi-cpu me-1"></i>AI Insights</a></li>
-                        {% endif %}
-                        <li class="nav-item"><a class="nav-link text-warning" href="{{ url_for('pricing') }}"><i class="bi bi-star-fill me-1"></i>PRO Plan</a></li>
+                        {% if current_user and current_user.plan_tier in ['GROWTH', 'PRO'] %}<li class="nav-item"><a class="nav-link" href="{{ url_for('pro') }}"><i class="bi bi-cpu me-1"></i>AI Insights</a></li>{% endif %}
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('pricing') }}"><i class="bi bi-star-fill me-1"></i>Plans</a></li>
                         <li class="nav-item"><a class="nav-link" href="{{ url_for('profile') }}">Profile</a></li>
-                        <li class="nav-item ms-2"><a class="btn btn-outline-light btn-sm" href="{{ url_for('logout') }}">Logout</a></li>
-                    {% else %}
-                        <li class="nav-item"><a class="nav-link" href="{{ url_for('login') }}">Login</a></li>
-                        <li class="nav-item ms-2"><a class="btn btn-primary btn-sm" href="{{ url_for('register') }}">Sign Up Free</a></li>
-                    {% endif %}
+                        <li class="nav-item ms-2"><a class="btn btn-outline-secondary btn-sm" href="{{ url_for('logout') }}">Logout</a></li>
+                    {% else %}<li class="nav-item"><a class="nav-link" href="{{ url_for('login') }}">Login</a></li><li class="nav-item ms-2"><a class="btn btn-primary btn-sm" href="{{ url_for('register') }}">Sign Up Free</a></li>{% endif %}
                 </ul>
             </div>
         </div>
     </nav>
-
-    <div class="container mt-3">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
-    </div>
-
+    <div class="container mt-3">{% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for category, message in messages %}<div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">{{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>{% endfor %}{% endif %}{% endwith %}</div>
     {% block content %}{% endblock %}
-
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
