@@ -1,26 +1,575 @@
-{% extends "base.html" %}
-{% block content %}
-<div class="container py-5">
-    <div class="row justify-content-center">
-        <div class="col-md-5">
-            <div class="card p-4 shadow-lg">
-                <h3 class="fw-bold text-center mb-3">Log In</h3>
-                <form action="{{ url_for('login') }}" method="POST">
-                    <div class="mb-3">
-                        <label class="form-label small text-secondary">Email Address</label>
-                        <input type="email" name="email" class="form-control" placeholder="owner@agency.com" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label small text-secondary">Password</label>
-                        <input type="password" name="password" class="form-control" placeholder="••••••••" required>
-                    </div>
-                    <div class="d-flex justify-content-between mb-4">
-                       <a href="{{ url_for('forgot_password_route') }}" class="small text-secondary text-decoration-none">Forgot password?</a>
-                    </div>
-                    <button type="submit" class="btn btn-primary w-100 fw-bold">Sign In</button>
-                </form>
-            </div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Log in — Budget Buddy</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600;8..60,700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg: #FAF9F5;
+            --surface: #FFFFFF;
+            --border: #E6E2D8;
+
+            --ink: #16202B;
+            --ink-soft: #5C6570;
+            --ink-faint: #8A9099;
+
+            --navy: #1B3A5C;
+            --navy-dark: #0E1B2A;
+
+            --brass: #A2792C;
+            --brass-soft: #F3EBD8;
+
+            --red: #9C3B2E;
+            --red-soft: #F6E7E3;
+
+            --radius: 12px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: var(--bg);
+            color: var(--ink);
+            font-family: 'Inter', system-ui, sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        a {
+            color: inherit;
+        }
+
+        /* NAVIGATION */
+
+        .topbar {
+            height: 72px;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+
+            padding: 0 32px;
+
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+
+            text-decoration: none;
+        }
+
+        .brand-mark {
+            width: 34px;
+            height: 34px;
+
+            border-radius: 8px;
+            background: var(--navy);
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .brand-mark svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .brand-name {
+            font-size: 18px;
+            font-weight: 600;
+            letter-spacing: -0.01em;
+        }
+
+        .back-link {
+            font-size: 13px;
+            color: var(--ink-soft);
+            text-decoration: none;
+        }
+
+        .back-link:hover {
+            color: var(--navy);
+        }
+
+        /* PAGE */
+
+        .page {
+            min-height: calc(100vh - 72px);
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            padding: 60px 20px;
+        }
+
+        .login-wrapper {
+            width: 100%;
+            max-width: 440px;
+        }
+
+        /* INTRO */
+
+        .intro {
+            text-align: center;
+            margin-bottom: 28px;
+        }
+
+        .eyebrow {
+            display: inline-flex;
+            align-items: center;
+
+            gap: 7px;
+
+            font-size: 11.5px;
+            font-weight: 700;
+
+            letter-spacing: 0.07em;
+            text-transform: uppercase;
+
+            color: var(--brass);
+            background: var(--brass-soft);
+
+            padding: 6px 14px;
+
+            border-radius: 20px;
+        }
+
+        .intro h1 {
+            font-family: 'Source Serif 4', Georgia, serif;
+
+            font-size: 40px;
+            line-height: 1.15;
+
+            font-weight: 600;
+
+            letter-spacing: -0.02em;
+
+            margin: 18px 0 10px;
+        }
+
+        .intro p {
+            margin: 0;
+
+            font-size: 14px;
+            line-height: 1.6;
+
+            color: var(--ink-soft);
+        }
+
+        /* LOGIN CARD */
+
+        .login-card {
+            background: var(--surface);
+
+            border: 1px solid var(--border);
+
+            border-radius: 14px;
+
+            padding: 34px;
+
+            box-shadow:
+                0 1px 2px rgba(22, 32, 43, 0.04),
+                0 12px 35px rgba(22, 32, 43, 0.07);
+        }
+
+        .field {
+            margin-bottom: 20px;
+        }
+
+        .field label {
+            display: block;
+
+            font-size: 13px;
+            font-weight: 600;
+
+            margin-bottom: 8px;
+        }
+
+        .field input {
+            width: 100%;
+
+            padding: 13px 14px;
+
+            border: 1px solid var(--border);
+
+            border-radius: 8px;
+
+            background: #fff;
+
+            color: var(--ink);
+
+            font-family: inherit;
+            font-size: 14px;
+
+            outline: none;
+
+            transition:
+                border-color 0.15s ease,
+                box-shadow 0.15s ease;
+        }
+
+        .field input::placeholder {
+            color: var(--ink-faint);
+        }
+
+        .field input:focus {
+            border-color: var(--navy);
+
+            box-shadow:
+                0 0 0 3px rgba(27, 58, 92, 0.10);
+        }
+
+        /* PASSWORD ROW */
+
+        .password-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+
+            margin-bottom: 8px;
+        }
+
+        .password-row label {
+            margin-bottom: 0;
+        }
+
+        .forgot {
+            font-size: 12px;
+            color: var(--navy);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .forgot:hover {
+            text-decoration: underline;
+        }
+
+        /* BUTTON */
+
+        .login-button {
+            width: 100%;
+
+            border: none;
+            border-radius: 8px;
+
+            padding: 14px 18px;
+
+            background: var(--navy);
+            color: white;
+
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 600;
+
+            cursor: pointer;
+
+            transition:
+                background 0.15s ease,
+                transform 0.15s ease;
+        }
+
+        .login-button:hover {
+            background: var(--navy-dark);
+        }
+
+        .login-button:active {
+            transform: translateY(1px);
+        }
+
+        /* ERROR */
+
+        .error-message {
+            background: var(--red-soft);
+
+            border: 1px solid rgba(156, 59, 46, 0.18);
+
+            color: var(--red);
+
+            border-radius: 8px;
+
+            padding: 11px 13px;
+
+            font-size: 13px;
+
+            margin-bottom: 20px;
+        }
+
+        /* DIVIDER */
+
+        .divider {
+            display: flex;
+            align-items: center;
+
+            gap: 12px;
+
+            margin: 25px 0;
+        }
+
+        .divider::before,
+        .divider::after {
+            content: "";
+
+            height: 1px;
+
+            flex: 1;
+
+            background: var(--border);
+        }
+
+        .divider span {
+            font-size: 11px;
+            color: var(--ink-faint);
+
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+
+        /* SIGNUP */
+
+        .signup {
+            text-align: center;
+
+            font-size: 13px;
+
+            color: var(--ink-soft);
+        }
+
+        .signup a {
+            color: var(--navy);
+
+            font-weight: 600;
+
+            text-decoration: none;
+        }
+
+        .signup a:hover {
+            text-decoration: underline;
+        }
+
+        /* SECURITY NOTE */
+
+        .security-note {
+            margin-top: 18px;
+
+            text-align: center;
+
+            font-size: 11.5px;
+
+            line-height: 1.5;
+
+            color: var(--ink-faint);
+        }
+
+        /* FOOTER */
+
+        footer {
+            text-align: center;
+
+            padding: 25px 20px;
+
+            font-size: 11.5px;
+
+            color: var(--ink-faint);
+        }
+
+        /* MOBILE */
+
+        @media (max-width: 600px) {
+
+            .topbar {
+                padding: 0 18px;
+            }
+
+            .page {
+                padding: 40px 16px;
+            }
+
+            .login-card {
+                padding: 26px 20px;
+            }
+
+            .intro h1 {
+                font-size: 34px;
+            }
+
+            .back-link {
+                display: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<header class="topbar">
+
+    <a href="/" class="brand">
+
+        <div class="brand-mark">
+            <svg viewBox="0 0 24 24" fill="none">
+                <path
+                    d="M4 12L9.5 17.5L20 6"
+                    stroke="white"
+                    stroke-width="2.4"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                />
+            </svg>
         </div>
+
+        <div class="brand-name">
+            Budget Buddy
+        </div>
+
+    </a>
+
+    <a href="/" class="back-link">
+        ← Back to Budget Buddy
+    </a>
+
+</header>
+
+
+<main class="page">
+
+    <div class="login-wrapper">
+
+        <div class="intro">
+
+            <span class="eyebrow">
+                ◆ Agency Software Auditor
+            </span>
+
+            <h1>
+                Welcome back.
+            </h1>
+
+            <p>
+                Log in to continue auditing your agency's software spend.
+            </p>
+
+        </div>
+
+
+        <div class="login-card">
+
+            {% if error %}
+                <div class="error-message">
+                    {{ error }}
+                </div>
+            {% endif %}
+
+
+            {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="error-message">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+
+            <form method="POST" action="{{ url_for('login') }}">
+
+                <div class="field">
+
+                    <label for="email">
+                        Email address
+                    </label>
+
+                    <input
+                        type="email"
+                        id="email"
+                        name="email"
+                        placeholder="you@youragency.com"
+                        autocomplete="email"
+                        required
+                    >
+
+                </div>
+
+
+                <div class="field">
+
+                    <div class="password-row">
+
+                        <label for="password">
+                            Password
+                        </label>
+
+                        <a href="#" class="forgot">
+                            Forgot password?
+                        </a>
+
+                    </div>
+
+                    <input
+                        type="password"
+                        id="password"
+                        name="password"
+                        placeholder="Enter your password"
+                        autocomplete="current-password"
+                        required
+                    >
+
+                </div>
+
+
+                <button
+                    type="submit"
+                    class="login-button"
+                >
+                    Log in to Budget Buddy
+                </button>
+
+            </form>
+
+
+            <div class="divider">
+                <span>New to Budget Buddy?</span>
+            </div>
+
+
+            <div class="signup">
+
+                Don't have an account?
+
+                <a href="{{ url_for('register') }}">
+                    Create one
+                </a>
+
+            </div>
+
+        </div>
+
+
+        <div class="security-note">
+            Your transaction data stays private. No bank connection is required
+            to run an audit.
+        </div>
+
     </div>
-</div>
-{% endblock %}
+
+</main>
+
+
+<footer>
+    © 2026 Budget Buddy · Agency Software Auditor
+</footer>
+
+</body>
+</html>
