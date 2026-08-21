@@ -1,119 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Budget Buddy — Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600;8..60,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #FAF9F5;
+    --surface: #FFFFFF;
+    --border: #E6E2D8;
+    --ink: #16202B;
+    --ink-soft: #5C6570;
+    --ink-faint: #8A9099;
+    --navy: #1B3A5C;
+    --navy-dark: #0E1B2A;
+    --navy-dark-soft: #B9C6D4;
+    --brass: #A2792C;
+    --brass-soft: #F3EBD8;
+    --green: #1F6E45;
+    --green-soft: #E4F0E8;
+    --red: #9C3B2E;
+    --red-soft: #F6E7E3;
+    --amber: #B8822A;
+    --amber-soft: #FBF0DD;
+    --radius: 12px;
+    --shadow: 0 1px 2px rgba(22,32,43,0.04), 0 4px 16px rgba(22,32,43,0.05);
+  }
+  *{ box-sizing: border-box; }
+  body{
+    margin:0;
+    background: var(--bg);
+    background-image:
+      linear-gradient(var(--border) 1px, transparent 1px);
+    background-size: 100% 42px;
+    background-position: 0 96px;
+    color: var(--ink);
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .serif{ font-family: 'Source Serif 4', Georgia, serif; }
+  .mono{ font-family: 'IBM Plex Mono', monospace; }
 
-{% extends "base.html" %}
-{% block title %}Dashboard | Budget Buddy{% endblock %}
-{% block content %}
-<div class="row g-4">
- <aside class="col-lg-2">
-  <div class="card p-3 sticky-top" style="top:15px">
-   <div class="small-muted mb-2">WORKSPACE</div>
-   <a class="sidebar-link" href="{{ url_for('dashboard') }}">📊 Dashboard</a>
-   <a class="sidebar-link" href="{{ url_for('auditor_console') }}">🛡️ Auditor Console</a>
-   <a class="sidebar-link" href="{{ url_for('import_csv') }}">📥 Import CSV</a>
-   {% if pro %}<a class="sidebar-link" href="{{ url_for('reports') }}">📄 Reports</a><a class="sidebar-link" href="{{ url_for('pro') }}">🤖 AI & Pro</a>{% else %}<a class="sidebar-link" href="{{ url_for('pricing') }}">⭐ Unlock Pro</a>{% endif %}
-   <a class="sidebar-link" href="#budgets">🎯 Budgets</a>
-   <a class="sidebar-link" href="#goals">🏁 Goals</a>
-   <a class="sidebar-link" href="#categories">🏷 Categories</a>
+  /* Topbar */
+  .topbar{
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 32px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    position: sticky;
+    top:0;
+    z-index: 10;
+  }
+  .brand{ display:flex; align-items:center; gap:10px; }
+  .brand-mark{
+    width:32px; height:32px; border-radius:8px;
+    background: var(--navy);
+    display:flex; align-items:center; justify-content:center;
+    flex-shrink:0;
+  }
+  .brand-mark svg{ width:17px; height:17px; }
+  .brand-name{ font-size:18px; font-weight:600; letter-spacing:-0.01em; }
+  .brand-sub{ font-size:11px; color: var(--ink-faint); letter-spacing:0.06em; text-transform:uppercase; margin-top:1px; }
+
+  nav{ display:flex; align-items:center; gap:28px; }
+  nav a{
+    color: var(--ink-soft); text-decoration:none; font-size:14px; font-weight:500;
+    padding: 6px 2px; border-bottom: 2px solid transparent;
+  }
+  nav a.active{ color: var(--navy); border-bottom-color: var(--navy); }
+  nav a.pro{ color: var(--brass); }
+
+  .topbar-right{ display:flex; align-items:center; gap:16px; }
+  .btn{
+    font-family:inherit; font-size:13px; font-weight:600; border-radius:8px;
+    padding:9px 16px; cursor:pointer; border:1px solid transparent;
+  }
+  .btn-ghost{ background:transparent; border-color:var(--border); color:var(--ink); }
+
+  main{ max-width:1180px; margin:0 auto; padding:32px; display:flex; flex-direction:column; gap:20px; }
+
+  .card{
+    background: var(--surface);
+    border:1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+  }
+
+  /* Welcome / stamp row */
+  .welcome{
+    display:flex; align-items:center; justify-content:space-between; gap:24px;
+    padding: 26px 30px;
+  }
+  .welcome-left .eyebrow{ font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color: var(--ink-faint); margin-bottom:6px; }
+  .welcome-left h1{ font-size:26px; margin:0 0 8px; font-weight:600; }
+  .badge{
+    display:inline-flex; align-items:center; gap:6px;
+    font-size:11px; font-weight:600; letter-spacing:0.03em;
+    padding:4px 10px; border-radius:20px;
+  }
+  .badge-pro{ background: var(--brass-soft); color: var(--brass); }
+  .badge-verified{ background: var(--green-soft); color: var(--green); }
+  .badge-audit{ background:#EAF0F7; color:var(--navy); }
+
+  .stamp{
+    width:112px; height:112px; border-radius:50%;
+    border:2px solid var(--brass);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    position:relative; flex-shrink:0;
+  }
+  .stamp::before{
+    content:""; position:absolute; inset:6px; border-radius:50%; border:1px dashed var(--brass);
+    opacity:0.55;
+  }
+  .stamp .score{ font-size:28px; font-weight:600; color:var(--navy); line-height:1; }
+  .stamp .of100{ font-size:10px; color:var(--ink-faint); margin-top:2px; }
+  .stamp .label{
+    font-size:8.5px; letter-spacing:0.14em; text-transform:uppercase; color:var(--brass);
+    margin-top:5px; font-weight:600;
+  }
+
+  /* KPI row */
+  .kpi-row{ display:grid; grid-template-columns: repeat(3, 1fr); gap:20px; }
+  .kpi{ padding:22px 24px; }
+  .kpi-top{ display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+  .kpi-label{ font-size:12px; color:var(--ink-soft); text-transform:uppercase; letter-spacing:0.05em; }
+  .kpi-trend{ font-size:11px; font-weight:600; padding:2px 7px; border-radius:6px; }
+  .trend-up{ color:var(--green); background:var(--green-soft); }
+  .trend-down{ color:var(--red); background:var(--red-soft); }
+  .kpi-value{ font-size:30px; font-weight:600; letter-spacing:-0.01em; }
+  .kpi-sub{ font-size:12px; color:var(--ink-faint); margin-top:6px; }
+
+  /* Split row */
+  .split-row{ display:grid; grid-template-columns: 1.1fr 1fr; gap:20px; align-items:start; }
+  .card-head{ display:flex; align-items:center; justify-content:space-between; padding:20px 24px 4px; }
+  .card-head h2{ font-size:15px; font-weight:600; margin:0; display:flex; align-items:center; gap:8px; }
+  .card-body{ padding:16px 24px 22px; }
+
+  .insight-list{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:12px; }
+  .insight-list li{ font-size:13.5px; color:var(--ink); line-height:1.5; padding-left:16px; position:relative; }
+  .insight-list li::before{ content:"›"; position:absolute; left:0; color:var(--brass); font-weight:700; }
+  .link-btn{
+    margin-top:16px; width:100%; text-align:center; padding:10px; border-radius:8px;
+    border:1px solid var(--border); color:var(--navy); font-size:13px; font-weight:600;
+    background:#F7F9FB; cursor:pointer;
+  }
+
+  .sub-row{ display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--border); }
+  .sub-row:last-child{ border-bottom:none; }
+  .sub-left{ display:flex; align-items:center; gap:10px; }
+  .sub-avatar{
+    width:28px; height:28px; border-radius:7px; background:var(--brass-soft); color:var(--brass);
+    display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700;
+  }
+  .sub-name{ font-size:13.5px; font-weight:500; }
+  .sub-flag{ font-size:10.5px; color:var(--red); background:var(--red-soft); padding:1px 6px; border-radius:5px; margin-left:8px; }
+  .sub-amount{ font-size:13.5px; font-weight:600; }
+  .sub-amount.mono-num{ font-family:'IBM Plex Mono', monospace; }
+
+  /* Risk card */
+  .risk-card .card-body{ display:flex; flex-direction:column; gap:0; padding-top:6px; }
+  .risk-item{ display:flex; gap:14px; padding:16px 0; border-bottom:1px solid var(--border); }
+  .risk-item:last-child{ border-bottom:none; }
+  .risk-tier{
+    flex-shrink:0; width:64px; text-align:center; height:22px; border-radius:6px;
+    font-size:10px; font-weight:700; letter-spacing:0.04em; display:flex; align-items:center; justify-content:center;
+    text-transform:uppercase;
+  }
+  .tier-high{ background:var(--red-soft); color:var(--red); }
+  .tier-med{ background:var(--amber-soft); color:var(--amber); }
+  .tier-low{ background:var(--green-soft); color:var(--green); }
+  .risk-text strong{ font-size:13.5px; }
+  .risk-text p{ margin:4px 0 0; font-size:13px; color:var(--ink-soft); line-height:1.5; }
+  .risk-text .rec{ color:var(--ink-faint); font-size:12px; margin-top:4px; }
+
+  /* Chart card */
+  .chart-row{ display:flex; align-items:center; gap:14px; margin-bottom:10px; }
+  .chart-cat{ width:130px; font-size:12.5px; color:var(--ink-soft); flex-shrink:0; }
+  .chart-track{ flex:1; height:10px; background:#F0EEE7; border-radius:6px; overflow:hidden; }
+  .chart-fill{ height:100%; border-radius:6px; background:var(--navy); }
+  .chart-pct{ width:44px; text-align:right; font-size:12px; font-weight:600; font-family:'IBM Plex Mono', monospace; flex-shrink:0; }
+
+  /* Table */
+  table{ width:100%; border-collapse:collapse; font-size:13px; }
+  thead th{
+    text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:0.05em;
+    color:var(--ink-faint); font-weight:600; padding:0 0 10px; border-bottom:1px solid var(--border);
+  }
+  tbody td{ padding:13px 0; border-bottom:1px solid var(--border); vertical-align:middle; }
+  tbody tr:last-child td{ border-bottom:none; }
+  td.date, td.amt{ font-family:'IBM Plex Mono', monospace; font-size:12.5px; color:var(--ink-soft); }
+  td.amt{ text-align:right; font-weight:600; color:var(--ink); }
+  .cat-tag{ font-size:11px; padding:3px 9px; border-radius:20px; background:#F0F2F4; color:var(--ink-soft); }
+  .status-ok{ display:inline-flex; align-items:center; gap:5px; font-size:12px; color:var(--green); font-weight:600; }
+  .status-ok::before{ content:"●"; font-size:8px; }
+  .table-export{ display:flex; gap:8px; }
+  .table-export button{
+    font-size:12px; font-weight:600; padding:7px 12px; border-radius:7px; border:1px solid var(--border);
+    background:transparent; color:var(--ink-soft); cursor:pointer;
+  }
+
+  /* Anchor row (dark) */
+  .anchor-row{ display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+  .anchor-card{
+    background: var(--navy-dark); color:#fff; border-radius: var(--radius); padding:24px 26px;
+  }
+  .anchor-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+  .anchor-title{ font-size:13.5px; font-weight:600; color:#E4E9EE; }
+  .anchor-pill{ font-size:10px; font-weight:700; letter-spacing:0.05em; padding:3px 9px; border-radius:6px; text-transform:uppercase; }
+  .anchor-pill.recover{ background:rgba(178,138,58,0.22); color:#E8CE9A; }
+  .anchor-pill.sandbox{ background:rgba(255,255,255,0.1); color:var(--navy-dark-soft); }
+  .anchor-value{ font-size:32px; font-weight:600; font-family:'Source Serif 4', serif; }
+  .anchor-note{ font-size:12.5px; color:var(--navy-dark-soft); margin-top:8px; line-height:1.5; }
+
+  footer{ text-align:center; padding:28px; font-size:11.5px; color:var(--ink-faint); }
+
+  @media (max-width: 860px){
+    .kpi-row, .split-row, .anchor-row{ grid-template-columns:1fr; }
+    nav{ display:none; }
+    .welcome{ flex-direction:column; align-items:flex-start; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <div class="brand-mark">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M4 12L9.5 17.5L20 6" stroke="white" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div>
+      <div class="brand-name">Budget Buddy</div>
+      <div class="brand-sub">Agency Software Auditor</div>
+    </div>
   </div>
- </aside>
- <main class="col-lg-10">
-  <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
-   <div><h2 class="mb-1">Good to see you, {{ user['first_name'] }}.</h2><div class="text-muted">Your {{ month }} financial snapshot.</div></div>
-   <div class="d-flex gap-2">
-    <a href="{{ url_for('auditor_console') }}" class="btn btn-dark">🛡️ Open Auditor Console</a>
-    {% if not pro %}<a href="{{ url_for('pricing') }}" class="btn btn-success">Upgrade to Pro — $29/mo</a>{% endif %}
-   </div>
+  <nav>
+    <a href="#" class="active">Dashboard</a>
+    <a href="#">Auditor Console</a>
+    <a href="#">Categories</a>
+    <a href="#" class="pro">AI Insights</a>
+  </nav>
+  <div class="topbar-right">
+    <span class="badge badge-pro">★ PRO PLAN</span>
+    <button class="btn btn-ghost">Log out</button>
   </div>
-
-  {% if alerts %}
-  <div class="alert alert-warning"><strong>Budget alerts</strong>{% for a in alerts %}<div class="mt-1">{{ a['title'] }} — {{ a['message'] }} <form class="d-inline" method="post" action="{{ url_for('read_alert',alert_id=a['id']) }}"><button class="btn btn-sm btn-link text-dark">dismiss</button></form></div>{% endfor %}</div>
-  {% endif %}
-
-  <div class="row g-3 mb-4">
-   <div class="col-md-3"><div class="metric"><div class="label">Revenue</div><div class="value text-success">${{ '%.2f'|format(income) }}</div></div></div>
-   <div class="col-md-3"><div class="metric"><div class="label">Expenses</div><div class="value text-danger">${{ '%.2f'|format(expense) }}</div></div></div>
-   <div class="col-md-3"><div class="metric"><div class="label">Profit</div><div class="value">${{ '%.2f'|format(profit) }}</div></div></div>
-   <div class="col-md-3"><div class="metric"><div class="label">Health Score</div><div class="value">{{ score }}/100</div><div class="small-muted">{{ margin }}% profit margin</div></div></div>
-  </div>
-
-  <div class="row g-4">
-   <div class="col-xl-8">
-    <div class="card p-4 mb-4">
-     <div class="d-flex justify-content-between align-items-center"><h5>Transactions</h5><button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addTxn">+ Add transaction</button></div>
-     <form class="row g-2 mt-2 mb-3">
-      <div class="col-md-4"><input class="form-control" name="search" placeholder="Search Adobe, Meta, Client A..." value="{{ request.args.get('search','') }}"></div>
-      <div class="col-md-2"><select class="form-select" name="kind"><option value="">All types</option><option value="income" {% if request.args.get('kind')=='income' %}selected{% endif %}>Income</option><option value="expense" {% if request.args.get('kind')=='expense' %}selected{% endif %}>Expense</option></select></div>
-      <div class="col-md-2"><input type="month" class="form-control" name="month" value="{{ month }}"></div>
-      <div class="col-md-2"><button class="btn btn-outline-light w-100">Filter</button></div>
-     </form>
-     <div class="table-responsive">
-      <table class="table align-middle">
-       <thead><tr><th>Date</th><th>Description</th><th>Category</th><th>Type</th><th>Amount</th><th></th></tr></thead>
-       <tbody>
-       {% for t in txns %}
-       <tr><td>{{ t['txn_date'] }}</td><td>{{ t['description'] }}{% if t['notes'] %}<div class="small-muted">{{ t['notes'] }}</div>{% endif %}</td><td>{{ t['category_name'] or 'Uncategorized' }}</td><td><span class="badge bg-{{ 'success' if t['kind']=='income' else 'danger' }}">{{ t['kind'] }}</span></td><td>${{ '%.2f'|format(t['amount']) }}</td><td>
-        <form method="post" action="{{ url_for('delete_transaction',txn_id=t['id']) }}" onsubmit="return confirm('Delete this transaction?')"><button class="btn btn-sm btn-outline-danger">Delete</button></form>
-       </td></tr>
-       {% else %}<tr><td colspan="6" class="text-center text-muted py-4">No transactions for this filter.</td></tr>{% endfor %}
-       </tbody>
-      </table>
-     </div>
-    </div>
-
-    <div class="card p-4 mb-4" id="budgets">
-     <div class="d-flex justify-content-between"><h5>Budgets</h5><span class="small-muted">{{ month }}</span></div>
-     {% for b in budgets %}
-      <div class="mb-3"><div class="d-flex justify-content-between"><span>{{ b['name'] }}</span><span>${{ '%.2f'|format(b['spent']) }} / ${{ '%.2f'|format(b['amount']) }}</span></div><div class="progress mt-1" style="height:8px"><div class="progress-bar {% if b['percent']>=100 %}bg-danger{% endif %}" style="width:{{ b['percent'] }}%"></div></div><div class="small-muted mt-1">${{ '%.2f'|format(b['remaining']) }} remaining</div></div>
-     {% else %}<p class="text-muted">Create advertising, software, payroll, or other budgets below.</p>{% endfor %}
-     <form class="row g-2 mt-2" method="post" action="{{ url_for('budgets_manage') }}">
-      <input type="hidden" name="action" value="add"><div class="col-md-3"><input class="form-control" name="name" placeholder="Advertising Budget" required></div><div class="col-md-2"><input class="form-control" type="number" step="0.01" name="amount" placeholder="1000" required></div><div class="col-md-2"><input class="form-control" type="month" name="month" value="{{ month }}"></div><div class="col-md-3"><select class="form-select" name="category_id"><option value="">All expenses</option>{% for c in categories if c['kind']=='expense' %}<option value="{{ c['id'] }}">{{ c['name'] }}</option>{% endfor %}</select></div><div class="col-md-2"><button class="btn btn-outline-light w-100">Add</button></div>
-     </form>
-    </div>
-
-    <div class="card p-4 mb-4" id="goals">
-     <h5>Goal Tracking</h5>
-     {% for g in goals %}
-      {% set pct = [100, (g['current']/g['target']*100 if g['target'] else 0)]|min %}
-      <div class="mb-3"><div class="d-flex justify-content-between"><span>{{ g['name'] }}</span><strong>{{ '%.0f'|format(pct) }}%</strong></div><div class="progress"><div class="progress-bar bg-info" style="width:{{ pct }}%"></div></div><div class="small-muted">${{ '%.2f'|format(g['current']) }} / ${{ '%.2f'|format(g['target']) }}{% if g['deadline'] %} · deadline {{ g['deadline'] }}{% endif %}</div></div>
-     {% else %}<p class="text-muted">Set a savings goal such as $20,000.</p>{% endfor %}
-     <form class="row g-2" method="post" action="{{ url_for('goals_manage') }}"><input type="hidden" name="action" value="add"><div class="col-md-4"><input class="form-control" name="name" placeholder="Save $20,000" required></div><div class="col-md-2"><input class="form-control" type="number" step="0.01" name="target" placeholder="20000" required></div><div class="col-md-2"><input class="form-control" type="number" step="0.01" name="current" placeholder="0"></div><div class="col-md-2"><input class="form-control" type="date" name="deadline"></div><div class="col-md-2"><button class="btn btn-outline-light w-100">Create</button></div></form>
-    </div>
-
-    <div class="card p-4" id="categories">
-     <h5>Categories</h5>
-     <div class="d-flex flex-wrap gap-2 mb-3">{% for c in categories %}<span class="badge text-bg-secondary">{{ c['name'] }} · {{ c['kind'] }}</span>{% endfor %}</div>
-     <form class="row g-2" method="post" action="{{ url_for('categories_manage') }}"><input type="hidden" name="action" value="add"><div class="col-md-6"><input class="form-control" name="name" placeholder="Custom category" required></div><div class="col-md-4"><select class="form-select" name="kind"><option value="expense">Expense</option><option value="income">Income</option></select></div><div class="col-md-2"><button class="btn btn-outline-light w-100">Add</button></div></form>
-    </div>
-   </div>
-
-   <div class="col-xl-4">
-    <div class="card p-4 mb-4">
-     <h5>Spending Overview</h5>
-     <canvas id="expenseChart" height="220"></canvas>
-     {% if not pro %}<div class="mt-3 p-3 rounded border border-success"><strong>⭐ Pro unlocks:</strong><div class="small-muted mt-1">AI insights, savings recommendations, recurring subscriptions, forecasts, budget alerts, weekly email summaries, advanced reports and full financial health analysis.</div><a href="{{ url_for('pricing') }}" class="btn btn-success btn-sm mt-2">Go Pro — $29/mo</a></div>{% endif %}
-    </div>
-    {% if pro %}
-    <div class="card p-4 mb-4">
-      <h5>🤖 AI Financial Insights</h5>
-      {% for i in insights %}<p class="small mb-2">• {{ i }}</p>{% endfor %}
-      <h6 class="mt-3">Savings recommendations</h6>
-      {% for r in recommendations %}<p class="small mb-2">• {{ r }}</p>{% endfor %}
-      <a href="{{ url_for('pro') }}" class="btn btn-outline-light btn-sm">View full Pro analysis</a>
-    </div>
-    <div class="card p-4">
-      <h5>Forecast</h5>
-      <div class="small-muted">Estimated month-end revenue</div><div class="h4">${{ '%.2f'|format(projected_income) }}</div>
-      <div class="small-muted">Estimated month-end expenses</div><div class="h4">${{ '%.2f'|format(projected_expense) }}</div>
-    </div>
-    {% endif %}
-   </div>
-  </div>
- </main>
 </div>
 
-<div class="modal fade" id="addTxn"><div class="modal-dialog"><div class="modal-content text-light"><form method="post" action="{{ url_for('add_transaction') }}"><div class="modal-header"><h5>Add transaction</h5><button class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body"><input class="form-control mb-2" type="date" name="txn_date" value="{{ month }}-01" required><input class="form-control mb-2" name="description" placeholder="Client payment / Adobe / Meta" required><input class="form-control mb-2" type="number" step="0.01" name="amount" placeholder="0.00" required><select class="form-select mb-2" name="kind"><option value="expense">Expense</option><option value="income">Income</option></select><select class="form-select mb-2" name="category_id"><option value="">No category</option>{% for c in categories %}<option value="{{ c['id'] }}">{{ c['name'] }} ({{ c['kind'] }})</option>{% endfor %}</select><textarea class="form-control" name="notes" placeholder="Optional notes"></textarea></div><div class="modal-footer"><button class="btn btn-primary">Save</button></div></form></div></div></div>
-{% endblock %}
-{% block scripts %}
-<script>
-new Chart(document.getElementById('expenseChart'),{type:'doughnut',data:{labels:['Revenue','Expenses','Profit'],datasets:[{data:[{{ income }},{{ expense }},{{ [profit,0]|max }}]}]},options:{plugins:{legend:{labels:{color:'#eef2ff'}}}}});
-</script>
-{% endblock %}
+<main>
+
+  <!-- Welcome / health stamp -->
+  <section class="card welcome">
+    <div class="welcome-left">
+      <div class="eyebrow">Audit period · August 2026</div>
+      <h1>Northline Creative <span style="font-weight:400; color:var(--ink-faint); font-size:16px;">(sample account)</span></h1>
+      <span class="badge badge-verified">✓ Last synced 2 hours ago</span>
+    </div>
+    <div class="stamp">
+      <div class="score serif">82</div>
+      <div class="of100">/ 100</div>
+      <div class="label">Stack Health</div>
+    </div>
+  </section>
+
+  <!-- KPI row -->
+  <section class="kpi-row">
+    <div class="card kpi">
+      <div class="kpi-top">
+        <span class="kpi-label">Total Revenue</span>
+        <span class="kpi-trend trend-up">▲ 6.2%</span>
+      </div>
+      <div class="kpi-value mono">$184,230.00</div>
+      <div class="kpi-sub">vs. $173,510 last month</div>
+    </div>
+    <div class="card kpi">
+      <div class="kpi-top">
+        <span class="kpi-label">Total Expenses</span>
+        <span class="kpi-trend trend-down">▲ 3.1%</span>
+      </div>
+      <div class="kpi-value mono">$126,540.50</div>
+      <div class="kpi-sub">vs. $122,750 last month</div>
+    </div>
+    <div class="card kpi">
+      <div class="kpi-top">
+        <span class="kpi-label">Net Profit</span>
+        <span class="kpi-trend trend-up">▲ 12.8%</span>
+      </div>
+      <div class="kpi-value mono">$57,689.50</div>
+      <div class="kpi-sub">18.9% margin this month</div>
+    </div>
+  </section>
+
+  <!-- Insights + Subscriptions -->
+  <section class="split-row">
+    <div class="card">
+      <div class="card-head"><h2>◆ AI Financial Insights</h2></div>
+      <div class="card-body">
+        <ul class="insight-list">
+          <li>Recoverable software spend this month is estimated at <strong>$2,340</strong> — mostly duplicate project-management tools.</li>
+          <li>Your largest client makes up <strong>42%</strong> of revenue. Consider growing 2–3 new accounts to reduce concentration risk.</li>
+          <li>Marketing tooling spend is <strong>9%</strong> of revenue, in line with the 8–12% agency benchmark.</li>
+        </ul>
+        <button class="link-btn">View full audit report →</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>◆ Detected Subscriptions</h2></div>
+      <div class="card-body" style="padding-top:2px;">
+        <div class="sub-row">
+          <div class="sub-left"><div class="sub-avatar">AW</div><span class="sub-name">Asana</span></div>
+          <span class="sub-amount mono-num">$65.00/mo</span>
+        </div>
+        <div class="sub-row">
+          <div class="sub-left"><div class="sub-avatar">MO</div><span class="sub-name">Monday.com</span><span class="sub-flag">overlap</span></div>
+          <span class="sub-amount mono-num">$72.00/mo</span>
+        </div>
+        <div class="sub-row">
+          <div class="sub-left"><div class="sub-avatar">SL</div><span class="sub-name">Slack</span></div>
+          <span class="sub-amount mono-num">$84.88/mo</span>
+        </div>
+        <div class="sub-row">
+          <div class="sub-left"><div class="sub-avatar">AC</div><span class="sub-name">Adobe Creative Cloud</span></div>
+          <span class="sub-amount mono-num">$59.99/mo</span>
+        </div>
+        <div class="sub-row">
+          <div class="sub-left"><div class="sub-avatar">CV</div><span class="sub-name">Canva</span><span class="sub-flag">2 unused seats</span></div>
+          <span class="sub-amount mono-num">$14.70/mo</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Risk / findings -->
+  <section class="card risk-card">
+    <div class="card-head"><h2>◆ Financial Risk Findings</h2><span class="badge badge-audit">3 flagged</span></div>
+    <div class="card-body">
+      <div class="risk-item">
+        <span class="risk-tier tier-high">High</span>
+        <div class="risk-text">
+          <strong>Client concentration risk</strong>
+          <p>One client accounts for 42% of recorded revenue ($77,377 of $184,230). Losing that account would hit cash flow hard.</p>
+          <p class="rec">Recommendation: aim to bring this below 30% by growing revenue from other accounts.</p>
+        </div>
+      </div>
+      <div class="risk-item">
+        <span class="risk-tier tier-med">Medium</span>
+        <div class="risk-text">
+          <strong>Duplicate project-management tools</strong>
+          <p>Both Asana ($65/mo) and Monday.com ($72/mo) are active with overlapping team usage.</p>
+          <p class="rec">Recommendation: consolidate to one tool — projected savings of $864/yr.</p>
+        </div>
+      </div>
+      <div class="risk-item">
+        <span class="risk-tier tier-low">Low</span>
+        <div class="risk-text">
+          <strong>Vendor price increase</strong>
+          <p>AWS billing rose 12% month-over-month ($164 → $183).</p>
+          <p class="rec">Recommendation: confirm the increase matches expected usage growth.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Expense breakdown -->
+  <section class="card">
+    <div class="card-head"><h2>◆ Expense Category Breakdown</h2></div>
+    <div class="card-body">
+      <div class="chart-row"><span class="chart-cat">Software &amp; tools</span><div class="chart-track"><div class="chart-fill" style="width:76%"></div></div><span class="chart-pct">34%</span></div>
+      <div class="chart-row"><span class="chart-cat">Marketing</span><div class="chart-track"><div class="chart-fill" style="width:49%"></div></div><span class="chart-pct">22%</span></div>
+      <div class="chart-row"><span class="chart-cat">Cloud hosting</span><div class="chart-track"><div class="chart-fill" style="width:31%"></div></div><span class="chart-pct">14%</span></div>
+      <div class="chart-row"><span class="chart-cat">Office &amp; ops</span><div class="chart-track"><div class="chart-fill" style="width:27%"></div></div><span class="chart-pct">12%</span></div>
+      <div class="chart-row"><span class="chart-cat">Subscriptions</span><div class="chart-track"><div class="chart-fill" style="width:22%"></div></div><span class="chart-pct">10%</span></div>
+      <div class="chart-row"><span class="chart-cat">Other</span><div class="chart-track"><div class="chart-fill" style="width:16%"></div></div><span class="chart-pct">8%</span></div>
+    </div>
+  </section>
+
+  <!-- Transaction records -->
+  <section class="card">
+    <div class="card-head">
+      <h2>◆ Transaction Records</h2>
+      <div class="table-export"><button>⭳ CSV</button><button>⭳ PDF</button></div>
+    </div>
+    <div class="card-body">
+      <table>
+        <thead><tr><th>Date</th><th>Description</th><th>Category</th><th style="text-align:right;">Amount</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td class="date">2026-08-19</td><td>Monday.com — team plan</td><td><span class="cat-tag">Software</span></td><td class="amt">$72.00</td><td><span class="status-ok">Verified</span></td></tr>
+          <tr><td class="date">2026-08-17</td><td>Meta Ads — client campaigns</td><td><span class="cat-tag">Marketing</span></td><td class="amt">$1,240.00</td><td><span class="status-ok">Verified</span></td></tr>
+          <tr><td class="date">2026-08-12</td><td>AWS — hosting</td><td><span class="cat-tag">Cloud</span></td><td class="amt">$183.47</td><td><span class="status-ok">Verified</span></td></tr>
+          <tr><td class="date">2026-08-05</td><td>Adobe Creative Cloud</td><td><span class="cat-tag">Subscriptions</span></td><td class="amt">$59.99</td><td><span class="status-ok">Verified</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Anchor: risk audit + simulator -->
+  <section class="anchor-row">
+    <div class="anchor-card">
+      <div class="anchor-head"><span class="anchor-title">Recoverable Spend This Month</span><span class="anchor-pill recover">Audit finding</span></div>
+      <div class="anchor-value">$2,340.00</div>
+      <div class="anchor-note">Identified across 2 overlapping tools and 2 unused seats. Confirmed savings only count once you cancel — this is a potential estimate.</div>
+    </div>
+    <div class="anchor-card">
+      <div class="anchor-head"><span class="anchor-title">Simulator Engine</span><span class="anchor-pill sandbox">Sandbox — not audited</span></div>
+      <div class="anchor-value">$0.00</div>
+      <div class="anchor-note">Model "what if we cut this tool" scenarios here without affecting your real audit numbers above.</div>
+    </div>
+  </section>
+
+</main>
+
+<footer>Sample data shown for design purposes · Budget Buddy — Agency Software Auditor</footer>
+
+</body>
+</html>
