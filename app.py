@@ -1,5 +1,4 @@
 import os
-import sys
 import csv
 import io
 import json
@@ -10,9 +9,6 @@ import requests
 from datetime import datetime, timedelta
 from functools import wraps
 
-# Ensure local domain modules and services can be imported cleanly
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-
 from flask import (
     Flask, render_template, request, redirect, 
     url_for, flash, jsonify, session, send_file, Response, abort
@@ -22,22 +18,6 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 import openai
-
-# Import Authoritative Audit Models & Services (Phases 1–6)
-from models import (
-    Transaction as AuditTx, RecurringCharge, Opportunity,
-    OpportunityType, OperationalRiskLevel, StagedDecision,
-    StagedActionType, EvidenceStrength, BillingInterval,
-    DecisionStatus, DecisionRecord, SavingsBuckets
-)
-from services.csv_service import CSVService
-from services.recurring_service import RecurringService
-from services.vendor_service import VendorService
-from services.overlap_service import OverlapService
-from services.opportunity_service import OpportunityService
-from services.risk_service import RiskService
-from services.simulator_service import SimulatorService
-from services.decision_service import DecisionService
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -1896,6 +1876,7 @@ def sendwave_submit():
             flash("User session not found.", "danger")
             return redirect(url_for('login'))
 
+        # Support both form post and JSON payloads
         data = request.get_json(silent=True) if request.is_json else request.form
         if not data:
             data = request.form
@@ -1920,6 +1901,7 @@ def sendwave_submit():
 
         logger.info("CODE VALIDATED")
 
+        # Duplicate detection / update
         existing = SendwavePayment.query.filter_by(reference_code=reference_code).first()
         if existing:
             if existing.user_id == user.id:
@@ -1952,6 +1934,7 @@ def sendwave_submit():
 
         logger.info("DATABASE COMMIT SUCCESS")
 
+        # Isolated Resend HTTPS email dispatch (Failure will NOT revert the pending database status)
         email_sent, email_msg = send_sendwave_review_email(payment)
         
         success_message = "Code submitted successfully. Your payment is now Pending verification."
@@ -2043,215 +2026,6 @@ def sendwave_email_decline(payment_id, token):
         payment.reviewed_at = datetime.utcnow()
         db.session.commit()
     return render_template('sendwave_email_review.html', payment=payment, just_actioned=True)
-
-
-# ==============================================================================
-# AUTHORITATIVE SOFTWARE SPEND AUDIT API (PHASES 1–6)
-# ==============================================================================
-
-@app.route('/api/audit/analyze', methods=['POST'])
-def api_audit_analyze():
-    data = request.get_json(silent=True) or {}
-    csv_content = data.get("csv_content", "")
-    if not csv_content.strip():
-        return jsonify({"error": "No CSV content provided."}), 400
-
-    # 1. Authoritative CSV parsing
-    txs, stats = CSVService.parse_csv(csv_content)
-    if not txs:
-        return jsonify({"error": "No valid transactions parsed.", "stats": stats}), 400
-
-    # 2. Detect recurring subscriptions
-    recurring_charges = RecurringService.detect_recurring_charges(txs)
-
-    # 3. Detect overlaps
-    overlaps = OverlapService.detect_potential_overlaps(recurring_charges)
-
-    # 4. Generate ranked opportunities
-    opportunities = OpportunityService.generate_opportunities(recurring_charges)
-
-    # 5. Summary metrics
-    known_software_subs = [r for r in recurring_charges if r.is_software and r.is_known_vendor]
-    total_software_spend = sum(r.monthly_equivalent for r in known_software_subs)
-    unknown_subs = [r for r in recurring_charges if not r.is_known_vendor]
-    unknown_spend = sum(r.monthly_equivalent for r in unknown_subs)
-
-    # 6. User decisions and buckets
-    existing_decisions_raw = data.get("decisions", [])
-    user_decisions = [DecisionRecord.from_dict(d) if isinstance(d, dict) else d for d in existing_decisions_raw]
-    buckets = DecisionService.calculate_buckets(user_decisions, recurring_charges, opportunities)
-
-    return jsonify({
-        "stats": stats,
-        "summary": {
-            "total_recurring_count": len(recurring_charges),
-            "known_software_count": len(known_software_subs),
-            "known_software_monthly_spend": round(total_software_spend, 2),
-            "unknown_recurring_count": len(unknown_subs),
-            "unknown_recurring_monthly_spend": round(unknown_spend, 2),
-            "overlap_count": len(overlaps),
-            "opportunity_count": len(opportunities)
-        },
-        "buckets": buckets.to_dict(),
-        "decisions": [d.to_dict() for d in user_decisions],
-        "recurring_charges": [rc.to_dict() for rc in recurring_charges],
-        "overlaps": overlaps,
-        "opportunities": [opp.to_dict() for opp in opportunities],
-        "transactions": [t.to_dict() for t in txs]
-    })
-
-
-@app.route('/api/audit/risk-survey', methods=['POST'])
-def api_audit_risk_survey():
-    data = request.get_json(silent=True) or {}
-    res = RiskService.evaluate_risk(
-        vendor_id=data.get("vendor_id"),
-        tool_name=data.get("tool_name", "Unknown Tool"),
-        q1_client_facing=data.get("q1_client_facing"),
-        q2_active_login=data.get("q2_active_login"),
-        q3_stores_critical_data=data.get("q3_stores_critical_data"),
-        q4_system_integrations=data.get("q4_system_integrations")
-    )
-    return jsonify(res.to_dict())
-
-
-@app.route('/api/audit/decision', methods=['POST'])
-def api_audit_save_decision():
-    data = request.get_json(silent=True) or {}
-    opportunity_id = data.get("opportunity_id")
-    if not opportunity_id:
-        return jsonify({"error": "opportunity_id is required."}), 400
-
-    existing_raw = data.get("existing_decision")
-    if existing_raw:
-        rec = DecisionRecord.from_dict(existing_raw)
-    else:
-        rec = DecisionService.create_decision(
-            opportunity_id=opportunity_id,
-            recurring_fingerprints=data.get("recurring_fingerprints", []),
-            vendors=data.get("vendors", []),
-            opportunity_type=data.get("opportunity_type", "GENERAL"),
-            original_monthly_amount=float(data.get("original_monthly_amount", 0.0)),
-            action=data.get("action", "NONE"),
-            user_note=data.get("user_note", "")
-        )
-
-    try:
-        action_enum = StagedActionType((data.get("action") or "NONE").upper())
-        custom_reduction = float(data["custom_reduction_amount"]) if data.get("custom_reduction_amount") is not None else None
-        rec = DecisionService.stage_action(rec, action=action_enum, custom_reduction_amount=custom_reduction, user_note=data.get("user_note", ""))
-    except ValueError:
-        pass
-
-    all_decisions_raw = data.get("all_decisions", [])
-    all_recs = [DecisionRecord.from_dict(d) if isinstance(d, dict) else d for d in all_decisions_raw]
-    found = False
-    for i, existing in enumerate(all_recs):
-        if existing.opportunity_id == rec.opportunity_id:
-            all_recs[i] = rec
-            found = True
-            break
-    if not found:
-        all_recs.append(rec)
-
-    buckets = DecisionService.calculate_buckets(all_recs, [], [])
-    return jsonify({
-        "success": True,
-        "decision": rec.to_dict(),
-        "buckets": buckets.to_dict(),
-        "all_decisions": [d.to_dict() for d in all_recs]
-    })
-
-
-@app.route('/api/audit/verify-savings', methods=['POST'])
-def api_audit_verify_savings():
-    data = request.get_json(silent=True) or {}
-    opportunity_id = data.get("opportunity_id")
-    if not opportunity_id:
-        return jsonify({"error": "opportunity_id is required."}), 400
-
-    try:
-        verified_amount = float(data.get("verified_monthly_amount", 0.0))
-    except (ValueError, TypeError):
-        return jsonify({"error": "Invalid verified_monthly_amount."}), 400
-
-    existing_raw = data.get("existing_decision")
-    if existing_raw:
-        rec = DecisionRecord.from_dict(existing_raw)
-    else:
-        rec = DecisionService.create_decision(
-            opportunity_id=opportunity_id,
-            recurring_fingerprints=data.get("recurring_fingerprints", []),
-            vendors=data.get("vendors", []),
-            opportunity_type=data.get("opportunity_type", "GENERAL"),
-            original_monthly_amount=float(data.get("original_monthly_amount", verified_amount)),
-            action="VERIFIED",
-            user_note=data.get("user_note", "")
-        )
-
-    success, updated_rec, msg = DecisionService.verify_savings(rec, verified_monthly_amount=verified_amount, user_note=data.get("user_note", ""))
-    if not success or not updated_rec:
-        return jsonify({"error": msg}), 400
-
-    all_decisions_raw = data.get("all_decisions", [])
-    all_recs = [DecisionRecord.from_dict(d) if isinstance(d, dict) else d for d in all_decisions_raw]
-    found = False
-    for i, existing in enumerate(all_recs):
-        if existing.opportunity_id == updated_rec.opportunity_id:
-            all_recs[i] = updated_rec
-            found = True
-            break
-    if not found:
-        all_recs.append(updated_rec)
-
-    buckets = DecisionService.calculate_buckets(all_recs, [], [])
-    return jsonify({
-        "success": True,
-        "message": msg,
-        "decision": updated_rec.to_dict(),
-        "buckets": buckets.to_dict(),
-        "all_decisions": [d.to_dict() for d in all_recs]
-    })
-
-
-@app.route('/api/audit/reset-decision', methods=['POST'])
-def api_audit_reset_decision():
-    data = request.get_json(silent=True) or {}
-    opportunity_id = data.get("opportunity_id")
-    all_decisions_raw = data.get("all_decisions", [])
-    all_recs = [DecisionRecord.from_dict(d) if isinstance(d, dict) else d for d in all_decisions_raw]
-    all_recs = [d for d in all_recs if d.opportunity_id != opportunity_id]
-
-    buckets = DecisionService.calculate_buckets(all_recs, [], [])
-    return jsonify({
-        "success": True,
-        "opportunity_id": opportunity_id,
-        "buckets": buckets.to_dict(),
-        "all_decisions": [d.to_dict() for d in all_recs]
-    })
-
-
-@app.route('/api/audit/simulate', methods=['POST'])
-def api_audit_simulate():
-    data = request.get_json(silent=True) or {}
-    charges_raw = data.get("recurring_charges", [])
-    staged_raw = data.get("staged_decisions", [])
-
-    charges = [RecurringCharge.from_dict(c) if hasattr(RecurringCharge, "from_dict") else RecurringCharge(**c) for c in charges_raw]
-    staged = []
-    for s in staged_raw:
-        action_type = StagedActionType(s.get("action", "MONITOR").upper())
-        staged.append(StagedDecision(
-            recurring_fingerprint=s.get("recurring_fingerprint", ""),
-            vendor_name=s.get("vendor_name", ""),
-            action=action_type,
-            custom_reduction_amount=float(s["custom_reduction_amount"]) if s.get("custom_reduction_amount") is not None else None,
-            notes=s.get("notes", "")
-        ))
-
-    sim_res = SimulatorService.run_simulation(charges, staged)
-    return jsonify(sim_res.to_dict())
-
 
 if __name__ == '__main__':
     app.run(debug=True)
