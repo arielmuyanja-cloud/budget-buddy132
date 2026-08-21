@@ -1,176 +1,2617 @@
 {% extends "base.html" %}
 {% block content %}
+
 <style>
-    .bb-page { background:#f6f8fc; color:#14213d; min-height:100vh; margin:-1.5rem; padding:1.5rem; }
-    .bb-card { background:#fff; border:1px solid #e4e8f0; border-radius:16px; box-shadow:0 8px 24px rgba(20,33,61,.06); }
-    .bb-muted { color:#667085; }
-    .bb-code { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
-    .bb-metric { font-size:1.65rem; font-weight:800; letter-spacing:-.02em; }
-    .bb-positive { color:#15803d; }
-    .bb-negative { color:#b42318; }
-    .bb-neutral { color:#14213d; }
-    .bb-risk-critical { border-left:4px solid #b42318; }
-    .bb-risk-review { border-left:4px solid #f59e0b; }
-    .bb-risk-info { border-left:4px solid #64748b; }
-    .bb-pill { border-radius:999px; padding:.25rem .55rem; font-size:.72rem; font-weight:700; }
-    .bb-table th { color:#667085; font-size:.72rem; text-transform:uppercase; letter-spacing:.06em; }
-    .bb-table td { vertical-align:middle; }
-    .bb-empty { border:1px dashed #cbd5e1; border-radius:12px; padding:2rem; text-align:center; color:#667085; }
-    .bb-spinner { display:none; }
-    .bb-loading .bb-spinner { display:inline-block; }
-    @media (max-width: 768px) { .bb-page { margin:-1rem; padding:1rem; } }
+  :root{
+    --bb-bg:#FAF9F5;
+    --bb-surface:#FFFFFF;
+    --bb-border:#E6E2D8;
+
+    --bb-ink:#16202B;
+    --bb-ink-soft:#5C6570;
+    --bb-ink-faint:#8A9099;
+
+    --bb-navy:#1B3A5C;
+    --bb-navy-dark:#0E1B2A;
+    --bb-navy-dark-soft:#B9C6D4;
+
+    --bb-brass:#A2792C;
+    --bb-brass-soft:#F3EBD8;
+
+    --bb-green:#1F6E45;
+    --bb-green-soft:#E4F0E8;
+
+    --bb-red:#9C3B2E;
+    --bb-red-soft:#F6E7E3;
+
+    --bb-amber:#B8822A;
+    --bb-amber-soft:#FBF0DD;
+
+    --bb-radius:12px;
+
+    --bb-shadow:
+      0 1px 2px rgba(22,32,43,.04),
+      0 4px 16px rgba(22,32,43,.05);
+  }
+
+  *{
+    box-sizing:border-box;
+  }
+
+  .bb-page{
+    background:var(--bb-bg);
+    color:var(--bb-ink);
+    min-height:100vh;
+    margin:-1.5rem;
+    padding:0;
+    font-family:'Inter',system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  .bb-page *{
+    box-sizing:border-box;
+  }
+
+  .bb-page .serif{
+    font-family:'Source Serif 4',Georgia,serif;
+  }
+
+  .bb-page .mono{
+    font-family:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+
+  .bb-shell{
+    max-width:1400px;
+    margin:0 auto;
+    padding:0 32px 60px;
+  }
+
+  /* =========================================
+     TOP NAV
+  ========================================= */
+
+  .bb-topbar{
+    background:var(--bb-surface);
+    border-bottom:1px solid var(--bb-border);
+    padding:16px 32px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:20px;
+    position:relative;
+    z-index:10;
+  }
+
+  .bb-brand{
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+
+  .bb-brand-mark{
+    width:32px;
+    height:32px;
+    border-radius:8px;
+    background:var(--bb-navy);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-shrink:0;
+  }
+
+  .bb-brand-mark svg{
+    width:17px;
+    height:17px;
+  }
+
+  .bb-brand-name{
+    font-size:18px;
+    font-weight:600;
+    letter-spacing:-.01em;
+  }
+
+  .bb-brand-sub{
+    font-size:11px;
+    color:var(--bb-ink-faint);
+    margin-left:8px;
+    padding-left:8px;
+    border-left:1px solid var(--bb-border);
+  }
+
+  .bb-nav-right{
+    display:flex;
+    align-items:center;
+    gap:12px;
+  }
+
+  .bb-plan-pill{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    background:var(--bb-brass-soft);
+    color:var(--bb-brass);
+    border-radius:20px;
+    padding:6px 12px;
+    font-size:10.5px;
+    font-weight:700;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+  }
+
+  .bb-status-dot{
+    width:6px;
+    height:6px;
+    border-radius:50%;
+    background:var(--bb-green);
+  }
+
+  .bb-btn{
+    font-family:inherit;
+    font-size:13.5px;
+    font-weight:600;
+    border-radius:8px;
+    padding:10px 18px;
+    cursor:pointer;
+    border:1px solid transparent;
+    text-decoration:none;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:7px;
+    transition:.15s ease;
+  }
+
+  .bb-btn:hover{
+    text-decoration:none;
+    transform:translateY(-1px);
+  }
+
+  .bb-btn-navy{
+    background:var(--bb-navy);
+    color:#fff !important;
+  }
+
+  .bb-btn-navy:hover{
+    background:#244b73;
+  }
+
+  .bb-btn-ghost{
+    background:transparent;
+    border-color:var(--bb-border);
+    color:var(--bb-ink) !important;
+  }
+
+  .bb-btn-danger{
+    background:transparent;
+    border-color:#E5C4BE;
+    color:var(--bb-red) !important;
+  }
+
+  .bb-btn-sm{
+    font-size:11.5px;
+    padding:7px 11px;
+  }
+
+  /* =========================================
+     PAGE HEADER
+  ========================================= */
+
+  .bb-header{
+    padding:46px 0 30px;
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    gap:30px;
+  }
+
+  .bb-eyebrow{
+    display:inline-flex;
+    align-items:center;
+    gap:7px;
+    font-size:11.5px;
+    font-weight:700;
+    letter-spacing:.07em;
+    text-transform:uppercase;
+    color:var(--bb-brass);
+    background:var(--bb-brass-soft);
+    padding:6px 14px;
+    border-radius:20px;
+  }
+
+  .bb-header h1{
+    font-family:'Source Serif 4',Georgia,serif;
+    font-size:40px;
+    line-height:1.15;
+    font-weight:600;
+    letter-spacing:-.02em;
+    margin:16px 0 8px;
+  }
+
+  .bb-header-sub{
+    color:var(--bb-ink-soft);
+    font-size:14px;
+    line-height:1.55;
+  }
+
+  .bb-header-right{
+    text-align:right;
+    flex-shrink:0;
+  }
+
+  .bb-health-label{
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:.07em;
+    font-weight:700;
+    color:var(--bb-ink-faint);
+    margin-bottom:3px;
+  }
+
+  .bb-health{
+    font-family:'Source Serif 4',Georgia,serif;
+    font-size:32px;
+    font-weight:600;
+  }
+
+  .bb-health.good{
+    color:var(--bb-green);
+  }
+
+  .bb-health.medium{
+    color:var(--bb-amber);
+  }
+
+  .bb-health.bad{
+    color:var(--bb-red);
+  }
+
+  /* =========================================
+     ALERTS
+  ========================================= */
+
+  .bb-alert{
+    background:var(--bb-amber-soft);
+    border:1px solid #E9D4A9;
+    color:#735316;
+    border-radius:10px;
+    padding:12px 15px;
+    margin-bottom:14px;
+    font-size:13px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:15px;
+  }
+
+  .bb-alert button{
+    border:0;
+    background:none;
+    color:#735316;
+    font-size:18px;
+    cursor:pointer;
+  }
+
+  /* =========================================
+     CARDS
+  ========================================= */
+
+  .bb-card{
+    background:var(--bb-surface);
+    border:1px solid var(--bb-border);
+    border-radius:var(--bb-radius);
+    box-shadow:var(--bb-shadow);
+  }
+
+  .bb-card-pad{
+    padding:24px;
+  }
+
+  .bb-card-header{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:15px;
+    margin-bottom:20px;
+  }
+
+  .bb-card-title{
+    font-size:16px;
+    font-weight:600;
+    margin:0 0 5px;
+    color:var(--bb-ink);
+  }
+
+  .bb-card-subtitle{
+    font-size:12px;
+    color:var(--bb-ink-soft);
+    line-height:1.5;
+  }
+
+  .bb-section-gap{
+    margin-bottom:20px;
+  }
+
+  /* =========================================
+     KPI
+  ========================================= */
+
+  .bb-kpi-grid{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:18px;
+    margin-bottom:20px;
+  }
+
+  .bb-kpi{
+    padding:22px 23px;
+    min-height:138px;
+    position:relative;
+  }
+
+  .bb-kpi-label{
+    font-size:10.5px;
+    text-transform:uppercase;
+    letter-spacing:.065em;
+    font-weight:700;
+    color:var(--bb-ink-faint);
+    margin-bottom:11px;
+  }
+
+  .bb-kpi-value{
+    font-family:'Source Serif 4',Georgia,serif;
+    font-size:31px;
+    line-height:1.1;
+    font-weight:600;
+    letter-spacing:-.02em;
+  }
+
+  .bb-kpi-value.revenue{
+    color:var(--bb-green);
+  }
+
+  .bb-kpi-value.expense{
+    color:var(--bb-red);
+  }
+
+  .bb-kpi-value.profit-positive{
+    color:var(--bb-green);
+  }
+
+  .bb-kpi-value.profit-negative{
+    color:var(--bb-red);
+  }
+
+  .bb-kpi-note{
+    font-size:11.5px;
+    color:var(--bb-ink-soft);
+    margin-top:7px;
+  }
+
+  .bb-kpi-score{
+    color:var(--bb-navy);
+  }
+
+  /* =========================================
+     TWO COLUMN
+  ========================================= */
+
+  .bb-two-column{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:20px;
+    margin-bottom:20px;
+  }
+
+  .bb-three-column{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:20px;
+    margin-bottom:20px;
+  }
+
+  /* =========================================
+     BADGES
+  ========================================= */
+
+  .bb-badge{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:20px;
+    padding:5px 10px;
+    font-size:10px;
+    font-weight:700;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+    white-space:nowrap;
+  }
+
+  .bb-badge-brass{
+    background:var(--bb-brass-soft);
+    color:var(--bb-brass);
+  }
+
+  .bb-badge-green{
+    background:var(--bb-green-soft);
+    color:var(--bb-green);
+  }
+
+  .bb-badge-red{
+    background:var(--bb-red-soft);
+    color:var(--bb-red);
+  }
+
+  .bb-badge-amber{
+    background:var(--bb-amber-soft);
+    color:var(--bb-amber);
+  }
+
+  .bb-badge-neutral{
+    background:#F1F0EC;
+    color:var(--bb-ink-soft);
+  }
+
+  /* =========================================
+     AI INSIGHTS
+  ========================================= */
+
+  .bb-ai-loading{
+    color:var(--bb-ink-soft);
+    font-size:13px;
+    padding:15px 0;
+  }
+
+  .bb-ai-list{
+    list-style:none;
+    padding:0;
+    margin:0;
+  }
+
+  .bb-ai-list li{
+    padding:11px 0;
+    border-bottom:1px solid var(--bb-border);
+    font-size:13px;
+    color:var(--bb-ink-soft);
+    line-height:1.55;
+  }
+
+  .bb-ai-list li:last-child{
+    border-bottom:none;
+  }
+
+  .bb-ai-list li::before{
+    content:"✓";
+    color:var(--bb-green);
+    font-weight:700;
+    margin-right:8px;
+  }
+
+  .bb-empty{
+    border:1px dashed #CFCBC1;
+    border-radius:10px;
+    padding:25px 18px;
+    text-align:center;
+    color:var(--bb-ink-soft);
+    font-size:13px;
+    background:#FCFBF8;
+  }
+
+  .bb-loading{
+    color:var(--bb-ink-faint);
+    font-size:12px;
+  }
+
+  /* =========================================
+     SUBSCRIPTIONS
+  ========================================= */
+
+  .bb-sub-list{
+    list-style:none;
+    padding:0;
+    margin:0;
+  }
+
+  .bb-sub-item{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:15px;
+    padding:13px 0;
+    border-bottom:1px solid var(--bb-border);
+  }
+
+  .bb-sub-item:last-child{
+    border-bottom:none;
+  }
+
+  .bb-sub-name{
+    font-size:13px;
+    font-weight:600;
+    color:var(--bb-ink);
+  }
+
+  .bb-sub-category{
+    color:var(--bb-ink-soft);
+    font-size:11.5px;
+    margin-top:3px;
+  }
+
+  .bb-sub-price{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px;
+    font-weight:600;
+    text-align:right;
+    margin-bottom:4px;
+  }
+
+  /* =========================================
+     FORMS
+  ========================================= */
+
+  .bb-form-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+    margin-bottom:10px;
+  }
+
+  .bb-input,
+  .bb-select,
+  .bb-file{
+    width:100%;
+    border:1px solid var(--bb-border);
+    border-radius:8px;
+    background:#fff;
+    color:var(--bb-ink);
+    padding:10px 12px;
+    font-family:inherit;
+    font-size:13px;
+    outline:none;
+  }
+
+  .bb-input:focus,
+  .bb-select:focus,
+  .bb-file:focus{
+    border-color:var(--bb-navy);
+    box-shadow:0 0 0 3px rgba(27,58,92,.08);
+  }
+
+  .bb-form-help{
+    color:var(--bb-ink-soft);
+    font-size:12px;
+    line-height:1.55;
+    margin:0 0 14px;
+  }
+
+  /* =========================================
+     CHART
+  ========================================= */
+
+  .bb-chart-wrap{
+    position:relative;
+    width:100%;
+    min-height:300px;
+  }
+
+  #expenseChart{
+    width:100% !important;
+    max-height:330px;
+  }
+
+  .bb-coverage{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px;
+    color:var(--bb-green);
+    background:var(--bb-green-soft);
+    border-radius:20px;
+    padding:5px 9px;
+    font-weight:600;
+  }
+
+  /* =========================================
+     TRANSACTIONS
+  ========================================= */
+
+  .bb-table-wrap{
+    width:100%;
+    overflow-x:auto;
+  }
+
+  .bb-table{
+    width:100%;
+    border-collapse:collapse;
+    min-width:760px;
+  }
+
+  .bb-table th{
+    color:var(--bb-ink-faint);
+    font-size:10px;
+    text-transform:uppercase;
+    letter-spacing:.07em;
+    font-weight:700;
+    text-align:left;
+    padding:11px 12px;
+    border-bottom:1px solid var(--bb-border);
+    white-space:nowrap;
+  }
+
+  .bb-table td{
+    padding:13px 12px;
+    border-bottom:1px solid var(--bb-border);
+    vertical-align:middle;
+    font-size:12.5px;
+  }
+
+  .bb-table tbody tr:hover{
+    background:#FCFBF8;
+  }
+
+  .bb-date{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px !important;
+    color:var(--bb-ink-soft);
+  }
+
+  .bb-description{
+    font-weight:500;
+  }
+
+  .bb-category{
+    display:inline-flex;
+    background:#F3F1EC;
+    color:var(--bb-ink-soft);
+    padding:4px 8px;
+    border-radius:5px;
+    font-size:10px;
+  }
+
+  .bb-type-income{
+    color:var(--bb-green);
+    background:var(--bb-green-soft);
+  }
+
+  .bb-type-expense{
+    color:var(--bb-red);
+    background:var(--bb-red-soft);
+  }
+
+  .bb-type{
+    display:inline-flex;
+    padding:4px 8px;
+    border-radius:5px;
+    font-size:9.5px;
+    font-weight:700;
+    text-transform:uppercase;
+  }
+
+  .bb-amount{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11.5px !important;
+    font-weight:600;
+    white-space:nowrap;
+  }
+
+  .bb-amount.expense{
+    color:var(--bb-red);
+  }
+
+  .bb-amount.income{
+    color:var(--bb-green);
+  }
+
+  /* =========================================
+     PAGINATION
+  ========================================= */
+
+  .bb-pagination{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:15px;
+    padding-top:15px;
+  }
+
+  .bb-pagination-summary{
+    font-size:11.5px;
+    color:var(--bb-ink-soft);
+  }
+
+  .bb-pagination-controls{
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+
+  .bb-page-number{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px;
+    color:var(--bb-ink-soft);
+  }
+
+  /* =========================================
+     DARK AUDIT ANCHOR
+  ========================================= */
+
+  .bb-audit-anchor{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:20px;
+    margin-top:20px;
+  }
+
+  .bb-dark-card{
+    background:var(--bb-navy-dark);
+    border-radius:14px;
+    padding:27px;
+    color:#fff;
+    min-height:205px;
+    position:relative;
+    overflow:hidden;
+  }
+
+  .bb-dark-card::after{
+    content:"";
+    position:absolute;
+    width:180px;
+    height:180px;
+    right:-80px;
+    top:-90px;
+    border:1px solid rgba(255,255,255,.07);
+    border-radius:50%;
+  }
+
+  .bb-dark-label{
+    font-size:10px;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    color:var(--bb-navy-dark-soft);
+    font-weight:700;
+    margin-bottom:10px;
+  }
+
+  .bb-dark-title{
+    font-size:17px;
+    font-weight:600;
+    margin-bottom:22px;
+  }
+
+  .bb-dark-value{
+    font-family:'Source Serif 4',Georgia,serif;
+    font-size:36px;
+    font-weight:600;
+    letter-spacing:-.02em;
+    margin-bottom:8px;
+  }
+
+  .bb-dark-copy{
+    color:var(--bb-navy-dark-soft);
+    font-size:12px;
+    line-height:1.55;
+    max-width:430px;
+  }
+
+  .bb-dark-status{
+    display:inline-flex;
+    background:var(--bb-red-soft);
+    color:#F0B1A7;
+    padding:5px 9px;
+    border-radius:20px;
+    font-size:9.5px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:.05em;
+    margin-bottom:14px;
+  }
+
+  .bb-dark-status.safe{
+    background:rgba(31,110,69,.18);
+    color:#9BD0B1;
+  }
+
+  /* =========================================
+     RESPONSIVE
+  ========================================= */
+
+  @media(max-width:1100px){
+    .bb-kpi-grid{
+      grid-template-columns:repeat(2,1fr);
+    }
+
+    .bb-three-column{
+      grid-template-columns:1fr 1fr;
+    }
+  }
+
+  @media(max-width:800px){
+    .bb-topbar{
+      padding:14px 18px;
+    }
+
+    .bb-brand-sub{
+      display:none;
+    }
+
+    .bb-nav-right .bb-plan-pill{
+      display:none;
+    }
+
+    .bb-shell{
+      padding:0 18px 40px;
+    }
+
+    .bb-header{
+      padding-top:32px;
+      flex-direction:column;
+      align-items:flex-start;
+    }
+
+    .bb-header-right{
+      text-align:left;
+    }
+
+    .bb-header h1{
+      font-size:32px;
+    }
+
+    .bb-kpi-grid,
+    .bb-two-column,
+    .bb-three-column,
+    .bb-audit-anchor{
+      grid-template-columns:1fr;
+    }
+
+    .bb-form-grid{
+      grid-template-columns:1fr;
+    }
+
+    .bb-card-pad{
+      padding:18px;
+    }
+  }
+
+  @media(max-width:500px){
+    .bb-topbar{
+      padding:12px 14px;
+    }
+
+    .bb-brand-name{
+      font-size:16px;
+    }
+
+    .bb-nav-right .bb-btn-ghost{
+      display:none;
+    }
+
+    .bb-shell{
+      padding:0 14px 30px;
+    }
+
+    .bb-header h1{
+      font-size:28px;
+    }
+
+    .bb-kpi{
+      min-height:120px;
+    }
+
+    .bb-kpi-value{
+      font-size:28px;
+    }
+  }
 </style>
 
+
 <div class="bb-page">
-<div class="container-fluid px-0">
+
+  <!-- =========================================
+       TOP BAR
+  ========================================= -->
+
+  <div class="bb-topbar">
+
+    <div class="bb-brand">
+
+      <div class="bb-brand-mark">
+        <svg viewBox="0 0 24 24" fill="none">
+          <path
+            d="M4 12L9.5 17.5L20 6"
+            stroke="white"
+            stroke-width="2.4"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+      </div>
+
+      <div class="bb-brand-name">
+        Budget Buddy
+      </div>
+
+      <div class="bb-brand-sub">
+        Financial Audit Console
+      </div>
+
+    </div>
+
+    <div class="bb-nav-right">
+
+      <span class="bb-plan-pill">
+        <span class="bb-status-dot"></span>
+        {{ user.plan_tier }} PLAN
+      </span>
+
+      <a href="{{ url_for('pro') }}" class="bb-btn bb-btn-ghost">
+        Pro Analysis
+      </a>
+
+    </div>
+
+  </div>
+
+
+  <div class="bb-shell">
+
+    <!-- =========================================
+         HEADER
+    ========================================= -->
+
     {% set agency_name = user.agency_name %}
+
     {% if not agency_name or agency_name|lower in ['awenfke', 'test', 'demo', 'demo agency'] %}
-        {% set agency_name = 'Your Agency' %}
+      {% set agency_name = 'Your Agency' %}
     {% endif %}
 
-    <div class="bb-card p-4 mb-4 d-flex flex-wrap justify-content-between align-items-center gap-3">
-        <div>
-            <div class="d-flex align-items-center gap-2 mb-1"><span class="badge bg-primary">{{ user.plan_tier }} PLAN</span><span class="bb-muted small">Financial workspace</span></div>
-            <h2 class="fw-bold mb-1">{{ agency_name }}</h2>
-            <div class="bb-muted small">Evidence-based financial snapshot · {{ month }}</div>
+    <div class="bb-header">
+
+      <div>
+
+        <span class="bb-eyebrow">
+          ◆ Evidence-based financial audit
+        </span>
+
+        <h1>
+          {{ agency_name }}
+        </h1>
+
+        <div class="bb-header-sub">
+          Financial workspace · {{ month }}
+          <br>
+          Every number below is tied to transaction evidence.
         </div>
-        <div class="text-md-end">
-            <div class="bb-muted small text-uppercase fw-bold">Health Score</div>
-            <div class="bb-metric {% if health_score >= 70 %}bb-positive{% elif health_score >= 40 %}text-warning{% else %}bb-negative{% endif %}">{{ health_score }} / 100</div>
+
+      </div>
+
+      <div class="bb-header-right">
+
+        <div class="bb-health-label">
+          Health Score
         </div>
+
+        <div class="bb-health
+          {% if health_score >= 70 %}
+            good
+          {% elif health_score >= 40 %}
+            medium
+          {% else %}
+            bad
+          {% endif %}
+        ">
+          {{ health_score }} / 100
+        </div>
+
+      </div>
+
     </div>
+
+
+    <!-- =========================================
+         ALERTS
+    ========================================= -->
 
     {% for alert in alerts %}
-    <div class="alert alert-warning alert-dismissible fade show" role="alert">
-        <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ alert.message if alert.message is defined else alert }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
+
+      <div class="bb-alert">
+
+        <div>
+          <strong>Audit notice:</strong>
+          {{ alert.message if alert.message is defined else alert }}
+        </div>
+
+        <button
+          type="button"
+          onclick="this.parentElement.remove()"
+          aria-label="Dismiss"
+        >
+          ×
+        </button>
+
+      </div>
+
     {% endfor %}
 
-    <div class="row g-3 mb-4">
-        <div class="col-md-4"><div class="bb-card p-4 h-100"><div class="bb-muted small text-uppercase fw-bold">Total Revenue</div><div class="bb-metric bb-positive mt-1">${{ "{:,.2f}".format(total_revenue) }}</div></div></div>
-        <div class="col-md-4"><div class="bb-card p-4 h-100"><div class="bb-muted small text-uppercase fw-bold">Total Expenses</div><div class="bb-metric bb-negative mt-1">${{ "{:,.2f}".format(total_expenses) }}</div></div></div>
-        <div class="col-md-4"><div class="bb-card p-4 h-100"><div class="bb-muted small text-uppercase fw-bold">Net Profit</div><div class="bb-metric {% if net_profit >= 0 %}bb-positive{% else %}bb-negative{% endif %} mt-1">{% if net_profit < 0 %}-{% endif %}${{ "{:,.2f}".format(net_profit|abs) }}</div></div></div>
+
+    <!-- =========================================
+         KPI ROW
+    ========================================= -->
+
+    <div class="bb-kpi-grid">
+
+      <!-- Revenue -->
+
+      <div class="bb-card bb-kpi">
+
+        <div class="bb-kpi-label">
+          Total Revenue
+        </div>
+
+        <div class="bb-kpi-value revenue">
+          ${{ "{:,.2f}".format(total_revenue) }}
+        </div>
+
+        <div class="bb-kpi-note">
+          Recorded income in this audit period
+        </div>
+
+      </div>
+
+
+      <!-- Expenses -->
+
+      <div class="bb-card bb-kpi">
+
+        <div class="bb-kpi-label">
+          Total Expenses
+        </div>
+
+        <div class="bb-kpi-value expense">
+          ${{ "{:,.2f}".format(total_expenses) }}
+        </div>
+
+        <div class="bb-kpi-note">
+          Recorded outgoing transactions
+        </div>
+
+      </div>
+
+
+      <!-- Net Profit -->
+
+      <div class="bb-card bb-kpi">
+
+        <div class="bb-kpi-label">
+          Net Profit
+        </div>
+
+        <div class="bb-kpi-value
+          {% if net_profit >= 0 %}
+            profit-positive
+          {% else %}
+            profit-negative
+          {% endif %}
+        ">
+
+          {% if net_profit < 0 %}
+            -${{ "{:,.2f}".format(net_profit|abs) }}
+          {% else %}
+            ${{ "{:,.2f}".format(net_profit) }}
+          {% endif %}
+
+        </div>
+
+        <div class="bb-kpi-note">
+          Revenue less recorded expenses
+        </div>
+
+      </div>
+
+
+      <!-- Health -->
+
+      <div class="bb-card bb-kpi">
+
+        <div class="bb-kpi-label">
+          Financial Health
+        </div>
+
+        <div class="bb-kpi-value bb-kpi-score">
+          {{ health_score }} / 100
+        </div>
+
+        <div class="bb-kpi-note">
+          Current audit health score
+        </div>
+
+      </div>
+
     </div>
 
-    <div class="row g-4 mb-4">
-        <div class="col-xl-6">
-            <div class="bb-card p-4 h-100">
-                <div class="d-flex justify-content-between align-items-center mb-3"><h5 class="fw-bold mb-0">AI Financial Insights</h5><span class="bb-pill bg-light text-primary">PRO</span></div>
-                {% if user.plan_tier in ['GROWTH', 'PRO'] %}
-                <div id="ai-container" class="bb-muted small" aria-live="polite">Loading AI audit <span class="bb-spinner">…</span></div>
-                <script>
-                    fetch('/api/ai-insights').then(r => { if (!r.ok) throw new Error('AI request failed'); return r.json(); }).then(d => {
-                        const items = Array.isArray(d.insights) ? d.insights : [];
-                        document.getElementById('ai-container').innerHTML = items.length ? '<ul class="list-unstyled mb-0">' + items.map(i => `<li class="mb-2">• ${i}</li>`).join('') + '</ul>' : '<div class="bb-empty">No AI insights are available yet.</div>';
-                    }).catch(() => { document.getElementById('ai-container').innerHTML = '<div class="alert alert-warning mb-0">AI insights are temporarily unavailable. Your ledger data is unaffected.</div>'; });
-                </script>
-                <a href="{{ url_for('pro') }}" class="btn btn-outline-primary btn-sm mt-3">View full Pro analysis →</a>
-                {% else %}
-                <p class="bb-muted small">Upgrade to PRO to unlock automated financial analysis.</p>
-                <a href="{{ url_for('pricing') }}" class="btn btn-primary btn-sm">Upgrade</a>
-                {% endif %}
+
+    <!-- =========================================
+         AI + SUBSCRIPTIONS
+    ========================================= -->
+
+    <div class="bb-two-column">
+
+      <!-- AI -->
+
+      <div class="bb-card bb-card-pad">
+
+        <div class="bb-card-header">
+
+          <div>
+            <h2 class="bb-card-title">
+              AI Financial Insights
+            </h2>
+
+            <div class="bb-card-subtitle">
+              Automated observations from your financial data.
             </div>
+          </div>
+
+          <span class="bb-badge bb-badge-brass">
+            PRO
+          </span>
+
         </div>
-        <div class="col-xl-6">
-            <div class="bb-card p-4 h-100">
-                <div class="d-flex justify-content-between align-items-center mb-3"><h5 class="fw-bold mb-0">Detected Subscriptions</h5><span class="bb-muted small">Review before cancelling</span></div>
-                <div class="list-group list-group-flush">
-                    {% for sub in subscriptions %}
-                    <div class="list-group-item px-0 d-flex justify-content-between align-items-center bg-transparent">
-                        <div><div class="fw-semibold">{{ sub.name }}</div><div class="bb-muted small">{{ sub.category or 'Needs review' }}</div></div>
-                        <div class="text-end"><div class="fw-bold">${{ "{:,.2f}".format(sub.amount) }}/mo</div><a class="btn btn-link btn-sm p-0" href="{{ url_for('dashboard', search=sub.name) }}#transaction-records">Review</a></div>
+
+
+        {% if user.plan_tier in ['GROWTH', 'PRO'] %}
+
+          <div
+            id="ai-container"
+            class="bb-ai-loading"
+            aria-live="polite"
+          >
+            Loading AI audit…
+          </div>
+
+          <script>
+            fetch('/api/ai-insights')
+              .then(response => {
+                if (!response.ok) {
+                  throw new Error('AI request failed');
+                }
+
+                return response.json();
+              })
+              .then(data => {
+
+                const items = Array.isArray(data.insights)
+                  ? data.insights
+                  : [];
+
+                const container =
+                  document.getElementById('ai-container');
+
+                if (!items.length) {
+
+                  container.innerHTML = `
+                    <div class="bb-empty">
+                      No AI insights are available yet.
                     </div>
-                    {% else %}<div class="bb-empty">No recurring software detected yet.</div>{% endfor %}
-                </div>
+                  `;
+
+                  return;
+                }
+
+                container.innerHTML =
+                  '<ul class="bb-ai-list">' +
+                  items.map(item =>
+                    `<li>${item}</li>`
+                  ).join('') +
+                  '</ul>';
+
+              })
+              .catch(() => {
+
+                const container =
+                  document.getElementById('ai-container');
+
+                container.innerHTML = `
+                  <div class="bb-empty">
+                    AI insights are temporarily unavailable.
+                    Your ledger data is unaffected.
+                  </div>
+                `;
+
+              });
+          </script>
+
+          <a
+            href="{{ url_for('pro') }}"
+            class="bb-btn bb-btn-navy bb-btn-sm"
+            style="margin-top:16px;"
+          >
+            View full Pro analysis →
+          </a>
+
+        {% else %}
+
+          <div class="bb-empty">
+            Upgrade to PRO to unlock automated financial analysis.
+          </div>
+
+          <a
+            href="{{ url_for('pricing') }}"
+            class="bb-btn bb-btn-navy bb-btn-sm"
+            style="margin-top:16px;"
+          >
+            Upgrade
+          </a>
+
+        {% endif %}
+
+      </div>
+
+
+      <!-- SUBSCRIPTIONS -->
+
+      <div class="bb-card bb-card-pad">
+
+        <div class="bb-card-header">
+
+          <div>
+            <h2 class="bb-card-title">
+              Detected Subscriptions
+            </h2>
+
+            <div class="bb-card-subtitle">
+              Review recurring software charges before cancelling.
             </div>
+          </div>
+
+          <span class="bb-badge bb-badge-neutral">
+            Recurring
+          </span>
+
         </div>
+
+
+        <ul class="bb-sub-list">
+
+          {% for sub in subscriptions %}
+
+            <li class="bb-sub-item">
+
+              <div>
+
+                <div class="bb-sub-name">
+                  {{ sub.name }}
+                </div>
+
+                <div class="bb-sub-category">
+                  {{ sub.category or 'Needs review' }}
+                </div>
+
+              </div>
+
+              <div>
+
+                <div class="bb-sub-price">
+                  ${{ "{:,.2f}".format(sub.amount) }}/mo
+                </div>
+
+                <a
+                  href="{{ url_for('dashboard', search=sub.name) }}#transaction-records"
+                  class="bb-btn bb-btn-ghost bb-btn-sm"
+                >
+                  Review
+                </a>
+
+              </div>
+
+            </li>
+
+          {% else %}
+
+            <li>
+              <div class="bb-empty">
+                No recurring software detected yet.
+              </div>
+            </li>
+
+          {% endfor %}
+
+        </ul>
+
+      </div>
+
     </div>
 
-    <div class="row g-4 mb-4">
-        <div class="col-md-6"><div class="bb-card p-4 h-100"><h6 class="fw-bold mb-3">Add Single Transaction</h6><form action="{{ url_for('add_transaction') }}" method="POST"><div class="row g-2 mb-2"><div class="col-6"><input type="text" name="description" class="form-control" placeholder="Description" required></div><div class="col-6"><input type="number" step="0.01" name="amount" class="form-control" placeholder="Amount" required></div></div><div class="row g-2 mb-3"><div class="col-6"><select name="type" class="form-select"><option value="EXPENSE">Expense</option><option value="INCOME">Income</option></select></div><div class="col-6"><select name="category" class="form-select">{% for c in categories %}<option value="{{ c.name }}">{{ c.name }}</option>{% endfor %}</select></div></div><button type="submit" class="btn btn-primary w-100">Save Transaction</button></form></div></div>
-        <div class="col-md-6"><div class="bb-card p-4 h-100"><h6 class="fw-bold mb-2">Import Statement CSV</h6><p class="bb-muted small">Invalid dates and amounts are skipped instead of becoming fake placeholder records.</p><form id="csvImportForm" action="{{ url_for('import_csv') }}" method="POST" enctype="multipart/form-data"><input type="file" name="file" class="form-control mb-3" accept=".csv" required><button id="csvSubmit" type="submit" class="btn btn-outline-primary w-100">Upload & Import <span id="csvSpinner" class="spinner-border spinner-border-sm d-none" aria-hidden="true"></span></button></form></div></div>
+
+    <!-- =========================================
+         INPUT / CSV
+    ========================================= -->
+
+    <div class="bb-two-column">
+
+      <!-- ADD TRANSACTION -->
+
+      <div class="bb-card bb-card-pad">
+
+        <div class="bb-card-header">
+
+          <div>
+            <h2 class="bb-card-title">
+              Add Single Transaction
+            </h2>
+
+            <div class="bb-card-subtitle">
+              Add a transaction directly to the audit ledger.
+            </div>
+          </div>
+
+          <span class="bb-badge bb-badge-neutral">
+            Ledger
+          </span>
+
+        </div>
+
+
+        <form
+          action="{{ url_for('add_transaction') }}"
+          method="POST"
+        >
+
+          <div class="bb-form-grid">
+
+            <input
+              type="text"
+              name="description"
+              class="bb-input"
+              placeholder="Description"
+              required
+            >
+
+            <input
+              type="number"
+              step="0.01"
+              name="amount"
+              class="bb-input"
+              placeholder="Amount"
+              required
+            >
+
+          </div>
+
+
+          <div class="bb-form-grid">
+
+            <select
+              name="type"
+              class="bb-select"
+            >
+              <option value="EXPENSE">
+                Expense
+              </option>
+
+              <option value="INCOME">
+                Income
+              </option>
+            </select>
+
+
+            <select
+              name="category"
+              class="bb-select"
+            >
+
+              {% for c in categories %}
+
+                <option value="{{ c.name }}">
+                  {{ c.name }}
+                </option>
+
+              {% endfor %}
+
+            </select>
+
+          </div>
+
+
+          <button
+            type="submit"
+            class="bb-btn bb-btn-navy"
+            style="width:100%; margin-top:4px;"
+          >
+            Save Transaction
+          </button>
+
+        </form>
+
+      </div>
+
+
+      <!-- CSV -->
+
+      <div class="bb-card bb-card-pad">
+
+        <div class="bb-card-header">
+
+          <div>
+            <h2 class="bb-card-title">
+              Import Statement CSV
+            </h2>
+
+            <div class="bb-card-subtitle">
+              Upload a bank or card transaction export.
+            </div>
+          </div>
+
+          <span class="bb-badge bb-badge-green">
+            Audit Input
+          </span>
+
+        </div>
+
+
+        <p class="bb-form-help">
+          Invalid dates and amounts are skipped instead of becoming
+          fake placeholder records.
+        </p>
+
+
+        <form
+          id="csvImportForm"
+          action="{{ url_for('import_csv') }}"
+          method="POST"
+          enctype="multipart/form-data"
+        >
+
+          <input
+            type="file"
+            name="file"
+            class="bb-file"
+            accept=".csv"
+            required
+          >
+
+          <button
+            id="csvSubmit"
+            type="submit"
+            class="bb-btn bb-btn-navy"
+            style="width:100%; margin-top:12px;"
+          >
+
+            Upload & Import
+
+            <span
+              id="csvSpinner"
+              style="display:none;"
+            >
+              …
+            </span>
+
+          </button>
+
+        </form>
+
+      </div>
+
     </div>
 
-    <div class="bb-card p-4 mb-4">
-        <div class="d-flex flex-wrap justify-content-between align-items-center mb-3"><div><h5 class="fw-bold mb-1">Expense Category Breakdown</h5><div class="bb-muted small">Vendor/description evidence is used to avoid treating every unknown transaction as meaningful financial risk.</div></div><span id="categoryCoverage" class="bb-pill bg-light text-dark">Checking categorization…</span></div>
-        <div id="chartEmpty" class="bb-empty d-none">No expense transactions are available for this chart.</div>
-        <canvas id="expenseChart" style="max-height:320px;"></canvas>
+
+    <!-- =========================================
+         EXPENSE CATEGORY
+    ========================================= -->
+
+    <div class="bb-card bb-card-pad bb-section-gap">
+
+      <div class="bb-card-header">
+
+        <div>
+
+          <h2 class="bb-card-title">
+            Expense Category Breakdown
+          </h2>
+
+          <div class="bb-card-subtitle">
+            Categories are inferred from transaction descriptions and
+            existing category evidence. Unknown transactions remain
+            explicitly marked for review instead of being silently
+            treated as meaningful risk.
+          </div>
+
+        </div>
+
+        <span
+          id="categoryCoverage"
+          class="bb-coverage"
+        >
+          Checking categorization…
+        </span>
+
+      </div>
+
+
+      <div
+        id="chartEmpty"
+        class="bb-empty"
+        style="display:none;"
+      >
+        No expense transactions are available for this chart.
+      </div>
+
+
+      <div class="bb-chart-wrap">
+
+        <canvas
+          id="expenseChart"
+        ></canvas>
+
+      </div>
+
     </div>
 
-    <div class="bb-card p-4" id="transaction-records">
-        <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2"><div><h5 class="fw-bold mb-1">Transaction Records</h5><div id="paginationSummary" class="bb-muted small"></div></div><div><a href="{{ url_for('export_csv') }}" class="btn btn-outline-secondary btn-sm">CSV</a> <a href="{{ url_for('export_pdf') }}" class="btn btn-outline-secondary btn-sm">PDF</a></div></div>
-        <div class="table-responsive"><table class="table bb-table align-middle"><thead><tr><th>Date</th><th>Description</th><th>Category</th><th>Type</th><th>Amount</th><th class="text-end">Action</th></tr></thead><tbody id="transactionBody">
-            {% for t in transactions %}
-            <tr class="transaction-row">
-                <td class="small bb-code">{% if t.date %}{{ t.date }}{% else %}<span class="bb-muted">—</span>{% endif %}</td>
-                <td>{{ t.description or 'Unspecified transaction' }}</td>
-                <td><span class="badge bg-light text-dark border">{{ t.category or 'Uncategorized' }}</span></td>
-                <td><span class="badge {% if t.type == 'INCOME' %}bg-success{% else %}bg-danger{% endif %}">{{ t.type }}</span></td>
-                <td class="fw-bold">{% if t.type == 'EXPENSE' %}-{% endif %}${{ "{:,.2f}".format(t.amount|abs) }}</td>
-                <td class="text-end"><form action="{{ url_for('delete_transaction', tx_id=t.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Delete this transaction?')"><button type="submit" class="btn btn-sm btn-outline-danger">Delete</button></form></td>
+
+    <!-- =========================================
+         TRANSACTION RECORDS
+    ========================================= -->
+
+    <div
+      class="bb-card bb-card-pad"
+      id="transaction-records"
+    >
+
+      <div class="bb-card-header">
+
+        <div>
+
+          <h2 class="bb-card-title">
+            Transaction Records
+          </h2>
+
+          <div
+            id="paginationSummary"
+            class="bb-card-subtitle"
+          ></div>
+
+        </div>
+
+
+        <div style="display:flex;gap:8px;">
+
+          <a
+            href="{{ url_for('export_csv') }}"
+            class="bb-btn bb-btn-ghost bb-btn-sm"
+          >
+            Export CSV
+          </a>
+
+          <a
+            href="{{ url_for('export_pdf') }}"
+            class="bb-btn bb-btn-ghost bb-btn-sm"
+          >
+            Export PDF
+          </a>
+
+        </div>
+
+      </div>
+
+
+      <div class="bb-table-wrap">
+
+        <table class="bb-table">
+
+          <thead>
+
+            <tr>
+
+              <th>
+                Date
+              </th>
+
+              <th>
+                Description
+              </th>
+
+              <th>
+                Category
+              </th>
+
+              <th>
+                Type
+              </th>
+
+              <th>
+                Amount
+              </th>
+
+              <th style="text-align:right;">
+                Action
+              </th>
+
             </tr>
-            {% else %}<tr><td colspan="6"><div class="bb-empty">No transactions logged yet. Upload a CSV statement to begin.</div></td></tr>{% endfor %}
-        </tbody></table></div>
-        <div id="paginationControls" class="d-flex justify-content-between align-items-center mt-3"></div>
+
+          </thead>
+
+
+          <tbody id="transactionBody">
+
+            {% for t in transactions %}
+
+              <tr class="transaction-row">
+
+                <td class="bb-date">
+
+                  {% if t.date %}
+                    {{ t.date }}
+                  {% else %}
+                    —
+                  {% endif %}
+
+                </td>
+
+
+                <td class="bb-description">
+
+                  {{ t.description or 'Unspecified transaction' }}
+
+                </td>
+
+
+                <td>
+
+                  <span class="bb-category">
+
+                    {{ t.category or 'Uncategorized' }}
+
+                  </span>
+
+                </td>
+
+
+                <td>
+
+                  {% if t.type == 'INCOME' %}
+
+                    <span class="bb-type bb-type-income">
+                      INCOME
+                    </span>
+
+                  {% else %}
+
+                    <span class="bb-type bb-type-expense">
+                      EXPENSE
+                    </span>
+
+                  {% endif %}
+
+                </td>
+
+
+                <td
+                  class="bb-amount
+                  {% if t.type == 'EXPENSE' %}
+                    expense
+                  {% else %}
+                    income
+                  {% endif %}
+                  "
+                >
+
+                  {% if t.type == 'EXPENSE' %}
+                    -${{ "{:,.2f}".format(t.amount|abs) }}
+                  {% else %}
+                    ${{ "{:,.2f}".format(t.amount|abs) }}
+                  {% endif %}
+
+                </td>
+
+
+                <td style="text-align:right;">
+
+                  <form
+                    action="{{ url_for('delete_transaction', tx_id=t.id) }}"
+                    method="POST"
+                    style="display:inline;"
+                    onsubmit="return confirm('Delete this transaction?')"
+                  >
+
+                    <button
+                      type="submit"
+                      class="bb-btn bb-btn-danger bb-btn-sm"
+                    >
+                      Delete
+                    </button>
+
+                  </form>
+
+                </td>
+
+              </tr>
+
+            {% else %}
+
+              <tr>
+
+                <td colspan="6">
+
+                  <div class="bb-empty">
+
+                    No transactions logged yet.
+                    Upload a CSV statement to begin.
+
+                  </div>
+
+                </td>
+
+              </tr>
+
+            {% endfor %}
+
+          </tbody>
+
+        </table>
+
+      </div>
+
+
+      <div class="bb-pagination">
+
+        <div
+          id="paginationSummaryBottom"
+          class="bb-pagination-summary"
+        ></div>
+
+        <div
+          id="paginationControls"
+          class="bb-pagination-controls"
+        ></div>
+
+      </div>
+
     </div>
+
+
+    <!-- =========================================
+         DARK AUDIT ANCHOR
+    ========================================= -->
+
+    <div class="bb-audit-anchor">
+
+      <div class="bb-dark-card">
+
+        <div class="bb-dark-label">
+          Financial Audit
+        </div>
+
+        <div class="bb-dark-title">
+          Operational Risk Snapshot
+        </div>
+
+        <span class="bb-dark-status">
+          Evidence review
+        </span>
+
+        <div class="bb-dark-value">
+
+          {% if net_profit < 0 %}
+            -${{ "{:,.2f}".format(net_profit|abs) }}
+          {% else %}
+            ${{ "{:,.2f}".format(net_profit) }}
+          {% endif %}
+
+        </div>
+
+        <div class="bb-dark-copy">
+          Current net position based on recorded revenue and
+          expenses. This figure is an observed financial result,
+          not a projection.
+        </div>
+
+      </div>
+
+
+      <div class="bb-dark-card">
+
+        <div class="bb-dark-label">
+          Sandbox
+        </div>
+
+        <div class="bb-dark-title">
+          Simulator Engine
+        </div>
+
+        <span class="bb-dark-status safe">
+          What-if only
+        </span>
+
+        <div class="bb-dark-value">
+          $0.00
+        </div>
+
+        <div class="bb-dark-copy">
+          Simulator values are projections only and are deliberately
+          separated from the real audited transaction numbers above.
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
 </div>
-</div>
+
+
+<!-- =========================================
+     JAVASCRIPT
+========================================= -->
 
 <script>
+
 (function(){
-    const rows = Array.from(document.querySelectorAll('.transaction-row'));
-    const pageSize = 25;
-    let page = 1;
-    const summary = document.getElementById('paginationSummary');
-    const controls = document.getElementById('paginationControls');
-    function renderPage(){
-        const pages = Math.max(1, Math.ceil(rows.length / pageSize));
-        page = Math.min(page, pages);
-        rows.forEach((row, i) => row.style.display = (i >= (page-1)*pageSize && i < page*pageSize) ? '' : 'none');
-        summary.textContent = rows.length ? `Showing ${Math.min((page-1)*pageSize+1, rows.length)}–${Math.min(page*pageSize, rows.length)} of ${rows.length}` : '0 transactions';
-        controls.innerHTML = pages > 1 ? `<button class="btn btn-sm btn-outline-secondary" ${page===1?'disabled':''} id="prevPage">Previous</button><span class="bb-muted small">Page ${page} of ${pages}</span><button class="btn btn-sm btn-outline-secondary" ${page===pages?'disabled':''} id="nextPage">Next</button>` : '';
-        document.getElementById('prevPage')?.addEventListener('click',()=>{page--;renderPage()});
-        document.getElementById('nextPage')?.addEventListener('click',()=>{page++;renderPage()});
-    }
-    renderPage();
 
-    const txEvidence = [
-        {% for t in transactions %}{description: {{ (t.description or '')|tojson }}, category: {{ (t.category or '')|tojson }}, amount: {{ t.amount|tojson }}},{% endfor %}
-    ];
-    const weakCategories = ['other','imported','general','uncategorized','no category',''];
-    const rules = [
-        [['payroll','salary','wages','gusto','adp'], 'Payroll'],
-        [['adobe','figma','slack','zoom','chatgpt','openai','github','notion','canva','hubspot','semrush','aws','google workspace'], 'Software'],
-        [['facebook ads','meta ads','google ads','linkedin ads','advertising','ppc','paid media','marketing'], 'Advertising'],
-        [['contractor','freelance','upwork','fiverr'], 'Contractors'],
-        [['uber','airbnb','hotel','flight','airline','travel'], 'Travel'],
-        [['rent','lease','office'], 'Rent & Facilities'],
-        [['insurance'], 'Insurance'],
-        [['bank fee','bank charge','stripe fee','paypal fee','processing fee'], 'Banking & Fees'],
-        [['legal','law firm','accounting','bookkeeping'], 'Professional Services'],
-        [['restaurant','food','meal','cafe','coffee'], 'Meals'],
-        [['internet','phone','mobile','utility','electric'], 'Utilities'],
-        [['tax','irs','vat'], 'Taxes'],
-        [['office supplies','stationery','printer'], 'Office'],
-    ];
-    function inferCategory(item){
-        const text = String(item.description || '').toLowerCase();
-        for (const [keywords, label] of rules) if (keywords.some(k => text.includes(k))) return label;
-        const existing = String(item.category || '').trim();
-        return weakCategories.includes(existing.toLowerCase()) ? 'Needs Categorization' : existing;
-    }
-    const chartData = {};
-    let weak = 0;
-    txEvidence.forEach(item => { const label=inferCategory(item); chartData[label]=(chartData[label]||0)+Number(item.amount||0); if(label==='Needs Categorization') weak += Number(item.amount||0); });
-    const totalExpense = Object.values(chartData).reduce((a,b)=>a+b,0);
-    const coverage = totalExpense > 0 ? Math.max(0, Math.min(100, 100 - (weak/totalExpense*100))) : 100;
-    document.getElementById('categoryCoverage').textContent = totalExpense ? `Categorization coverage ${coverage.toFixed(0)}%` : 'No expense data';
-    if (!totalExpense) { document.getElementById('chartEmpty').classList.remove('d-none'); document.getElementById('expenseChart').classList.add('d-none'); return; }
-    const labels = Object.keys(chartData).sort((a,b)=>chartData[b]-chartData[a]);
-    new Chart(document.getElementById('expenseChart').getContext('2d'), {type:'bar', data:{labels, datasets:[{label:'Expenses ($)', data:labels.map(k=>chartData[k]), backgroundColor:'#4f46e5', borderRadius:6}]}, options:{responsive:true, plugins:{legend:{display:false},tooltip:{callbacks:{label:(c)=>` $${Number(c.raw).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})`}}}, scales:{y:{beginAtZero:true,ticks:{callback:v=>'$'+Number(v).toLocaleString()}}}}});
+  /* =========================================
+     PAGINATION
+  ========================================= */
 
-    const form=document.getElementById('csvImportForm'); form?.addEventListener('submit',()=>{document.getElementById('csvSubmit').disabled=true;document.getElementById('csvSpinner').classList.remove('d-none');});
+  const rows =
+    Array.from(
+      document.querySelectorAll('.transaction-row')
+    );
+
+  const pageSize = 25;
+
+  let page = 1;
+
+  const summary =
+    document.getElementById('paginationSummary');
+
+  const summaryBottom =
+    document.getElementById('paginationSummaryBottom');
+
+  const controls =
+    document.getElementById('paginationControls');
+
+
+  function renderPage(){
+
+    const pages =
+      Math.max(
+        1,
+        Math.ceil(rows.length / pageSize)
+      );
+
+    page =
+      Math.min(
+        page,
+        pages
+      );
+
+
+    rows.forEach((row, index) => {
+
+      const start =
+        (page - 1) * pageSize;
+
+      const end =
+        page * pageSize;
+
+      row.style.display =
+        index >= start &&
+        index < end
+          ? ''
+          : 'none';
+
+    });
+
+
+    const startNumber =
+      rows.length
+        ? Math.min(
+            (page - 1) * pageSize + 1,
+            rows.length
+          )
+        : 0;
+
+
+    const endNumber =
+      Math.min(
+        page * pageSize,
+        rows.length
+      );
+
+
+    const text =
+      rows.length
+        ? `Showing ${startNumber}–${endNumber} of ${rows.length}`
+        : '0 transactions';
+
+
+    if(summary){
+      summary.textContent = text;
+    }
+
+    if(summaryBottom){
+      summaryBottom.textContent = text;
+    }
+
+
+    if(pages <= 1){
+
+      controls.innerHTML = '';
+
+      return;
+
+    }
+
+
+    controls.innerHTML = `
+
+      <button
+        class="bb-btn bb-btn-ghost bb-btn-sm"
+        ${page === 1 ? 'disabled' : ''}
+        id="prevPage"
+      >
+        Previous
+      </button>
+
+      <span class="bb-page-number">
+        PAGE ${page} / ${pages}
+      </span>
+
+      <button
+        class="bb-btn bb-btn-ghost bb-btn-sm"
+        ${page === pages ? 'disabled' : ''}
+        id="nextPage"
+      >
+        Next
+      </button>
+
+    `;
+
+
+    document
+      .getElementById('prevPage')
+      ?.addEventListener(
+        'click',
+        function(){
+
+          if(page > 1){
+
+            page--;
+
+            renderPage();
+
+          }
+
+        }
+      );
+
+
+    document
+      .getElementById('nextPage')
+      ?.addEventListener(
+        'click',
+        function(){
+
+          if(page < pages){
+
+            page++;
+
+            renderPage();
+
+          }
+
+        }
+      );
+
+  }
+
+
+  renderPage();
+
+
+  /* =========================================
+     CATEGORY ENGINE
+  ========================================= */
+
+  const txEvidence = [
+
+    {% for t in transactions %}
+
+      {
+        description:
+          {{ (t.description or '')|tojson }},
+
+        category:
+          {{ (t.category or '')|tojson }},
+
+        amount:
+          {{ t.amount|tojson }},
+
+        type:
+          {{ (t.type or '')|tojson }}
+
+      },
+
+    {% endfor %}
+
+  ];
+
+
+  const weakCategories = [
+
+    'other',
+    'imported',
+    'general',
+    'uncategorized',
+    'no category',
+    ''
+
+  ];
+
+
+  const rules = [
+
+    [
+      [
+        'payroll',
+        'salary',
+        'wages',
+        'gusto',
+        'adp'
+      ],
+      'Payroll'
+    ],
+
+    [
+      [
+        'adobe',
+        'figma',
+        'slack',
+        'zoom',
+        'chatgpt',
+        'openai',
+        'github',
+        'notion',
+        'canva',
+        'hubspot',
+        'semrush',
+        'aws',
+        'google workspace',
+        'monday',
+        'asana',
+        'dropbox',
+        'grammarly',
+        'mailchimp',
+        'salesforce',
+        'pipedrive',
+        'quickbooks',
+        'xero'
+      ],
+      'Software'
+    ],
+
+    [
+      [
+        'facebook ads',
+        'meta ads',
+        'google ads',
+        'linkedin ads',
+        'advertising',
+        'ppc',
+        'paid media',
+        'marketing'
+      ],
+      'Advertising'
+    ],
+
+    [
+      [
+        'contractor',
+        'freelance',
+        'upwork',
+        'fiverr'
+      ],
+      'Contractors'
+    ],
+
+    [
+      [
+        'uber',
+        'airbnb',
+        'hotel',
+        'flight',
+        'airline',
+        'travel'
+      ],
+      'Travel'
+    ],
+
+    [
+      [
+        'rent',
+        'lease',
+        'office'
+      ],
+      'Rent & Facilities'
+    ],
+
+    [
+      [
+        'insurance'
+      ],
+      'Insurance'
+    ],
+
+    [
+      [
+        'bank fee',
+        'bank charge',
+        'stripe fee',
+        'paypal fee',
+        'processing fee'
+      ],
+      'Banking & Fees'
+    ],
+
+    [
+      [
+        'legal',
+        'law firm',
+        'accounting',
+        'bookkeeping'
+      ],
+      'Professional Services'
+    ],
+
+    [
+      [
+        'restaurant',
+        'food',
+        'meal',
+        'cafe',
+        'coffee'
+      ],
+      'Meals'
+    ],
+
+    [
+      [
+        'internet',
+        'phone',
+        'mobile',
+        'utility',
+        'electric'
+      ],
+      'Utilities'
+    ],
+
+    [
+      [
+        'tax',
+        'irs',
+        'vat'
+      ],
+      'Taxes'
+    ],
+
+    [
+      [
+        'office supplies',
+        'stationery',
+        'printer'
+      ],
+      'Office'
+    ],
+
+    [
+      [
+        'shipping',
+        'fedex',
+        'ups',
+        'dhl',
+        'usps'
+      ],
+      'Shipping'
+    ]
+
+  ];
+
+
+  function inferCategory(item){
+
+    const text =
+      String(
+        item.description || ''
+      ).toLowerCase();
+
+
+    for(
+      const [keywords, label]
+      of rules
+    ){
+
+      if(
+        keywords.some(
+          keyword =>
+            text.includes(keyword)
+        )
+      ){
+
+        return label;
+
+      }
+
+    }
+
+
+    const existing =
+      String(
+        item.category || ''
+      ).trim();
+
+
+    if(
+      weakCategories.includes(
+        existing.toLowerCase()
+      )
+    ){
+
+      return 'Needs Categorization';
+
+    }
+
+
+    return existing;
+
+  }
+
+
+  /* =========================================
+     BUILD EXPENSE DATA
+  ========================================= */
+
+  const chartData = {};
+
+  let weakExpenseAmount = 0;
+
+  let totalExpenseAmount = 0;
+
+
+  txEvidence.forEach(item => {
+
+    /*
+      IMPORTANT:
+      Only EXPENSE transactions belong
+      in the expense category chart.
+    */
+
+    if(
+      String(item.type).toUpperCase()
+      !== 'EXPENSE'
+    ){
+
+      return;
+
+    }
+
+
+    const amount =
+      Math.abs(
+        Number(item.amount || 0)
+      );
+
+
+    if(!Number.isFinite(amount)){
+
+      return;
+
+    }
+
+
+    const label =
+      inferCategory(item);
+
+
+    chartData[label] =
+      (
+        chartData[label] || 0
+      ) + amount;
+
+
+    totalExpenseAmount += amount;
+
+
+    if(
+      label === 'Needs Categorization'
+    ){
+
+      weakExpenseAmount += amount;
+
+    }
+
+  });
+
+
+  const coverage =
+    totalExpenseAmount > 0
+
+      ? Math.max(
+          0,
+          Math.min(
+            100,
+            100 -
+              (
+                weakExpenseAmount /
+                totalExpenseAmount
+              ) *
+              100
+          )
+        )
+
+      : 100;
+
+
+  const coverageElement =
+    document.getElementById(
+      'categoryCoverage'
+    );
+
+
+  if(coverageElement){
+
+    coverageElement.textContent =
+      totalExpenseAmount
+
+        ? `Categorization coverage ${coverage.toFixed(0)}%`
+
+        : 'No expense data';
+
+  }
+
+
+  const chartCanvas =
+    document.getElementById(
+      'expenseChart'
+    );
+
+
+  const chartEmpty =
+    document.getElementById(
+      'chartEmpty'
+    );
+
+
+  if(!totalExpenseAmount){
+
+    if(chartEmpty){
+
+      chartEmpty.style.display =
+        'block';
+
+    }
+
+    if(chartCanvas){
+
+      chartCanvas.style.display =
+        'none';
+
+    }
+
+    return;
+
+  }
+
+
+  const labels =
+    Object.keys(chartData)
+      .sort(
+        (a,b) =>
+          chartData[b] -
+          chartData[a]
+      );
+
+
+  /*
+    Prevent "Needs Categorization"
+    from visually swallowing the chart.
+    It remains visible, but the chart now
+    represents actual classified categories
+    clearly.
+  */
+
+
+  if(
+    typeof Chart !== 'undefined' &&
+    chartCanvas
+  ){
+
+    new Chart(
+
+      chartCanvas.getContext('2d'),
+
+      {
+
+        type:'bar',
+
+        data:{
+
+          labels:labels,
+
+          datasets:[
+
+            {
+
+              label:'Expenses ($)',
+
+              data:
+                labels.map(
+                  label =>
+                    chartData[label]
+                ),
+
+              backgroundColor:
+                '#1B3A5C',
+
+              borderRadius:6,
+
+              borderSkipped:false
+
+            }
+
+          ]
+
+        },
+
+
+        options:{
+
+          responsive:true,
+
+          maintainAspectRatio:false,
+
+          plugins:{
+
+            legend:{
+              display:false
+            },
+
+            tooltip:{
+
+              callbacks:{
+
+                label:function(context){
+
+                  return (
+                    ' $' +
+                    Number(
+                      context.raw
+                    ).toLocaleString(
+                      undefined,
+                      {
+                        minimumFractionDigits:2,
+                        maximumFractionDigits:2
+                      }
+                    )
+                  );
+
+                }
+
+              }
+
+            }
+
+          },
+
+
+          scales:{
+
+            x:{
+
+              grid:{
+                display:false
+              },
+
+              ticks:{
+
+                color:'#5C6570',
+
+                font:{
+                  family:'Inter',
+                  size:11
+                }
+
+              }
+
+            },
+
+
+            y:{
+
+              beginAtZero:true,
+
+              grid:{
+                color:'#E6E2D8'
+              },
+
+              ticks:{
+
+                color:'#8A9099',
+
+                callback:function(value){
+
+                  return (
+                    '$' +
+                    Number(
+                      value
+                    ).toLocaleString()
+                  );
+
+                }
+
+              }
+
+            }
+
+          }
+
+        }
+
+      }
+
+    );
+
+  }
+
+
+  /* =========================================
+     CSV LOADING STATE
+  ========================================= */
+
+  const csvForm =
+    document.getElementById(
+      'csvImportForm'
+    );
+
+
+  const csvSubmit =
+    document.getElementById(
+      'csvSubmit'
+    );
+
+
+  const csvSpinner =
+    document.getElementById(
+      'csvSpinner'
+    );
+
+
+  if(csvForm){
+
+    csvForm.addEventListener(
+      'submit',
+      function(){
+
+        if(csvSubmit){
+
+          csvSubmit.disabled =
+            true;
+
+          csvSubmit.style.opacity =
+            '.7';
+
+        }
+
+
+        if(csvSpinner){
+
+          csvSpinner.style.display =
+            'inline';
+
+        }
+
+      }
+    );
+
+  }
+
 })();
+
 </script>
+
 {% endblock %}
