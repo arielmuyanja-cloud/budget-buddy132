@@ -1,14 +1,46 @@
 {% extends "base.html" %}
+{% block title %}Budget Buddy — Financial Audit & Waste Detection{% endblock %}
 {% block content %}
-<div class="container py-5 text-center">
-    <div class="py-5 col-md-8 mx-auto">
-        <span class="badge bg-primary-subtle text-primary mb-3 px-3 py-2">Automated Financial Clean Up</span>
-        <h1 class="display-4 fw-bold text-white mb-3">Eliminate SaaS Waste & Track Agency Cash Flow</h1>
-        <p class="lead text-secondary mb-4">Budget Buddy parses bank statements to catch hidden subscription leaks, unused seats, and budget overspends in seconds.</p>
-        <div class="d-flex justify-content-center gap-3">
-            <a href="{{ url_for('register') }}" class="btn btn-primary btn-lg fw-bold">Start Free Trial</a>
-            <a href="{{ url_for('pricing') }}" class="btn btn-outline-light btn-lg">View PRO Features</a>
-        </div>
+<style>
+  .bb-home { background:#f7f8fb; color:#1a2332; min-height:calc(100vh - 76px); padding:5rem 1rem 4rem; }
+  .bb-home-wrap { max-width:1100px; margin:0 auto; }
+  .bb-eyebrow { display:inline-flex; align-items:center; gap:.5rem; padding:.4rem .7rem; border:1px solid #dfe3ea; border-radius:999px; background:#fff; color:#4f46e5; font-size:.72rem; font-weight:800; letter-spacing:.07em; text-transform:uppercase; }
+  .bb-mark { width:34px; height:34px; border-radius:9px; display:inline-flex; align-items:center; justify-content:center; background:#4f46e5; color:#fff; font-weight:900; font-size:.72rem; }
+  .bb-home h1 { max-width:850px; margin:1.4rem auto 1rem; font-size:clamp(2.5rem,6vw,4.7rem); line-height:1.02; letter-spacing:-.055em; font-weight:850; }
+  .bb-home-lead { max-width:720px; margin:0 auto; color:#667085; font-size:1.08rem; line-height:1.7; }
+  .bb-actions { margin-top:2rem; }
+  .bb-proof { margin-top:4rem; }
+  .bb-proof-card { background:#fff; border:1px solid #e4e7ec; border-radius:14px; box-shadow:0 8px 28px rgba(16,24,40,.055); padding:1.25rem; height:100%; text-align:left; }
+  .bb-proof-icon { color:#4f46e5; font-size:1.1rem; }
+  .bb-proof-title { font-weight:800; margin-top:.65rem; }
+  .bb-proof-copy { color:#667085; font-size:.8rem; line-height:1.55; margin-top:.35rem; }
+  .bb-audit-strip { margin-top:1rem; background:#101828; color:#fff; border-radius:14px; padding:1.15rem 1.3rem; display:flex; justify-content:space-between; align-items:center; gap:1rem; text-align:left; }
+  .bb-audit-strip small { color:#98a2b3; }
+  .bb-verified { color:#86efac; font-size:.72rem; font-weight:800; }
+  @media(max-width:576px){ .bb-home{padding-top:3rem}.bb-audit-strip{align-items:flex-start;flex-direction:column}.bb-home h1{font-size:2.6rem} }
+</style>
+
+<div class="bb-home">
+  <div class="bb-home-wrap text-center">
+    <div class="bb-eyebrow"><span class="bb-mark">BB</span> Automated financial audit</div>
+    <h1>Find the software waste hiding in your agency's numbers.</h1>
+    <p class="bb-home-lead">Budget Buddy analyzes financial transactions to surface recurring software spend, unusual charges, overlapping tools and potential savings — with evidence you can actually review.</p>
+
+    <div class="bb-actions d-flex justify-content-center flex-wrap gap-3">
+      <a href="{{ url_for('register') }}" class="btn btn-primary btn-lg px-4 fw-bold">Start Free Trial</a>
+      <a href="{{ url_for('pricing') }}" class="btn btn-outline-secondary btn-lg px-4">View PRO Features</a>
     </div>
+
+    <div class="bb-proof row g-3">
+      <div class="col-md-4"><div class="bb-proof-card"><div class="bb-proof-icon"><i class="bi bi-search"></i></div><div class="bb-proof-title">Evidence first</div><div class="bb-proof-copy">See the transactions behind recurring charges and potential waste instead of relying on unexplained scores.</div></div></div>
+      <div class="col-md-4"><div class="bb-proof-card"><div class="bb-proof-icon"><i class="bi bi-arrow-repeat"></i></div><div class="bb-proof-title">Recurring spend</div><div class="bb-proof-copy">Identify software subscriptions and repeated charges that deserve a closer look.</div></div></div>
+      <div class="col-md-4"><div class="bb-proof-card"><div class="bb-proof-icon"><i class="bi bi-shield-check"></i></div><div class="bb-proof-title">Audit-ready clarity</div><div class="bb-proof-copy">Separate recorded facts from inference so agency owners can make decisions with context.</div></div></div>
+    </div>
+
+    <div class="bb-audit-strip">
+      <div><div class="fw-bold">Professional financial-audit workspace</div><small>Clean reporting, transparent evidence and decision-focused findings.</small></div>
+      <div class="bb-verified">✓ EVIDENCE-BASED</div>
+    </div>
+  </div>
 </div>
 {% endblock %}
