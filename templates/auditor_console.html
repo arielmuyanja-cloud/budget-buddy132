@@ -2,100 +2,246 @@
 {% block title %}Auditor Console | Budget Buddy{% endblock %}
 {% block content %}
 <style>
-  .audit-shell { background:#f5f7fb; color:#14213d; min-height:calc(100vh - 80px); margin:-1.5rem; padding:1.5rem; }
-  .audit-card { background:#fff; border:1px solid #e5e9f2; border-radius:16px; box-shadow:0 8px 24px rgba(20,33,61,.06); }
-  .audit-muted { color:#6b7280; }
-  .audit-code { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.78rem; }
-  .audit-accent { color:#5146d8; }
-  .audit-status { font-size:.68rem; font-weight:800; letter-spacing:.08em; }
-  .audit-dot { width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:8px; }
-  .audit-dot.complete { background:#16a34a; }
-  .audit-dot.pending { background:#f59e0b; }
-  .audit-dot.check { background:#ef4444; }
-  .audit-sidebar { background:#fbfcfe; border-right:1px solid #e5e9f2; }
-  .audit-table th { font-size:.7rem; text-transform:uppercase; letter-spacing:.08em; color:#6b7280; background:#f8fafc; }
-  .audit-table td { vertical-align:middle; }
-  .dark-audit { background:#111827; color:#f8fafc; border-radius:16px; }
-  .risk-chip { background:#3f1d1d; color:#fca5a5; border:1px solid #7f1d1d; }
-  .verify-chip { background:#ecfdf3; color:#15803d; border:1px solid #bbf7d0; }
+  :root {
+    --audit-bg: #f4f6fa;
+    --audit-card: #ffffff;
+    --audit-ink: #111827;
+    --audit-muted: #667085;
+    --audit-border: #e4e7ec;
+    --audit-accent: #4f46e5;
+    --audit-accent-soft: #eef2ff;
+    --audit-success: #16a34a;
+    --audit-warning: #f59e0b;
+    --audit-danger: #ef4444;
+    --audit-dark: #101828;
+  }
+
+  .audit-shell {
+    background: var(--audit-bg);
+    color: var(--audit-ink);
+    min-height: calc(100vh - 80px);
+    margin: -1.5rem;
+    padding: 1.25rem;
+  }
+
+  .audit-container { max-width: 1500px; margin: 0 auto; }
+
+  .audit-card {
+    background: var(--audit-card);
+    border: 1px solid var(--audit-border);
+    border-radius: 14px;
+    box-shadow: 0 4px 16px rgba(16, 24, 40, .045);
+  }
+
+  .audit-header { padding: 1rem 1.15rem; }
+
+  .audit-brand-mark {
+    width: 38px;
+    height: 38px;
+    flex: 0 0 38px;
+    border-radius: 9px;
+    background: linear-gradient(135deg, #4f46e5, #6366f1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: .78rem;
+    font-weight: 900;
+    letter-spacing: -.03em;
+  }
+
+  .audit-brand { line-height: 1.05; }
+  .audit-brand-title { font-weight: 800; letter-spacing: -.02em; }
+  .audit-brand-subtitle { color: var(--audit-muted); font-size: .72rem; margin-top: 3px; }
+  .audit-muted { color: var(--audit-muted); }
+
+  .audit-status {
+    font-size: .64rem;
+    font-weight: 800;
+    letter-spacing: .09em;
+    color: #475467;
+    background: #f8fafc;
+    border: 1px solid var(--audit-border);
+    border-radius: 999px;
+    padding: .48rem .7rem;
+  }
+
+  .audit-report-btn {
+    border-radius: 8px;
+    padding: .55rem .85rem;
+    font-size: .82rem;
+    font-weight: 700;
+  }
+
+  .audit-sidebar {
+    position: sticky;
+    top: 1rem;
+    padding: 1rem;
+  }
+
+  .audit-sidebar-title {
+    color: var(--audit-muted);
+    font-size: .63rem;
+    font-weight: 800;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    margin-bottom: .65rem;
+  }
+
+  .audit-module {
+    padding: .7rem .2rem;
+    border-bottom: 1px solid #f0f2f5;
+  }
+
+  .audit-module:last-child { border-bottom: 0; }
+  .audit-module-name { font-size: .79rem; font-weight: 700; }
+  .audit-module-status { margin-left: 17px; margin-top: 2px; font-size: .6rem; font-weight: 800; letter-spacing: .07em; color: var(--audit-muted); }
+
+  .audit-dot {
+    width: 8px;
+    height: 8px;
+    display: inline-block;
+    border-radius: 50%;
+    margin-right: 8px;
+    box-shadow: 0 0 0 3px rgba(22, 163, 74, .09);
+  }
+  .audit-dot.complete { background: var(--audit-success); }
+  .audit-dot.pending { background: var(--audit-warning); box-shadow: 0 0 0 3px rgba(245, 158, 11, .1); }
+  .audit-dot.check { background: var(--audit-danger); box-shadow: 0 0 0 3px rgba(239, 68, 68, .1); }
+
+  .audit-kpi { min-height: 146px; padding: 1.15rem; position: relative; }
+  .audit-kpi-label { color: var(--audit-muted); font-size: .65rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+  .audit-kpi-value { margin-top: .35rem; font-size: 2.15rem; line-height: 1; font-weight: 800; letter-spacing: -.045em; }
+  .audit-kpi-note { margin-top: .55rem; color: var(--audit-muted); font-size: .72rem; }
+  .audit-kpi-accent { color: var(--audit-accent); }
+  .audit-only { position: absolute; top: 1rem; right: 1rem; border: 1px solid #d0d5dd; background: #f8fafc; color: #475467; font-size: .58rem; font-weight: 800; letter-spacing: .06em; }
+
+  .audit-section-title { font-size: 1rem; font-weight: 800; letter-spacing: -.01em; }
+  .audit-section-note { color: var(--audit-muted); font-size: .72rem; margin-top: .25rem; }
+
+  .audit-table { margin: 0; }
+  .audit-table thead th {
+    color: #667085;
+    background: #f8fafc;
+    border-bottom: 1px solid var(--audit-border);
+    font-size: .62rem;
+    font-weight: 800;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    padding: .72rem 1rem;
+    white-space: nowrap;
+  }
+  .audit-table tbody td { padding: .8rem 1rem; border-color: #eef0f3; vertical-align: middle; font-size: .75rem; }
+  .audit-code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: .7rem !important; color: #344054; }
+  .verify-chip { background: #ecfdf3; color: #15803d; border: 1px solid #bbf7d0; border-radius: 999px; font-size: .58rem; font-weight: 800; letter-spacing: .04em; }
+
+  .audit-dark-card {
+    background: var(--audit-dark);
+    color: #f8fafc;
+    border: 1px solid #1d2939;
+    border-radius: 14px;
+    min-height: 210px;
+    padding: 1.2rem;
+  }
+
+  .audit-dark-label { color: #98a2b3; font-size: .62rem; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; }
+  .audit-dark-title { font-size: 1rem; font-weight: 800; margin-top: .25rem; }
+  .audit-dark-value { font-size: 2rem; font-weight: 800; letter-spacing: -.04em; margin-top: 1.25rem; }
+  .audit-dark-copy { color: #98a2b3; font-size: .72rem; line-height: 1.55; }
+  .risk-chip { background: rgba(127, 29, 29, .35); color: #fca5a5; border: 1px solid #7f1d1d; border-radius: 999px; font-size: .58rem; font-weight: 800; }
+  .sandbox-chip { background: rgba(79, 70, 229, .18); color: #c7d2fe; border: 1px solid rgba(129, 140, 248, .35); border-radius: 999px; font-size: .58rem; font-weight: 800; }
+  .audit-dark-divider { border-top: 1px solid #344054; }
+
+  @media (max-width: 991.98px) {
+    .audit-sidebar { position: static; }
+  }
+
+  @media (max-width: 575.98px) {
+    .audit-shell { margin: -.75rem; padding: .75rem; }
+    .audit-header { align-items: flex-start !important; }
+    .audit-header-actions { width: 100%; }
+    .audit-report-btn { width: 100%; }
+  }
 </style>
 
 <div class="audit-shell">
-  <div class="container-fluid px-0">
-    <header class="audit-card p-3 p-lg-4 mb-4 d-flex flex-wrap align-items-center justify-content-between gap-3">
+  <div class="audit-container">
+    <header class="audit-card audit-header mb-3 d-flex flex-wrap align-items-center justify-content-between gap-3">
       <div class="d-flex align-items-center gap-3">
-        <div style="width:40px;height:40px;border-radius:10px;background:#5146d8;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;">BB</div>
-        <div>
-          <div class="fw-bold fs-5">Budget Buddy <span class="audit-muted fw-normal">/ Auditor Console</span></div>
-          <div class="small audit-muted">Evidence-first financial audit workspace</div>
+        <div class="audit-brand-mark">BB</div>
+        <div class="audit-brand">
+          <div class="audit-brand-title">Budget Buddy</div>
+          <div class="audit-brand-subtitle">Auditor Console · Evidence-first financial audit workspace</div>
         </div>
       </div>
-      <div class="d-flex align-items-center gap-2">
-        <span class="badge bg-light text-dark border audit-status">PRE-PHASE 6 FREEZE</span>
-        <a class="btn btn-dark" href="{{ url_for('export_pdf') }}">Generate Audit Report</a>
+      <div class="audit-header-actions d-flex align-items-center gap-2">
+        <span class="audit-status">PRE-PHASE 6 FREEZE</span>
+        <a class="btn btn-dark audit-report-btn" href="{{ url_for('export_pdf') }}">Generate Audit Report</a>
       </div>
     </header>
 
     {% if not service_modules_available %}
-    <div class="alert alert-warning audit-card border-warning mb-4">
+    <div class="alert alert-warning audit-card border-warning mb-3 py-2 small">
       <strong>Service integration is not complete yet.</strong>
-      The console is using real transaction/financial outputs already present in the Flask app. Missing phase service modules are marked pending below; no placeholder service numbers are shown.
+      Missing phase service modules are marked pending below; no placeholder service numbers are shown.
     </div>
     {% endif %}
 
-    <div class="row g-4">
+    <div class="row g-3">
       <aside class="col-lg-2">
-        <div class="audit-card p-3 audit-sidebar">
-          <div class="small fw-bold text-uppercase audit-muted mb-3">Phase Audit Modules</div>
+        <div class="audit-card audit-sidebar">
+          <div class="audit-sidebar-title">Phase Audit Modules</div>
           {% for item in module_status %}
-          <div class="py-2 border-bottom">
-            <div class="small fw-semibold"><span class="audit-dot {{ 'complete' if item.status == 'COMPLETE' else ('check' if item.status == 'CHECK' else 'pending') }}"></span>{{ item.label }}</div>
-            <div class="audit-status audit-muted ms-3">{{ item.status }}</div>
+          <div class="audit-module">
+            <div class="audit-module-name"><span class="audit-dot {{ 'complete' if item.status == 'COMPLETE' else ('check' if item.status == 'CHECK' else 'pending') }}"></span>{{ item.label }}</div>
+            <div class="audit-module-status">{{ item.status }}</div>
           </div>
           {% endfor %}
         </div>
       </aside>
 
       <main class="col-lg-10">
-        <div class="row g-3 mb-4">
+        <div class="row g-3 mb-3">
           <div class="col-md-4">
-            <div class="audit-card p-4 h-100">
-              <div class="audit-muted small text-uppercase fw-bold">Audit coverage / health</div>
-              <div class="display-5 fw-bold mt-2 audit-accent">{{ health_score }}%</div>
-              <div class="small audit-muted">Computed from recorded financial data</div>
+            <div class="audit-card audit-kpi h-100">
+              <div class="audit-kpi-label">Coverage / accuracy</div>
+              <div class="audit-kpi-value audit-kpi-accent">{{ health_score }}%</div>
+              <div class="audit-kpi-note">Computed from recorded financial data</div>
             </div>
           </div>
           <div class="col-md-4">
-            <div class="audit-card p-4 h-100">
-              <div class="audit-muted small text-uppercase fw-bold">Open anomalies</div>
-              <div class="display-5 fw-bold mt-2">{{ anomaly_count }}</div>
-              <div class="small audit-muted">Current risk flags from the ledger</div>
+            <div class="audit-card audit-kpi h-100">
+              <div class="audit-kpi-label">Open issues / anomalies</div>
+              <div class="audit-kpi-value">{{ anomaly_count }}</div>
+              <div class="audit-kpi-note">Current risk flags from the ledger</div>
             </div>
           </div>
           <div class="col-md-4">
-            <div class="audit-card p-4 h-100 position-relative">
-              <span class="badge bg-light text-dark border position-absolute top-0 end-0 m-3">AUDIT ONLY</span>
-              <div class="audit-muted small text-uppercase fw-bold">Transactions classified</div>
-              <div class="display-5 fw-bold mt-2">{{ "{:,.0f}".format(transaction_count) }}</div>
-              <div class="small audit-muted">Recorded statement transactions</div>
+            <div class="audit-card audit-kpi h-100">
+              <span class="badge audit-only">AUDIT ONLY</span>
+              <div class="audit-kpi-label">Transactions classified</div>
+              <div class="audit-kpi-value">{{ "{:,.0f}".format(transaction_count) }}</div>
+              <div class="audit-kpi-note">Recorded statement transactions</div>
             </div>
           </div>
         </div>
 
-        <div class="audit-card mb-4">
-          <div class="p-4 border-bottom">
-            <div class="fw-bold fs-5">Architecture Verification: Fact to Inference</div>
-            <div class="small audit-muted">Only observed ledger facts are displayed; inference is explicitly separated.</div>
+        <section class="audit-card mb-3 overflow-hidden">
+          <div class="p-3 p-lg-4 border-bottom">
+            <div class="audit-section-title">Architecture Verification: Fact to Inference</div>
+            <div class="audit-section-note">Observed ledger facts remain separate from interpretation and inference.</div>
           </div>
           <div class="table-responsive">
-            <table class="table audit-table mb-0">
-              <thead><tr><th>Fact</th><th>Classification</th><th>Inference</th><th>Verification</th></tr></thead>
+            <table class="table audit-table">
+              <thead>
+                <tr><th>Fact</th><th>Classification</th><th>Inference</th><th>Verification</th></tr>
+              </thead>
               <tbody>
                 {% for row in verification_rows %}
                 <tr>
                   <td class="audit-code">{{ row.fact }}</td>
-                  <td>{{ row.classification }}</td>
-                  <td class="small audit-muted">{{ row.inference }}</td>
+                  <td class="fw-semibold">{{ row.classification }}</td>
+                  <td class="audit-muted">{{ row.inference }}</td>
                   <td><span class="badge verify-chip">✓ VERIFIED</span></td>
                 </tr>
                 {% else %}
@@ -104,28 +250,36 @@
               </tbody>
             </table>
           </div>
-        </div>
+        </section>
 
-        <div class="row g-4">
+        <div class="row g-3">
           <div class="col-lg-6">
-            <div class="dark-audit p-4 h-100">
-              <div class="d-flex justify-content-between align-items-start mb-4">
-                <div><div class="small text-uppercase text-secondary fw-bold">Operational Risk Audit</div><div class="fs-5 fw-bold mt-1">Risk evidence from current books</div></div>
+            <section class="audit-dark-card h-100">
+              <div class="d-flex justify-content-between align-items-start gap-2">
+                <div>
+                  <div class="audit-dark-label">Operational Risk Audit</div>
+                  <div class="audit-dark-title">Risk evidence from current books</div>
+                </div>
                 <span class="badge risk-chip">{{ risk_count }} FLAG{{ '' if risk_count == 1 else 'S' }}</span>
               </div>
-              <div class="display-6 fw-bold mb-2">${{ "{:,.2f}".format(expenses) }}</div>
-              <div class="text-secondary small">Total recorded expenses currently in scope.</div>
-              <div class="mt-3 pt-3 border-top border-secondary small">{{ risk_summary }}</div>
-            </div>
+              <div class="audit-dark-value">${{ "{:,.2f}".format(expenses) }}</div>
+              <div class="audit-dark-copy">Total recorded expenses currently in scope.</div>
+              <div class="audit-dark-divider mt-3 pt-3 audit-dark-copy">{{ risk_summary }}</div>
+            </section>
           </div>
           <div class="col-lg-6">
-            <div class="dark-audit p-4 h-100">
-              <div class="small text-uppercase text-secondary fw-bold">Simulator Engine (Sandbox)</div>
-              <div class="fs-5 fw-bold mt-1">What-if projection</div>
-              <div class="display-6 fw-bold mt-4">$0.00</div>
-              <div class="text-secondary small">No staged scenario change is currently applied. This value is deliberately separated from audited ledger amounts.</div>
+            <section class="audit-dark-card h-100">
+              <div class="d-flex justify-content-between align-items-start gap-2">
+                <div>
+                  <div class="audit-dark-label">Simulator Engine (Sandbox)</div>
+                  <div class="audit-dark-title">What-if projection</div>
+                </div>
+                <span class="badge sandbox-chip">PROJECTION ONLY</span>
+              </div>
+              <div class="audit-dark-value">$0.00</div>
+              <div class="audit-dark-copy">No staged scenario change is currently applied. This value is deliberately separated from audited ledger amounts.</div>
               <a href="{{ url_for('pro') }}" class="btn btn-outline-light btn-sm mt-3">Open analysis workspace</a>
-            </div>
+            </section>
           </div>
         </div>
       </main>
