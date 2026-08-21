@@ -1,197 +1,176 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="container py-4">
-    <!-- Top Financial Overview -->
-    <div class="row mb-4 align-items-center bg-dark rounded p-4 border border-secondary">
-        <div class="col-md-8">
-            <h2 class="fw-bold text-white mb-1">{{ user.agency_name or user.email }}</h2>
-            <span class="badge bg-primary">{{ user.plan_tier }} PLAN</span>
+<style>
+    .bb-page { background:#f6f8fc; color:#14213d; min-height:100vh; margin:-1.5rem; padding:1.5rem; }
+    .bb-card { background:#fff; border:1px solid #e4e8f0; border-radius:16px; box-shadow:0 8px 24px rgba(20,33,61,.06); }
+    .bb-muted { color:#667085; }
+    .bb-code { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
+    .bb-metric { font-size:1.65rem; font-weight:800; letter-spacing:-.02em; }
+    .bb-positive { color:#15803d; }
+    .bb-negative { color:#b42318; }
+    .bb-neutral { color:#14213d; }
+    .bb-risk-critical { border-left:4px solid #b42318; }
+    .bb-risk-review { border-left:4px solid #f59e0b; }
+    .bb-risk-info { border-left:4px solid #64748b; }
+    .bb-pill { border-radius:999px; padding:.25rem .55rem; font-size:.72rem; font-weight:700; }
+    .bb-table th { color:#667085; font-size:.72rem; text-transform:uppercase; letter-spacing:.06em; }
+    .bb-table td { vertical-align:middle; }
+    .bb-empty { border:1px dashed #cbd5e1; border-radius:12px; padding:2rem; text-align:center; color:#667085; }
+    .bb-spinner { display:none; }
+    .bb-loading .bb-spinner { display:inline-block; }
+    @media (max-width: 768px) { .bb-page { margin:-1rem; padding:1rem; } }
+</style>
+
+<div class="bb-page">
+<div class="container-fluid px-0">
+    {% set agency_name = user.agency_name %}
+    {% if not agency_name or agency_name|lower in ['awenfke', 'test', 'demo', 'demo agency'] %}
+        {% set agency_name = 'Your Agency' %}
+    {% endif %}
+
+    <div class="bb-card p-4 mb-4 d-flex flex-wrap justify-content-between align-items-center gap-3">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1"><span class="badge bg-primary">{{ user.plan_tier }} PLAN</span><span class="bb-muted small">Financial workspace</span></div>
+            <h2 class="fw-bold mb-1">{{ agency_name }}</h2>
+            <div class="bb-muted small">Evidence-based financial snapshot · {{ month }}</div>
         </div>
-        <div class="col-md-4 text-end">
-            <div class="p-2 border border-secondary rounded">
-                <span class="d-block text-secondary small">HEALTH SCORE</span>
-                <span class="fs-2 fw-bold {% if health_score >= 70 %}text-success{% else %}text-warning{% endif %}">{{ health_score }} / 100</span>
-            </div>
+        <div class="text-md-end">
+            <div class="bb-muted small text-uppercase fw-bold">Health Score</div>
+            <div class="bb-metric {% if health_score >= 70 %}bb-positive{% elif health_score >= 40 %}text-warning{% else %}bb-negative{% endif %}">{{ health_score }} / 100</div>
         </div>
     </div>
 
-    <!-- Active Warnings -->
     {% for alert in alerts %}
     <div class="alert alert-warning alert-dismissible fade show" role="alert">
-        <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ alert }}
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ alert.message if alert.message is defined else alert }}
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
     {% endfor %}
 
-    <!-- Metric Cards -->
     <div class="row g-3 mb-4">
-        <div class="col-md-4">
-            <div class="card p-3">
-                <span class="text-secondary small">TOTAL REVENUE</span>
-                <h3 class="text-success fw-bold mt-1">${{ "%.2f"|format(total_revenue) }}</h3>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card p-3">
-                <span class="text-secondary small">TOTAL EXPENSES</span>
-                <h3 class="text-danger fw-bold mt-1">${{ "%.2f"|format(total_expenses) }}</h3>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card p-3">
-                <span class="text-secondary small">NET PROFIT</span>
-                <h3 class="{% if net_profit >= 0 %}text-primary{% else %}text-danger{% endif %} fw-bold mt-1">${{ "%.2f"|format(net_profit) }}</h3>
-            </div>
-        </div>
+        <div class="col-md-4"><div class="bb-card p-4 h-100"><div class="bb-muted small text-uppercase fw-bold">Total Revenue</div><div class="bb-metric bb-positive mt-1">${{ "{:,.2f}".format(total_revenue) }}</div></div></div>
+        <div class="col-md-4"><div class="bb-card p-4 h-100"><div class="bb-muted small text-uppercase fw-bold">Total Expenses</div><div class="bb-metric bb-negative mt-1">${{ "{:,.2f}".format(total_expenses) }}</div></div></div>
+        <div class="col-md-4"><div class="bb-card p-4 h-100"><div class="bb-muted small text-uppercase fw-bold">Net Profit</div><div class="bb-metric {% if net_profit >= 0 %}bb-positive{% else %}bb-negative{% endif %} mt-1">{% if net_profit < 0 %}-{% endif %}${{ "{:,.2f}".format(net_profit|abs) }}</div></div></div>
     </div>
 
-    <!-- PRO Section: AI Insights & Subscriptions -->
     <div class="row g-4 mb-4">
-        <div class="col-md-6">
-            <div class="card p-3 h-100">
-                <h5 class="fw-bold text-primary"><i class="bi bi-cpu me-2"></i>AI Financial Insights</h5>
+        <div class="col-xl-6">
+            <div class="bb-card p-4 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3"><h5 class="fw-bold mb-0">AI Financial Insights</h5><span class="bb-pill bg-light text-primary">PRO</span></div>
                 {% if user.plan_tier in ['GROWTH', 'PRO'] %}
-                <div id="ai-container" class="mt-2 small text-secondary">Loading AI audit...</div>
+                <div id="ai-container" class="bb-muted small" aria-live="polite">Loading AI audit <span class="bb-spinner">…</span></div>
                 <script>
-                    fetch('/api/ai-insights').then(r => r.json()).then(d => {
-                        let html = '<ul class="list-unstyled mb-0">';
-                        d.insights.forEach(i => html += `<li class="mb-2"><i class="bi bi-arrow-right-short text-primary"></i> ${i}</li>`);
-                        document.getElementById('ai-container').innerHTML = html + '</ul>';
-                    });
+                    fetch('/api/ai-insights').then(r => { if (!r.ok) throw new Error('AI request failed'); return r.json(); }).then(d => {
+                        const items = Array.isArray(d.insights) ? d.insights : [];
+                        document.getElementById('ai-container').innerHTML = items.length ? '<ul class="list-unstyled mb-0">' + items.map(i => `<li class="mb-2">• ${i}</li>`).join('') + '</ul>' : '<div class="bb-empty">No AI insights are available yet.</div>';
+                    }).catch(() => { document.getElementById('ai-container').innerHTML = '<div class="alert alert-warning mb-0">AI insights are temporarily unavailable. Your ledger data is unaffected.</div>'; });
                 </script>
-                <a href="{{ url_for('pro') }}" class="btn btn-outline-primary btn-sm mt-3">View full Pro analysis &rarr;</a>
+                <a href="{{ url_for('pro') }}" class="btn btn-outline-primary btn-sm mt-3">View full Pro analysis →</a>
                 {% else %}
-                <p class="small text-secondary mt-2">Upgrade to PRO to unlock real-time automated AI spend analysis.</p>
-                <a href="{{ url_for('pricing') }}" class="btn btn-warning btn-sm mt-auto">Upgrade ($29/mo)</a>
+                <p class="bb-muted small">Upgrade to PRO to unlock automated financial analysis.</p>
+                <a href="{{ url_for('pricing') }}" class="btn btn-primary btn-sm">Upgrade</a>
                 {% endif %}
             </div>
         </div>
-        <div class="col-md-6">
-            <div class="card p-3 h-100">
-                <h5 class="fw-bold text-warning"><i class="bi bi-arrow-repeat me-2"></i>Detected Subscriptions</h5>
-                <ul class="list-group list-group-flush bg-transparent">
+        <div class="col-xl-6">
+            <div class="bb-card p-4 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3"><h5 class="fw-bold mb-0">Detected Subscriptions</h5><span class="bb-muted small">Review before cancelling</span></div>
+                <div class="list-group list-group-flush">
                     {% for sub in subscriptions %}
-                    <li class="list-group-item bg-transparent text-white d-flex justify-content-between px-0">
-                        <span>{{ sub.name }}</span>
-                        <span class="text-danger fw-bold">${{ "%.2f"|format(sub.amount) }}/mo</span>
-                    </li>
-                    {% else %}
-                    <li class="text-secondary small py-2">No recurring software detected.</li>
-                    {% endfor %}
-                </ul>
+                    <div class="list-group-item px-0 d-flex justify-content-between align-items-center bg-transparent">
+                        <div><div class="fw-semibold">{{ sub.name }}</div><div class="bb-muted small">{{ sub.category or 'Needs review' }}</div></div>
+                        <div class="text-end"><div class="fw-bold">${{ "{:,.2f}".format(sub.amount) }}/mo</div><a class="btn btn-link btn-sm p-0" href="{{ url_for('dashboard', search=sub.name) }}#transaction-records">Review</a></div>
+                    </div>
+                    {% else %}<div class="bb-empty">No recurring software detected yet.</div>{% endfor %}
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Controls: Add Tx & CSV Upload -->
     <div class="row g-4 mb-4">
-        <div class="col-md-6">
-            <div class="card p-3">
-                <h6 class="fw-bold mb-3">Add Single Transaction</h6>
-                <form action="{{ url_for('add_transaction') }}" method="POST">
-                    <div class="row g-2 mb-2">
-                        <div class="col-6"><input type="text" name="description" class="form-control form-control-sm" placeholder="Description" required></div>
-                        <div class="col-6"><input type="number" step="0.01" name="amount" class="form-control form-control-sm" placeholder="Amount ($)" required></div>
-                    </div>
-                    <div class="row g-2 mb-3">
-                        <div class="col-6">
-                            <select name="type" class="form-select form-select-sm">
-                                <option value="EXPENSE">Expense</option>
-                                <option value="INCOME">Income</option>
-                            </select>
-                        </div>
-                        <div class="col-6">
-                            <select name="category" class="form-select form-select-sm">
-                                {% for c in categories %}
-                                <option value="{{ c.name }}">{{ c.name }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                    </div>
-                    <button type="submit" class="btn btn-primary btn-sm w-100">Save Transaction</button>
-                </form>
-            </div>
-        </div>
-        <div class="col-md-6">
-            <div class="card p-3">
-                <h6 class="fw-bold mb-2">Import Statement CSV</h6>
-                <p class="small text-secondary">Upload bank statements for automated column matching and waste scanning.</p>
-                <form action="{{ url_for('import_csv') }}" method="POST" enctype="multipart/form-data">
-                    <input type="file" name="file" class="form-control form-control-sm mb-3" accept=".csv" required>
-                    <button type="submit" class="btn btn-outline-light btn-sm w-100">Upload & Import</button>
-                </form>
-            </div>
-        </div>
+        <div class="col-md-6"><div class="bb-card p-4 h-100"><h6 class="fw-bold mb-3">Add Single Transaction</h6><form action="{{ url_for('add_transaction') }}" method="POST"><div class="row g-2 mb-2"><div class="col-6"><input type="text" name="description" class="form-control" placeholder="Description" required></div><div class="col-6"><input type="number" step="0.01" name="amount" class="form-control" placeholder="Amount" required></div></div><div class="row g-2 mb-3"><div class="col-6"><select name="type" class="form-select"><option value="EXPENSE">Expense</option><option value="INCOME">Income</option></select></div><div class="col-6"><select name="category" class="form-select">{% for c in categories %}<option value="{{ c.name }}">{{ c.name }}</option>{% endfor %}</select></div></div><button type="submit" class="btn btn-primary w-100">Save Transaction</button></form></div></div>
+        <div class="col-md-6"><div class="bb-card p-4 h-100"><h6 class="fw-bold mb-2">Import Statement CSV</h6><p class="bb-muted small">Invalid dates and amounts are skipped instead of becoming fake placeholder records.</p><form id="csvImportForm" action="{{ url_for('import_csv') }}" method="POST" enctype="multipart/form-data"><input type="file" name="file" class="form-control mb-3" accept=".csv" required><button id="csvSubmit" type="submit" class="btn btn-outline-primary w-100">Upload & Import <span id="csvSpinner" class="spinner-border spinner-border-sm d-none" aria-hidden="true"></span></button></form></div></div>
     </div>
 
-    <!-- Spending Chart -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card p-3">
-                <h6 class="fw-bold mb-3">Expense Category Breakdown</h6>
-                <canvas id="expenseChart" style="max-height: 250px;"></canvas>
-            </div>
-        </div>
+    <div class="bb-card p-4 mb-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-center mb-3"><div><h5 class="fw-bold mb-1">Expense Category Breakdown</h5><div class="bb-muted small">Vendor/description evidence is used to avoid treating every unknown transaction as meaningful financial risk.</div></div><span id="categoryCoverage" class="bb-pill bg-light text-dark">Checking categorization…</span></div>
+        <div id="chartEmpty" class="bb-empty d-none">No expense transactions are available for this chart.</div>
+        <canvas id="expenseChart" style="max-height:320px;"></canvas>
     </div>
 
-    <!-- Transactions Table -->
-    <div class="card p-3">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h6 class="fw-bold mb-0">Transaction Records</h6>
-            <div>
-                <a href="{{ url_for('export_csv') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-filetype-csv me-1"></i>CSV</a>
-                <a href="{{ url_for('export_pdf') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-filetype-pdf me-1"></i>PDF</a>
-            </div>
-        </div>
-        <div class="table-responsive">
-            <table class="table table-dark table-hover align-middle">
-                <thead>
-                    <tr>
-                        <th>Date</th>
-                        <th>Description</th>
-                        <th>Category</th>
-                        <th>Type</th>
-                        <th>Amount</th>
-                        <th class="text-end">Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for t in transactions %}
-                    <tr>
-                        <td class="small">{{ t.date }}</td>
-                        <td>{{ t.description }}</td>
-                        <td><span class="badge bg-secondary">{{ t.category }}</span></td>
-                        <td><span class="badge {% if t.type == 'INCOME' %}bg-success{% else %}bg-danger{% endif %}">{{ t.type }}</span></td>
-                        <td class="fw-bold">${{ "%.2f"|format(t.amount) }}</td>
-                        <td class="text-end">
-                            <form action="{{ url_for('delete_transaction', tx_id=t.id) }}" method="POST" class="d-inline">
-                                <button type="submit" class="btn btn-link text-danger p-0"><i class="bi bi-trash"></i></button>
-                            </form>
-                        </td>
-                    </tr>
-                    {% else %}
-                    <tr><td colspan="6" class="text-center text-secondary py-3">No transactions logged yet. Upload a CSV statement to begin.</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+    <div class="bb-card p-4" id="transaction-records">
+        <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2"><div><h5 class="fw-bold mb-1">Transaction Records</h5><div id="paginationSummary" class="bb-muted small"></div></div><div><a href="{{ url_for('export_csv') }}" class="btn btn-outline-secondary btn-sm">CSV</a> <a href="{{ url_for('export_pdf') }}" class="btn btn-outline-secondary btn-sm">PDF</a></div></div>
+        <div class="table-responsive"><table class="table bb-table align-middle"><thead><tr><th>Date</th><th>Description</th><th>Category</th><th>Type</th><th>Amount</th><th class="text-end">Action</th></tr></thead><tbody id="transactionBody">
+            {% for t in transactions %}
+            <tr class="transaction-row">
+                <td class="small bb-code">{% if t.date %}{{ t.date }}{% else %}<span class="bb-muted">—</span>{% endif %}</td>
+                <td>{{ t.description or 'Unspecified transaction' }}</td>
+                <td><span class="badge bg-light text-dark border">{{ t.category or 'Uncategorized' }}</span></td>
+                <td><span class="badge {% if t.type == 'INCOME' %}bg-success{% else %}bg-danger{% endif %}">{{ t.type }}</span></td>
+                <td class="fw-bold">{% if t.type == 'EXPENSE' %}-{% endif %}${{ "{:,.2f}".format(t.amount|abs) }}</td>
+                <td class="text-end"><form action="{{ url_for('delete_transaction', tx_id=t.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Delete this transaction?')"><button type="submit" class="btn btn-sm btn-outline-danger">Delete</button></form></td>
+            </tr>
+            {% else %}<tr><td colspan="6"><div class="bb-empty">No transactions logged yet. Upload a CSV statement to begin.</div></td></tr>{% endfor %}
+        </tbody></table></div>
+        <div id="paginationControls" class="d-flex justify-content-between align-items-center mt-3"></div>
     </div>
+</div>
 </div>
 
 <script>
-    const chartData = JSON.parse('{{ chart_categories_json|safe }}');
-    const ctx = document.getElementById('expenseChart').getContext('2d');
-    new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: Object.keys(chartData),
-            datasets: [{
-                label: 'Expenses ($)',
-                data: Object.values(chartData),
-                backgroundColor: '#3b82f6'
-            }]
-        },
-        options: { responsive: true, plugins: { legend: { display: false } } }
-    });
+(function(){
+    const rows = Array.from(document.querySelectorAll('.transaction-row'));
+    const pageSize = 25;
+    let page = 1;
+    const summary = document.getElementById('paginationSummary');
+    const controls = document.getElementById('paginationControls');
+    function renderPage(){
+        const pages = Math.max(1, Math.ceil(rows.length / pageSize));
+        page = Math.min(page, pages);
+        rows.forEach((row, i) => row.style.display = (i >= (page-1)*pageSize && i < page*pageSize) ? '' : 'none');
+        summary.textContent = rows.length ? `Showing ${Math.min((page-1)*pageSize+1, rows.length)}–${Math.min(page*pageSize, rows.length)} of ${rows.length}` : '0 transactions';
+        controls.innerHTML = pages > 1 ? `<button class="btn btn-sm btn-outline-secondary" ${page===1?'disabled':''} id="prevPage">Previous</button><span class="bb-muted small">Page ${page} of ${pages}</span><button class="btn btn-sm btn-outline-secondary" ${page===pages?'disabled':''} id="nextPage">Next</button>` : '';
+        document.getElementById('prevPage')?.addEventListener('click',()=>{page--;renderPage()});
+        document.getElementById('nextPage')?.addEventListener('click',()=>{page++;renderPage()});
+    }
+    renderPage();
+
+    const txEvidence = [
+        {% for t in transactions %}{description: {{ (t.description or '')|tojson }}, category: {{ (t.category or '')|tojson }}, amount: {{ t.amount|tojson }}},{% endfor %}
+    ];
+    const weakCategories = ['other','imported','general','uncategorized','no category',''];
+    const rules = [
+        [['payroll','salary','wages','gusto','adp'], 'Payroll'],
+        [['adobe','figma','slack','zoom','chatgpt','openai','github','notion','canva','hubspot','semrush','aws','google workspace'], 'Software'],
+        [['facebook ads','meta ads','google ads','linkedin ads','advertising','ppc','paid media','marketing'], 'Advertising'],
+        [['contractor','freelance','upwork','fiverr'], 'Contractors'],
+        [['uber','airbnb','hotel','flight','airline','travel'], 'Travel'],
+        [['rent','lease','office'], 'Rent & Facilities'],
+        [['insurance'], 'Insurance'],
+        [['bank fee','bank charge','stripe fee','paypal fee','processing fee'], 'Banking & Fees'],
+        [['legal','law firm','accounting','bookkeeping'], 'Professional Services'],
+        [['restaurant','food','meal','cafe','coffee'], 'Meals'],
+        [['internet','phone','mobile','utility','electric'], 'Utilities'],
+        [['tax','irs','vat'], 'Taxes'],
+        [['office supplies','stationery','printer'], 'Office'],
+    ];
+    function inferCategory(item){
+        const text = String(item.description || '').toLowerCase();
+        for (const [keywords, label] of rules) if (keywords.some(k => text.includes(k))) return label;
+        const existing = String(item.category || '').trim();
+        return weakCategories.includes(existing.toLowerCase()) ? 'Needs Categorization' : existing;
+    }
+    const chartData = {};
+    let weak = 0;
+    txEvidence.forEach(item => { const label=inferCategory(item); chartData[label]=(chartData[label]||0)+Number(item.amount||0); if(label==='Needs Categorization') weak += Number(item.amount||0); });
+    const totalExpense = Object.values(chartData).reduce((a,b)=>a+b,0);
+    const coverage = totalExpense > 0 ? Math.max(0, Math.min(100, 100 - (weak/totalExpense*100))) : 100;
+    document.getElementById('categoryCoverage').textContent = totalExpense ? `Categorization coverage ${coverage.toFixed(0)}%` : 'No expense data';
+    if (!totalExpense) { document.getElementById('chartEmpty').classList.remove('d-none'); document.getElementById('expenseChart').classList.add('d-none'); return; }
+    const labels = Object.keys(chartData).sort((a,b)=>chartData[b]-chartData[a]);
+    new Chart(document.getElementById('expenseChart').getContext('2d'), {type:'bar', data:{labels, datasets:[{label:'Expenses ($)', data:labels.map(k=>chartData[k]), backgroundColor:'#4f46e5', borderRadius:6}]}, options:{responsive:true, plugins:{legend:{display:false},tooltip:{callbacks:{label:(c)=>` $${Number(c.raw).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})`}}}, scales:{y:{beginAtZero:true,ticks:{callback:v=>'$'+Number(v).toLocaleString()}}}}});
+
+    const form=document.getElementById('csvImportForm'); form?.addEventListener('submit',()=>{document.getElementById('csvSubmit').disabled=true;document.getElementById('csvSpinner').classList.remove('d-none');});
+})();
 </script>
 {% endblock %}
