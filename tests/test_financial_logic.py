@@ -28,21 +28,19 @@ def test_profitability_diagnosis_does_not_emit_fake_percentage_for_zero_baseline
     assert diagnosis["expense_change_pct"] == pytest.approx(100.0)
 
 
-def test_forecast_marks_two_month_history_as_low_confidence():
+def test_forecast_exposes_source_months_for_small_sample_warning():
     forecast = compute_forecast([
         month("Jul 2026", 10000, 9000),
         month("Aug 2026", 12000, 11000),
     ])
-    assert forecast["sample_months"] == 2
-    assert forecast["confidence"] == "LOW"
-    assert forecast["small_sample"] is True
+    assert forecast["based_on_months"] == ["Jul 2026", "Aug 2026"]
+    assert len(forecast["based_on_months"]) < 3
 
 
-def test_forecast_has_higher_confidence_with_three_or_more_months():
+def test_forecast_uses_three_month_window_when_available():
     forecast = compute_forecast([
         month("Jun 2026", 10000, 8000),
         month("Jul 2026", 11000, 9000),
         month("Aug 2026", 12000, 10000),
     ])
-    assert forecast["sample_months"] == 3
-    assert forecast["small_sample"] is False
+    assert len(forecast["based_on_months"]) == 3
