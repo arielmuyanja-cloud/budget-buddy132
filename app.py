@@ -1019,7 +1019,7 @@ def dashboard():
     profit_margin = round(((net_profit / total_revenue) * 100.0) if total_revenue > 0 else 0.0, 1)
 
     return render_template(
-        'business_dashboard.html',
+        'dashboard.html',
         user=user,
         transactions=transactions,
         txns=[{"id": t.id, "txn_date": t.date, "date": t.date, "description": t.description, "category_name": t.category, "category": t.category, "kind": t.type.lower(), "type": t.type, "amount": t.amount, "notes": ""} for t in transactions],
