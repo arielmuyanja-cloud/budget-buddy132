@@ -1,186 +1,102 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
-  <div>
-    <h2 class="fw-bold mb-1"><i class="bi bi-cpu me-2 text-primary"></i>AI Financial Insights <span class="badge bg-primary">PRO</span></h2>
-    <p class="text-secondary mb-0">Your AI CFO — understands your whole business and tells you what to do next.</p>
-  </div>
-  <a href="{{ url_for('dashboard') }}" class="btn btn-outline-light btn-sm mt-2 mt-md-0">&larr; Back to Dashboard</a>
+<style>
+  .pro-page { background:#f6f8fc; color:#14213d; min-height:100vh; margin:-1.5rem; padding:1.5rem; }
+  .pro-card { background:#fff; border:1px solid #e4e8f0; border-radius:16px; box-shadow:0 8px 24px rgba(20,33,61,.06); }
+  .pro-muted { color:#667085; }
+  .pro-number { letter-spacing:-.02em; }
+  .risk-critical { border-left:4px solid #b42318; background:#fff7f6; }
+  .risk-warning { border-left:4px solid #f59e0b; background:#fffbeb; }
+  .risk-data { border-left:4px solid #64748b; background:#f8fafc; }
+  .severity { font-size:.68rem; font-weight:800; letter-spacing:.05em; }
+  @media(max-width:768px){.pro-page{margin:-1rem;padding:1rem;}}
+</style>
+<div class="pro-page">
+<div class="container-fluid px-0">
+{% set agency_name = user.agency_name %}
+{% if not agency_name or agency_name|lower in ['awenfke', 'test', 'demo', 'demo agency'] %}{% set agency_name = 'Your Agency' %}{% endif %}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+  <div><div class="small pro-muted text-uppercase fw-bold">{{ agency_name }} · PRO</div><h2 class="fw-bold mb-1">AI Financial Insights</h2><p class="pro-muted mb-0">Decision support grounded in your recorded transactions.</p></div>
+  <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary btn-sm">← Back to Dashboard</a>
 </div>
 
 {% if not has_data %}
-<div class="card p-4 text-center">
-  <h5 class="mb-2">Not enough data yet</h5>
-  <p class="text-secondary mb-3">Log at least a few weeks of income and expenses on your dashboard and this page will fill in with real analysis — no generic filler, only numbers pulled from your own transactions.</p>
-  <a href="{{ url_for('dashboard') }}" class="btn btn-primary mx-auto" style="width:fit-content;">Go add transactions</a>
-</div>
+<div class="pro-card p-5 text-center"><h5 class="mb-2">Not enough data yet</h5><p class="pro-muted mb-3">Log transactions or import a statement. The analysis will not invent missing financial data.</p><a href="{{ url_for('dashboard') }}" class="btn btn-primary">Go to Dashboard</a></div>
 {% else %}
 
 <div class="row g-3 mb-4">
-  <div class="col-md-4">
-    <div class="card p-3">
-      <span class="text-secondary small">THIS MONTH ({{ current.label }})</span>
-      <h4 class="fw-bold mt-1 {% if current.profit >= 0 %}text-success{% else %}text-danger{% endif %}">${{ "%.0f"|format(current.profit) }} profit</h4>
-      <span class="text-secondary small">${{ "%.0f"|format(current.income) }} revenue &middot; ${{ "%.0f"|format(current.expense) }} expenses</span>
-    </div>
-  </div>
-  <div class="col-md-4">
-    <div class="card p-3">
-      <span class="text-secondary small">MARGIN</span>
-      <h4 class="fw-bold mt-1">{% if current.margin is not none %}{{ "%.0f"|format(current.margin) }}%{% else %}&mdash;{% endif %}</h4>
-      {% if diagnosis and diagnosis.margin_change is not none %}
-        <span class="small {% if diagnosis.margin_change < 0 %}text-danger{% else %}text-success{% endif %}">
-          {{ "%.0f"|format(diagnosis.margin_prior) }}% &rarr; {{ "%.0f"|format(diagnosis.margin_now) }}% vs {{ diagnosis.prior_label }}
-        </span>
-      {% else %}
-        <span class="small text-secondary">Add another month for a trend</span>
-      {% endif %}
-    </div>
-  </div>
-  <div class="col-md-4">
-    <div class="card p-3">
-      <span class="text-secondary small">FLAGS DETECTED</span>
-      <h4 class="fw-bold mt-1 {% if risks %}text-warning{% else %}text-success{% endif %}">{{ risks|length }}</h4>
-      <span class="small text-secondary">{% if risks %}See Financial Risk below{% else %}Nothing concerning right now{% endif %}</span>
-    </div>
-  </div>
+  <div class="col-md-4"><div class="pro-card p-4 h-100"><span class="pro-muted small text-uppercase fw-bold">This Month · {{ current.label }}</span><h4 class="fw-bold mt-2 {% if current.profit >= 0 %}text-success{% else %}text-danger{% endif %}">{% if current.profit < 0 %}-{% endif %}${{ "{:,.0f}".format(current.profit|abs) }} profit</h4><span class="pro-muted small">${{ "{:,.0f}".format(current.income) }} revenue · ${{ "{:,.0f}".format(current.expense) }} expenses</span></div></div>
+  <div class="col-md-4"><div class="pro-card p-4 h-100"><span class="pro-muted small text-uppercase fw-bold">Margin</span><h4 class="fw-bold mt-2">{% if current.margin is not none %}{{ "%.0f"|format(current.margin) }}%{% else %}—{% endif %}</h4>{% if diagnosis and diagnosis.margin_change is not none %}<span class="small {% if diagnosis.margin_change < 0 %}text-danger{% else %}text-success{% endif %}">{{ "%.0f"|format(diagnosis.margin_prior) }}% → {{ "%.0f"|format(diagnosis.margin_now) }}% vs {{ diagnosis.prior_label }}</span>{% else %}<span class="small pro-muted">Add another month for a trend</span>{% endif %}</div></div>
+  <div class="col-md-4"><div class="pro-card p-4 h-100"><span class="pro-muted small text-uppercase fw-bold">Flags Detected</span><h4 class="fw-bold mt-2 {% if risks %}text-warning{% else %}text-success{% endif %}">{{ risks|length }}</h4><span class="small pro-muted">{% if risks %}Review the risk classification below{% else %}Nothing concerning detected{% endif %}</span></div></div>
 </div>
 
-<!-- 1. Profitability Diagnosis -->
-<div class="card p-4 mb-4">
+<div class="pro-card p-4 mb-4">
   <h5 class="fw-bold mb-3">💰 Profitability Diagnosis</h5>
   {% if diagnosis %}
     <p class="mb-2">
-      Revenue {{ "%+.0f"|format(diagnosis.revenue_change_pct) if diagnosis.revenue_change_pct is not none else "&mdash;" }}%
-      vs {{ diagnosis.prior_label }}, while expenses moved
-      {{ "%+.0f"|format(diagnosis.expense_change_pct) if diagnosis.expense_change_pct is not none else "&mdash;" }}%.
-      {% if diagnosis.margin_now is not none and diagnosis.margin_prior is not none %}
-        Estimated profit margin: {{ "%.0f"|format(diagnosis.margin_prior) }}% &rarr; {{ "%.0f"|format(diagnosis.margin_now) }}%.
-      {% endif %}
+      Revenue
+      {% if diagnosis.revenue_change_pct is none %}—{% else %}{{ "%+.0f"|format(diagnosis.revenue_change_pct) }}%{% endif %}
+      vs {{ diagnosis.prior_label }}, while expenses
+      {% if diagnosis.expense_change_pct is none %}—{% elif diagnosis.expense_change_pct|abs > 500 %}<span class="text-warning">not meaningfully comparable</span>{% else %}{{ "%+.0f"|format(diagnosis.expense_change_pct) }}%{% endif %}.
+      {% if diagnosis.margin_now is not none and diagnosis.margin_prior is not none %}Estimated profit margin: {{ "%.0f"|format(diagnosis.margin_prior) }}% → {{ "%.0f"|format(diagnosis.margin_now) }}%.{% endif %}
     </p>
-    {% if diagnosis.top_expense_categories %}
-    <p class="small text-secondary mb-1">Largest expense categories this month:</p>
-    <ul class="mb-0">
-      {% for cat, amt in diagnosis.top_expense_categories %}
-      <li>{{ cat }} &mdash; ${{ "%.0f"|format(amt) }}</li>
-      {% endfor %}
-    </ul>
-    {% endif %}
-  {% else %}
-    <p class="text-secondary mb-0">Needs at least two months of transactions to compare against &mdash; you're currently at {{ current.label }} only.</p>
-  {% endif %}
+    {% if diagnosis.revenue_change_pct is none %}<div class="alert alert-light border small mb-3">Revenue comparison is unavailable because the prior month has no recorded revenue. No percentage is shown instead of a misleading number.</div>{% endif %}
+    {% if diagnosis.expense_change_pct is not none and diagnosis.expense_change_pct|abs > 500 %}<div class="alert alert-warning border small mb-3">The prior expense baseline is too small for a useful percentage comparison. The raw percentage is intentionally suppressed to avoid misleading results.</div>{% endif %}
+    {% if diagnosis.top_expense_categories %}<p class="small pro-muted mb-1">Largest expense categories this month:</p><ul class="mb-0">{% for cat, amt in diagnosis.top_expense_categories %}<li>{{ cat }} — ${{ "{:,.0f}".format(amt) }}</li>{% endfor %}</ul>{% endif %}
+  {% else %}<p class="pro-muted mb-0">Needs at least two months of transactions to compare against.</p>{% endif %}
 </div>
 
-<!-- 2. Forecast -->
-<div class="card p-4 mb-4">
-  <h5 class="fw-bold mb-3">📈 90-Day Financial Forecast</h5>
+<div class="pro-card p-4 mb-4">
+  <div class="d-flex justify-content-between align-items-center mb-2"><h5 class="fw-bold mb-0">📈 90-Day Financial Forecast</h5>{% if forecast and forecast.based_on_months|length < 3 %}<span class="badge bg-warning text-dark">LOW CONFIDENCE</span>{% endif %}</div>
   {% if forecast %}
-    <p class="small text-secondary mb-3">Based on your last {{ forecast.based_on_months|length }} month(s) of activity ({{ forecast.based_on_months|join(', ') }}).</p>
-    <div class="row text-center">
-      <div class="col-md-4">
-        <div class="small text-secondary">Projected revenue</div>
-        <div class="fs-3 fw-bold text-success">${{ "%.0f"|format(forecast.projected_revenue) }}</div>
-      </div>
-      <div class="col-md-4">
-        <div class="small text-secondary">Projected expenses</div>
-        <div class="fs-3 fw-bold text-danger">${{ "%.0f"|format(forecast.projected_expense) }}</div>
-      </div>
-      <div class="col-md-4">
-        <div class="small text-secondary">Projected operating profit</div>
-        <div class="fs-3 fw-bold">${{ "%.0f"|format(forecast.projected_profit) }}</div>
-      </div>
-    </div>
-    {% if forecast.profit_delta_vs_flat is not none and forecast.profit_delta_vs_flat < -100 %}
-    <p class="alert alert-warning mt-3 mb-0 small">⚠️ If current trends hold, profit could come in about ${{ "%.0f"|format(-forecast.profit_delta_vs_flat) }} lower over 90 days than a flat run-rate would suggest.</p>
-    {% endif %}
-  {% else %}
-    <p class="text-secondary mb-0">Not enough transaction history yet to forecast.</p>
-  {% endif %}
+    <p class="small pro-muted mb-3">Based on {{ forecast.based_on_months|length }} month(s): {{ forecast.based_on_months|join(', ') }}. {% if forecast.based_on_months|length < 3 %}This is a directional scenario, not a statistically reliable forecast; more history is required for stronger confidence.{% endif %}</p>
+    <div class="row text-center"><div class="col-md-4"><div class="small pro-muted">Projected revenue</div><div class="fs-3 fw-bold text-success pro-number">${{ "{:,.0f}".format(forecast.projected_revenue) }}</div></div><div class="col-md-4"><div class="small pro-muted">Projected expenses</div><div class="fs-3 fw-bold text-danger pro-number">${{ "{:,.0f}".format(forecast.projected_expense) }}</div></div><div class="col-md-4"><div class="small pro-muted">Projected operating profit</div><div class="fs-3 fw-bold pro-number">{% if forecast.projected_profit < 0 %}-{% endif %}${{ "{:,.0f}".format(forecast.projected_profit|abs) }}</div></div></div>
+    {% if forecast.profit_delta_vs_flat is not none and forecast.profit_delta_vs_flat < -100 %}<p class="alert alert-warning mt-3 mb-0 small">⚠️ Trend scenario is below a flat run-rate by about ${{ "{:,.0f}".format((-forecast.profit_delta_vs_flat)|abs) }} over 90 days. Treat this as a scenario, not a certainty.</p>{% endif %}
+  {% else %}<p class="pro-muted mb-0">Not enough transaction history yet to forecast.</p>{% endif %}
 </div>
 
-<!-- 3. Budget Recommendation -->
-<div class="card p-4 mb-4">
+<div class="pro-card p-4 mb-4">
   <h5 class="fw-bold mb-3">🎯 Budget Recommendation</h5>
   {% if budget_rec %}
-    <p class="mb-1">Your {{ budget_rec.category_label }} spend is currently <strong>{{ "%.1f"|format(budget_rec.current_pct_of_revenue) }}%</strong> of {{ budget_rec.month_label }} revenue (${{ "%.0f"|format(budget_rec.current_spend) }}).</p>
-    <p class="mb-0">Agency benchmark for this category is {{ "%.0f"|format(budget_rec.recommended_low_pct) }}&ndash;{{ "%.0f"|format(budget_rec.recommended_high_pct) }}% of revenue &mdash; that puts your suggested monthly budget at <strong>${{ "%.0f"|format(budget_rec.suggested_low) }}&ndash;${{ "%.0f"|format(budget_rec.suggested_high) }}</strong>.</p>
-  {% else %}
-    <p class="text-secondary mb-0">No marketing/advertising category spend logged this month, so there's nothing to benchmark yet. Tag an expense with a category like "Advertising" and this will populate.</p>
-  {% endif %}
+    <p class="mb-1">Your {{ budget_rec.category_label }} spend is currently <strong>{{ "%.1f"|format(budget_rec.current_pct_of_revenue) }}%</strong> of {{ budget_rec.month_label }} revenue (${{ "{:,.0f}".format(budget_rec.current_spend) }}).</p>
+    <p class="mb-2">Benchmark range: {{ "%.0f"|format(budget_rec.recommended_low_pct) }}–{{ "%.0f"|format(budget_rec.recommended_high_pct) }}% of revenue → suggested monthly budget <strong>${{ "{:,.0f}".format(budget_rec.suggested_low) }}–${{ "{:,.0f}".format(budget_rec.suggested_high) }}</strong>.</p>
+    {% if current.profit < 0 %}<div class="alert alert-danger small mb-0"><strong>Profitability caveat:</strong> the business is currently net-negative at -${{ "{:,.0f}".format(current.profit|abs) }}. This benchmark is not a recommendation to spend more while losses continue. Stabilize profitability/cash flow first unless there is a documented, affordable growth case.</div>{% endif %}
+  {% else %}<p class="pro-muted mb-0">No marketing/advertising category spend logged this month, so there is nothing to benchmark yet.</p>{% endif %}
 </div>
 
-<!-- 4. Financial Risk Detection -->
-<div class="card p-4 mb-4">
+<div class="pro-card p-4 mb-4">
   <h5 class="fw-bold mb-3">🚨 Financial Risk Detection</h5>
   {% if risks %}
     {% for r in risks %}
-    <div class="border-start border-danger border-3 ps-3 mb-3">
-      <div class="fw-bold text-danger">🔴 {{ r.title }}</div>
-      <div class="mb-1">{{ r.narrative }}</div>
-      <div class="small text-secondary">AI recommendation: {{ r.recommendation }}</div>
-    </div>
+      {% set is_data_risk = ('Other' in r.title) or ('Imported' in r.title) or ('Uncategorized' in r.title) or ('General' in r.title) %}
+      {% set is_critical = ('concentration' in r.title|lower) %}
+      {% set is_warning = not is_critical and not is_data_risk %}
+      <div class="p-3 rounded mb-3 {% if is_critical %}risk-critical{% elif is_data_risk %}risk-data{% else %}risk-warning{% endif %}">
+        <div class="d-flex flex-wrap justify-content-between gap-2"><div class="fw-bold {% if is_critical %}text-danger{% elif is_data_risk %}text-secondary{% else %}text-warning-emphasis{% endif %}">{{ r.title|replace('Large Income','Primary client') }}</div><span class="severity {% if is_critical %}text-danger{% elif is_data_risk %}text-secondary{% else %}text-warning-emphasis{% endif %}">{% if is_critical %}HIGH{% elif is_data_risk %}DATA QUALITY{% else %}REVIEW{% endif %}</span></div>
+        <div class="mb-1">{{ r.narrative|replace('Large Income','Primary client') }}</div>
+        {% if is_data_risk %}<div class="small text-secondary mb-1">This is treated as a data-quality issue, not automatically as a genuine financial risk. Fix categorization before acting on the concentration signal.</div>{% endif %}
+        <div class="small pro-muted">Recommendation: {{ r.recommendation }}</div>
+      </div>
     {% endfor %}
-  {% else %}
-    <p class="text-secondary mb-0">No risk patterns detected in your current data. Checked: client concentration, expense-vs-revenue growth, margin trend, revenue volatility, and category spend concentration.</p>
-  {% endif %}
+  {% else %}<p class="pro-muted mb-0">No risk patterns detected in your current data.</p>{% endif %}
 </div>
 
-<!-- 5. Ask Budget Buddy AI -->
-<div class="card p-4 mb-4">
+<div class="pro-card p-4">
   <h5 class="fw-bold mb-3">🧠 Ask Budget Buddy AI</h5>
-  <p class="small text-secondary">Ask a real question about your business — answers are grounded in your actual transactions, not generic advice.</p>
-  <form id="askAiForm" class="d-flex gap-2 mb-2">
-    <input type="text" id="askAiInput" class="form-control" placeholder='e.g. "Can I afford to hire another employee?"' maxlength="500" required>
-    <button type="submit" class="btn btn-primary" id="askAiBtn">Ask</button>
-  </form>
-  <div class="d-flex flex-wrap gap-2 mb-3">
-    <button type="button" class="btn btn-outline-light btn-sm ask-ai-suggestion">Can I afford to hire another employee?</button>
-    <button type="button" class="btn btn-outline-light btn-sm ask-ai-suggestion">How is my profit margin trending?</button>
-    <button type="button" class="btn btn-outline-light btn-sm ask-ai-suggestion">What's my biggest financial risk right now?</button>
-  </div>
-  <div id="askAiResult"></div>
+  <p class="small pro-muted">Answers are grounded in recorded transactions. Missing data is called out rather than guessed.</p>
+  <form id="askAiForm" class="d-flex gap-2 mb-2"><input type="text" id="askAiInput" class="form-control" placeholder='e.g. "Can I afford to hire another employee?"' maxlength="500" required><button type="submit" class="btn btn-primary" id="askAiBtn">Ask</button></form>
+  <div class="d-flex flex-wrap gap-2 mb-3"><button type="button" class="btn btn-outline-secondary btn-sm ask-ai-suggestion">Can I afford to hire another employee?</button><button type="button" class="btn btn-outline-secondary btn-sm ask-ai-suggestion">How is my profit margin trending?</button><button type="button" class="btn btn-outline-secondary btn-sm ask-ai-suggestion">What's my biggest financial risk right now?</button></div>
+  <div id="askAiResult" aria-live="polite"></div>
 </div>
 
 <script>
-const askAiForm = document.getElementById('askAiForm');
-const askAiInput = document.getElementById('askAiInput');
-const askAiBtn = document.getElementById('askAiBtn');
-const askAiResult = document.getElementById('askAiResult');
-
-async function submitAskAi(question) {
-    askAiBtn.disabled = true;
-    askAiResult.innerHTML = '<div class="alert alert-info mb-0">Thinking it through...</div>';
-    try {
-        const resp = await fetch('/api/ask-ai', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({question})
-        });
-        const data = await resp.json();
-        if (!resp.ok) {
-            askAiResult.innerHTML = `<div class="alert alert-danger mb-0">${data.error || 'Something went wrong.'}</div>`;
-            return;
-        }
-        askAiResult.innerHTML = `<div class="alert alert-secondary mb-0">${data.answer}</div>`;
-    } catch (err) {
-        askAiResult.innerHTML = '<div class="alert alert-danger mb-0">Couldn\'t reach the AI right now — try again.</div>';
-    } finally {
-        askAiBtn.disabled = false;
-    }
-}
-
-askAiForm.addEventListener('submit', function(e) {
-    e.preventDefault();
-    const q = askAiInput.value.trim();
-    if (q) submitAskAi(q);
-});
-
-document.querySelectorAll('.ask-ai-suggestion').forEach(btn => {
-    btn.addEventListener('click', () => {
-        askAiInput.value = btn.textContent;
-        submitAskAi(btn.textContent);
-    });
-});
+const askAiForm=document.getElementById('askAiForm'), askAiInput=document.getElementById('askAiInput'), askAiBtn=document.getElementById('askAiBtn'), askAiResult=document.getElementById('askAiResult');
+async function submitAskAi(question){askAiBtn.disabled=true;askAiResult.innerHTML='<div class="alert alert-info mb-0">Thinking it through…</div>';try{const resp=await fetch('/api/ask-ai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question})});const data=await resp.json();if(!resp.ok){askAiResult.innerHTML=`<div class="alert alert-danger mb-0">${data.error||'Something went wrong.'}</div>`;return;}askAiResult.innerHTML=`<div class="alert alert-secondary mb-0">${data.answer}</div>`;}catch(err){askAiResult.innerHTML='<div class="alert alert-danger mb-0">Couldn\'t reach the AI right now — try again.</div>';}finally{askAiBtn.disabled=false;}}
+askAiForm.addEventListener('submit',e=>{e.preventDefault();const q=askAiInput.value.trim();if(q)submitAskAi(q);});
+document.querySelectorAll('.ask-ai-suggestion').forEach(btn=>btn.addEventListener('click',()=>{askAiInput.value=btn.textContent;submitAskAi(btn.textContent);}));
 </script>
 {% endif %}
+</div>
+</div>
 {% endblock %}
