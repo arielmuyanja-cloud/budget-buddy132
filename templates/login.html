@@ -1,574 +1,637 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Log in — Budget Buddy</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600;8..60,700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-
-    <style>
-        :root {
-            --bg: #FAF9F5;
-            --surface: #FFFFFF;
-            --border: #E6E2D8;
-
-            --ink: #16202B;
-            --ink-soft: #5C6570;
-            --ink-faint: #8A9099;
-
-            --navy: #1B3A5C;
-            --navy-dark: #0E1B2A;
-
-            --brass: #A2792C;
-            --brass-soft: #F3EBD8;
-
-            --red: #9C3B2E;
-            --red-soft: #F6E7E3;
-
-            --radius: 12px;
-        }
-
-        * {
-            box-sizing: border-box;
-        }
-
-        body {
-            margin: 0;
-            min-height: 100vh;
-            background: var(--bg);
-            color: var(--ink);
-            font-family: 'Inter', system-ui, sans-serif;
-            -webkit-font-smoothing: antialiased;
-        }
-
-        a {
-            color: inherit;
-        }
-
-        /* NAVIGATION */
-
-        .topbar {
-            height: 72px;
-            background: var(--surface);
-            border-bottom: 1px solid var(--border);
-
-            padding: 0 32px;
-
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .brand {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-
-            text-decoration: none;
-        }
-
-        .brand-mark {
-            width: 34px;
-            height: 34px;
-
-            border-radius: 8px;
-            background: var(--navy);
-
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .brand-mark svg {
-            width: 18px;
-            height: 18px;
-        }
-
-        .brand-name {
-            font-size: 18px;
-            font-weight: 600;
-            letter-spacing: -0.01em;
-        }
-
-        .back-link {
-            font-size: 13px;
-            color: var(--ink-soft);
-            text-decoration: none;
-        }
-
-        .back-link:hover {
-            color: var(--navy);
-        }
-
-        /* PAGE */
-
-        .page {
-            min-height: calc(100vh - 72px);
-
-            display: flex;
-            align-items: center;
-            justify-content: center;
-
-            padding: 60px 20px;
-        }
-
-        .login-wrapper {
-            width: 100%;
-            max-width: 440px;
-        }
-
-        /* INTRO */
-
-        .intro {
-            text-align: center;
-            margin-bottom: 28px;
-        }
-
-        .eyebrow {
-            display: inline-flex;
-            align-items: center;
-
-            gap: 7px;
-
-            font-size: 11.5px;
-            font-weight: 700;
-
-            letter-spacing: 0.07em;
-            text-transform: uppercase;
-
-            color: var(--brass);
-            background: var(--brass-soft);
-
-            padding: 6px 14px;
-
-            border-radius: 20px;
-        }
-
-        .intro h1 {
-            font-family: 'Source Serif 4', Georgia, serif;
-
-            font-size: 40px;
-            line-height: 1.15;
-
-            font-weight: 600;
-
-            letter-spacing: -0.02em;
-
-            margin: 18px 0 10px;
-        }
-
-        .intro p {
-            margin: 0;
-
-            font-size: 14px;
-            line-height: 1.6;
-
-            color: var(--ink-soft);
-        }
-
-        /* LOGIN CARD */
-
-        .login-card {
-            background: var(--surface);
-
-            border: 1px solid var(--border);
-
-            border-radius: 14px;
-
-            padding: 34px;
-
-            box-shadow:
-                0 1px 2px rgba(22, 32, 43, 0.04),
-                0 12px 35px rgba(22, 32, 43, 0.07);
-        }
-
-        .field {
-            margin-bottom: 20px;
-        }
-
-        .field label {
-            display: block;
-
-            font-size: 13px;
-            font-weight: 600;
-
-            margin-bottom: 8px;
-        }
-
-        .field input {
-            width: 100%;
-
-            padding: 13px 14px;
-
-            border: 1px solid var(--border);
-
-            border-radius: 8px;
-
-            background: #fff;
-
-            color: var(--ink);
-
-            font-family: inherit;
-            font-size: 14px;
-
-            outline: none;
-
-            transition:
-                border-color 0.15s ease,
-                box-shadow 0.15s ease;
-        }
-
-        .field input::placeholder {
-            color: var(--ink-faint);
-        }
-
-        .field input:focus {
-            border-color: var(--navy);
-
-            box-shadow:
-                0 0 0 3px rgba(27, 58, 92, 0.10);
-        }
-
-        /* PASSWORD ROW */
-
-        .password-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-
-            margin-bottom: 8px;
-        }
-
-        .password-row label {
-            margin-bottom: 0;
-        }
-
-        .forgot {
-            font-size: 12px;
-            color: var(--navy);
-            text-decoration: none;
-            font-weight: 500;
-        }
-
-        .forgot:hover {
-            text-decoration: underline;
-        }
-
-        /* BUTTON */
-
-        .login-button {
-            width: 100%;
-
-            border: none;
-            border-radius: 8px;
-
-            padding: 14px 18px;
-
-            background: var(--navy);
-            color: white;
-
-            font-family: inherit;
-            font-size: 14px;
-            font-weight: 600;
-
-            cursor: pointer;
-
-            transition:
-                background 0.15s ease,
-                transform 0.15s ease;
-        }
-
-        .login-button:hover {
-            background: var(--navy-dark);
-        }
-
-        .login-button:active {
-            transform: translateY(1px);
-        }
-
-        /* ERROR */
-
-        .error-message {
-            background: var(--red-soft);
-
-            border: 1px solid rgba(156, 59, 46, 0.18);
-
-            color: var(--red);
-
-            border-radius: 8px;
-
-            padding: 11px 13px;
-
-            font-size: 13px;
-
-            margin-bottom: 20px;
-        }
-
-        /* DIVIDER */
-
-        .divider {
-            display: flex;
-            align-items: center;
-
-            gap: 12px;
-
-            margin: 25px 0;
-        }
-
-        .divider::before,
-        .divider::after {
-            content: "";
-
-            height: 1px;
-
-            flex: 1;
-
-            background: var(--border);
-        }
-
-        .divider span {
-            font-size: 11px;
-            color: var(--ink-faint);
-
-            text-transform: uppercase;
-            letter-spacing: 0.06em;
-        }
-
-        /* SIGNUP */
-
-        .signup {
-            text-align: center;
-
-            font-size: 13px;
-
-            color: var(--ink-soft);
-        }
-
-        .signup a {
-            color: var(--navy);
-
-            font-weight: 600;
-
-            text-decoration: none;
-        }
-
-        .signup a:hover {
-            text-decoration: underline;
-        }
-
-        /* SECURITY NOTE */
-
-        .security-note {
-            margin-top: 18px;
-
-            text-align: center;
-
-            font-size: 11.5px;
-
-            line-height: 1.5;
-
-            color: var(--ink-faint);
-        }
-
-        /* FOOTER */
-
-        footer {
-            text-align: center;
-
-            padding: 25px 20px;
-
-            font-size: 11.5px;
-
-            color: var(--ink-faint);
-        }
-
-        /* MOBILE */
-
-        @media (max-width: 600px) {
-
-            .topbar {
-                padding: 0 18px;
-            }
-
-            .page {
-                padding: 40px 16px;
-            }
-
-            .login-card {
-                padding: 26px 20px;
-            }
-
-            .intro h1 {
-                font-size: 34px;
-            }
-
-            .back-link {
-                display: none;
-            }
-        }
-    </style>
+<meta charset="UTF-8">
+<title>Budget Buddy — Log in</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600;8..60,700&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --bg:#FAF9F5;
+  --surface:#FFFFFF;
+  --border:#E6E2D8;
+  --ink:#16202B;
+  --ink-soft:#5C6570;
+  --ink-faint:#8A9099;
+  --navy:#1B3A5C;
+  --navy-dark:#0E1B2A;
+  --navy-dark-soft:#B9C6D4;
+  --brass:#A2792C;
+  --brass-soft:#F3EBD8;
+  --green:#1F6E45;
+  --green-soft:#E4F0E8;
+  --red:#9C3B2E;
+  --red-soft:#F6E7E3;
+  --radius:12px;
+  --shadow:0 1px 2px rgba(22,32,43,.04),
+           0 8px 30px rgba(22,32,43,.08);
+}
+
+*{
+  box-sizing:border-box;
+}
+
+html,body{
+  min-height:100%;
+}
+
+body{
+  margin:0;
+  background:var(--bg);
+  background-image:
+    linear-gradient(var(--border) 1px,transparent 1px);
+  background-size:100% 42px;
+  background-position:0 96px;
+  color:var(--ink);
+  font-family:'Inter',system-ui,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+
+.serif{
+  font-family:'Source Serif 4',Georgia,serif;
+}
+
+.mono{
+  font-family:'IBM Plex Mono',monospace;
+}
+
+/* TOP BAR */
+
+.topbar{
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+  padding:16px 32px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+
+.brand{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+.brand-mark{
+  width:32px;
+  height:32px;
+  border-radius:8px;
+  background:var(--navy);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.brand-mark svg{
+  width:17px;
+  height:17px;
+}
+
+.brand-name{
+  font-size:18px;
+  font-weight:600;
+  letter-spacing:-.01em;
+}
+
+.nav-right{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+.nav-text{
+  color:var(--ink-soft);
+  font-size:13px;
+}
+
+.nav-link{
+  color:var(--navy);
+  font-size:13px;
+  font-weight:600;
+  text-decoration:none;
+}
+
+/* MAIN */
+
+.page{
+  min-height:calc(100vh - 65px);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:60px 24px;
+}
+
+.login-layout{
+  width:100%;
+  max-width:1000px;
+  display:grid;
+  grid-template-columns:1fr 430px;
+  gap:70px;
+  align-items:center;
+}
+
+/* LEFT SIDE */
+
+.intro{
+  padding:20px;
+}
+
+.eyebrow{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  font-size:11.5px;
+  font-weight:700;
+  letter-spacing:.07em;
+  text-transform:uppercase;
+  color:var(--brass);
+  background:var(--brass-soft);
+  padding:6px 14px;
+  border-radius:20px;
+}
+
+.intro h1{
+  font-family:'Source Serif 4',Georgia,serif;
+  font-size:48px;
+  line-height:1.1;
+  font-weight:600;
+  letter-spacing:-.02em;
+  margin:22px 0 18px;
+}
+
+.intro h1 span{
+  color:var(--navy);
+}
+
+.intro p{
+  max-width:510px;
+  font-size:16px;
+  line-height:1.65;
+  color:var(--ink-soft);
+  margin:0 0 28px;
+}
+
+.proof-list{
+  list-style:none;
+  padding:0;
+  margin:0;
+}
+
+.proof-list li{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin:12px 0;
+  font-size:13.5px;
+}
+
+.check{
+  width:22px;
+  height:22px;
+  border-radius:50%;
+  background:var(--green-soft);
+  color:var(--green);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:12px;
+  font-weight:700;
+}
+
+/* LOGIN CARD */
+
+.login-card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:14px;
+  box-shadow:var(--shadow);
+  padding:34px;
+}
+
+.login-header{
+  margin-bottom:28px;
+}
+
+.login-header h2{
+  margin:0 0 7px;
+  font-family:'Source Serif 4',Georgia,serif;
+  font-size:30px;
+  font-weight:600;
+}
+
+.login-header p{
+  margin:0;
+  font-size:13px;
+  color:var(--ink-soft);
+  line-height:1.5;
+}
+
+/* FORM */
+
+.form-group{
+  margin-bottom:18px;
+}
+
+label{
+  display:block;
+  font-size:12px;
+  font-weight:600;
+  margin-bottom:7px;
+  color:var(--ink);
+}
+
+input{
+  width:100%;
+  padding:12px 13px;
+  border:1px solid var(--border);
+  border-radius:8px;
+  background:#fff;
+  color:var(--ink);
+  font-family:inherit;
+  font-size:14px;
+  outline:none;
+  transition:.15s ease;
+}
+
+input:focus{
+  border-color:var(--navy);
+  box-shadow:0 0 0 3px rgba(27,58,92,.08);
+}
+
+input::placeholder{
+  color:var(--ink-faint);
+}
+
+.password-row{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+
+.forgot{
+  font-size:11.5px;
+  color:var(--navy);
+  text-decoration:none;
+  font-weight:600;
+}
+
+.login-btn{
+  width:100%;
+  border:0;
+  border-radius:8px;
+  padding:13px 18px;
+  background:var(--navy);
+  color:#fff;
+  font-family:inherit;
+  font-size:14px;
+  font-weight:700;
+  cursor:pointer;
+  margin-top:4px;
+  transition:.15s ease;
+}
+
+.login-btn:hover{
+  background:#142e49;
+}
+
+.divider{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  margin:24px 0;
+  color:var(--ink-faint);
+  font-size:11px;
+}
+
+.divider::before,
+.divider::after{
+  content:"";
+  flex:1;
+  height:1px;
+  background:var(--border);
+}
+
+.signup{
+  text-align:center;
+  font-size:13px;
+  color:var(--ink-soft);
+}
+
+.signup a{
+  color:var(--navy);
+  font-weight:700;
+  text-decoration:none;
+}
+
+/* SECURITY NOTE */
+
+.security{
+  margin-top:22px;
+  padding:12px 14px;
+  border-radius:8px;
+  background:var(--green-soft);
+  color:var(--green);
+  font-size:11.5px;
+  line-height:1.5;
+  display:flex;
+  gap:8px;
+}
+
+.security strong{
+  font-weight:700;
+}
+
+/* FOOTER */
+
+footer{
+  text-align:center;
+  padding:20px;
+  font-size:11px;
+  color:var(--ink-faint);
+}
+
+/* ERROR MESSAGE */
+
+.error{
+  background:var(--red-soft);
+  color:var(--red);
+  border:1px solid #E9CFC9;
+  border-radius:8px;
+  padding:10px 12px;
+  margin-bottom:18px;
+  font-size:12.5px;
+}
+
+/* RESPONSIVE */
+
+@media(max-width:800px){
+
+  .login-layout{
+    grid-template-columns:1fr;
+    max-width:500px;
+    gap:25px;
+  }
+
+  .intro{
+    text-align:center;
+    padding:0;
+  }
+
+  .intro p{
+    margin-left:auto;
+    margin-right:auto;
+  }
+
+  .proof-list{
+    display:inline-block;
+    text-align:left;
+  }
+
+  .intro h1{
+    font-size:38px;
+  }
+}
+
+@media(max-width:500px){
+
+  .topbar{
+    padding:14px 18px;
+  }
+
+  .nav-text{
+    display:none;
+  }
+
+  .page{
+    padding:35px 16px;
+  }
+
+  .login-card{
+    padding:25px 20px;
+  }
+
+  .intro h1{
+    font-size:34px;
+  }
+}
+</style>
 </head>
 
 <body>
 
-<header class="topbar">
+<!-- NAVIGATION -->
 
-    <a href="/" class="brand">
+<div class="topbar">
 
-        <div class="brand-mark">
-            <svg viewBox="0 0 24 24" fill="none">
-                <path
-                    d="M4 12L9.5 17.5L20 6"
-                    stroke="white"
-                    stroke-width="2.4"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                />
-            </svg>
-        </div>
+  <div class="brand">
 
-        <div class="brand-name">
-            Budget Buddy
-        </div>
+    <div class="brand-mark">
+      <svg viewBox="0 0 24 24" fill="none">
+        <path
+          d="M4 12L9.5 17.5L20 6"
+          stroke="white"
+          stroke-width="2.4"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </svg>
+    </div>
 
+    <div class="brand-name">
+      Budget Buddy
+    </div>
+
+  </div>
+
+  <div class="nav-right">
+    <span class="nav-text">Don't have an account?</span>
+
+    <a href="/register" class="nav-link">
+      Create account
     </a>
+  </div>
 
-    <a href="/" class="back-link">
-        ← Back to Budget Buddy
-    </a>
-
-</header>
+</div>
 
 
-<main class="page">
+<!-- PAGE -->
 
-    <div class="login-wrapper">
+<div class="page">
 
-        <div class="intro">
+  <div class="login-layout">
 
-            <span class="eyebrow">
-                ◆ Agency Software Auditor
-            </span>
+    <!-- LEFT -->
 
-            <h1>
-                Welcome back.
-            </h1>
+    <div class="intro">
 
-            <p>
-                Log in to continue auditing your agency's software spend.
-            </p>
+      <span class="eyebrow">
+        ◆ Agency Software Auditor
+      </span>
 
-        </div>
+      <h1>
+        Stop paying for
+        <span>software nobody needs.</span>
+      </h1>
 
+      <p>
+        Budget Buddy analyzes your agency's transaction data
+        and surfaces duplicate tools, unused seats, suspicious
+        price increases, and potential savings.
+      </p>
 
-        <div class="login-card">
+      <ul class="proof-list">
 
-            {% if error %}
-                <div class="error-message">
-                    {{ error }}
-                </div>
-            {% endif %}
+        <li>
+          <span class="check">✓</span>
+          Find duplicate software subscriptions
+        </li>
 
+        <li>
+          <span class="check">✓</span>
+          Identify potentially unused seats
+        </li>
 
-            {% with messages = get_flashed_messages() %}
-                {% if messages %}
-                    {% for message in messages %}
-                        <div class="error-message">
-                            {{ message }}
-                        </div>
-                    {% endfor %}
-                {% endif %}
-            {% endwith %}
+        <li>
+          <span class="check">✓</span>
+          Detect unexpected price increases
+        </li>
 
+        <li>
+          <span class="check">✓</span>
+          See your potential recoverable spend
+        </li>
 
-            <form method="POST" action="{{ url_for('login') }}">
-
-                <div class="field">
-
-                    <label for="email">
-                        Email address
-                    </label>
-
-                    <input
-                        type="email"
-                        id="email"
-                        name="email"
-                        placeholder="you@youragency.com"
-                        autocomplete="email"
-                        required
-                    >
-
-                </div>
-
-
-                <div class="field">
-
-                    <div class="password-row">
-
-                        <label for="password">
-                            Password
-                        </label>
-
-                        <a href="#" class="forgot">
-                            Forgot password?
-                        </a>
-
-                    </div>
-
-                    <input
-                        type="password"
-                        id="password"
-                        name="password"
-                        placeholder="Enter your password"
-                        autocomplete="current-password"
-                        required
-                    >
-
-                </div>
-
-
-                <button
-                    type="submit"
-                    class="login-button"
-                >
-                    Log in to Budget Buddy
-                </button>
-
-            </form>
-
-
-            <div class="divider">
-                <span>New to Budget Buddy?</span>
-            </div>
-
-
-            <div class="signup">
-
-                Don't have an account?
-
-                <a href="{{ url_for('register') }}">
-                    Create one
-                </a>
-
-            </div>
-
-        </div>
-
-
-        <div class="security-note">
-            Your transaction data stays private. No bank connection is required
-            to run an audit.
-        </div>
+      </ul>
 
     </div>
 
-</main>
+
+    <!-- LOGIN -->
+
+    <div class="login-card">
+
+      <div class="login-header">
+
+        <h2>
+          Welcome back
+        </h2>
+
+        <p>
+          Log in to continue to your Budget Buddy audit.
+        </p>
+
+      </div>
+
+
+      <!--
+        IMPORTANT:
+        Keep your existing Flask form action/method here
+        if your app already uses a specific login route.
+      -->
+
+      {% if error %}
+      <div class="error">
+        {{ error }}
+      </div>
+      {% endif %}
+
+
+      <form method="POST" action="/login">
+
+        <div class="form-group">
+
+          <label for="email">
+            Email address
+          </label>
+
+          <input
+            type="email"
+            id="email"
+            name="email"
+            placeholder="you@agency.com"
+            autocomplete="email"
+            required
+          >
+
+        </div>
+
+
+        <div class="form-group">
+
+          <div class="password-row">
+
+            <label for="password">
+              Password
+            </label>
+
+            <a href="/forgot-password" class="forgot">
+              Forgot password?
+            </a>
+
+          </div>
+
+          <input
+            type="password"
+            id="password"
+            name="password"
+            placeholder="Enter your password"
+            autocomplete="current-password"
+            required
+          >
+
+        </div>
+
+
+        <button
+          type="submit"
+          class="login-btn"
+        >
+          Log in to Budget Buddy →
+        </button>
+
+      </form>
+
+
+      <div class="divider">
+        OR
+      </div>
+
+
+      <div class="signup">
+
+        Don't have a Budget Buddy account?
+
+        <a href="/register">
+          Start free audit
+        </a>
+
+      </div>
+
+
+      <div class="security">
+
+        <span>✓</span>
+
+        <div>
+          <strong>Your data stays yours.</strong>
+          Budget Buddy uses your uploaded transaction data
+          to generate your audit results.
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
 
 
 <footer>
-    © 2026 Budget Buddy · Agency Software Auditor
+  © 2026 Budget Buddy · Agency Software Auditor
 </footer>
 
 </body>
