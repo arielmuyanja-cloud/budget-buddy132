@@ -7,6 +7,7 @@
   <div class="card p-3 sticky-top" style="top:15px">
    <div class="small-muted mb-2">WORKSPACE</div>
    <a class="sidebar-link" href="{{ url_for('dashboard') }}">📊 Dashboard</a>
+   <a class="sidebar-link" href="{{ url_for('auditor_console') }}">🛡️ Auditor Console</a>
    <a class="sidebar-link" href="{{ url_for('import_csv') }}">📥 Import CSV</a>
    {% if pro %}<a class="sidebar-link" href="{{ url_for('reports') }}">📄 Reports</a><a class="sidebar-link" href="{{ url_for('pro') }}">🤖 AI & Pro</a>{% else %}<a class="sidebar-link" href="{{ url_for('pricing') }}">⭐ Unlock Pro</a>{% endif %}
    <a class="sidebar-link" href="#budgets">🎯 Budgets</a>
@@ -17,7 +18,10 @@
  <main class="col-lg-10">
   <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
    <div><h2 class="mb-1">Good to see you, {{ user['first_name'] }}.</h2><div class="text-muted">Your {{ month }} financial snapshot.</div></div>
-   {% if not pro %}<a href="{{ url_for('pricing') }}" class="btn btn-success">Upgrade to Pro — $29/mo</a>{% endif %}
+   <div class="d-flex gap-2">
+    <a href="{{ url_for('auditor_console') }}" class="btn btn-dark">🛡️ Open Auditor Console</a>
+    {% if not pro %}<a href="{{ url_for('pricing') }}" class="btn btn-success">Upgrade to Pro — $29/mo</a>{% endif %}
+   </div>
   </div>
 
   {% if alerts %}
