@@ -1,0 +1,1 @@
+After merge, Render redeploys workspace_app and normal /dashboard visits open the Decision Workspace. Use /dashboard?view=classic for the original dashboard.
