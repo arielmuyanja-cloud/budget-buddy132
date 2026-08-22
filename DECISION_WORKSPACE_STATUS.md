@@ -1,0 +1,1 @@
+The Decision Workspace is registered by workspace_app, exposes /decision-workspace, and redirects the authenticated /dashboard entry to the workspace unless view=classic is supplied.
