@@ -2,9 +2,11 @@ from app import app
 from workspace import register_workspace
 from profit_simulator import register_profit_simulator
 from decision_workspace_redirect import register_dashboard_redirect
+from decision_workspace_ui import register_decision_workspace_ui
 
 register_workspace(app)
 register_profit_simulator(app)
+register_decision_workspace_ui(app)
 register_dashboard_redirect(app)
 
 if __name__ == "__main__":
