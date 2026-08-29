@@ -1734,6 +1734,25 @@ def scanner():
     return render_template('statement_scanner.html')
 
 # --- BILLING & CHECKOUT (PADDLE & FLUTTERWAVE) ---
+@app.route('/debug-registration')
+def debug_registration():
+    import traceback
+    output = []
+    try:
+        from profit_simulator import register_profit_simulator
+        register_profit_simulator(app)
+        output.append("profit_simulator: registered OK (or was already registered)")
+    except Exception:
+        output.append("profit_simulator FAILED:\n" + traceback.format_exc())
+    try:
+        from workspace import register_workspace
+        register_workspace(app)
+        output.append("workspace: registered OK (or was already registered)")
+    except Exception:
+        output.append("workspace FAILED:\n" + traceback.format_exc())
+    return "<pre style='white-space:pre-wrap;font-size:13px'>" + "\n\n".join(output) + "</pre>"
+
+
 @app.route('/pricing')
 def pricing():
     return render_template('pricing.html')
