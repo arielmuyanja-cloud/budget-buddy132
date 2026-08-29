@@ -112,34 +112,45 @@ class Transaction(db.Model):
 class Category(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    name = db.Column(db.String(50), nullable=False)
-    type = db.Column(db.String(10), nullable=False, default="EXPENSE")
+  # REMOVE THESE LINES (115 to 142):
+def call_ai_provider(system_prompt, question):
+    if GEMINI_API_KEY:
+        try:
+            from google import genai
+            from google.genai import types
+            client = genai.Client(api_key=GEMINI_API_KEY)
+            model="gemini-3.6-flash",
+                contents=question,
+                config=types.GenerateContentConfig(
+                    system_instruction=system_prompt,
+                    max_output_tokens=350,
+                ),
+            )
+            text = (res.text or "").strip()
+        try:
+        response = model.generate_content(
+            contents=question
+        )
+        ai_reply = response.text
 
-class CategoryRule(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    keyword = db.Column(db.String(100), nullable=False)
-    target_category = db.Column(db.String(50), nullable=False)
+    if OPENAI_API_KEY:
+        try:
+            client = openai.OpenAI(api_key=OPENAI_API_KEY, timeout=10.0)
+            res = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": question}
+                ],
+                max_tokens=350,
+            )
+            text = (res.choices[0].message.content or "").strip()
+            if text:
+                return text
+        except Exception as e:
+            logger.warning(f"OpenAI call failed or timed out: {e}")
 
-class Budget(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    category = db.Column(db.String(50), nullable=False)
-    monthly_limit = db.Column(db.Float, nullable=False)
-
-class Goal(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    title = db.Column(db.String(100), nullable=False)
-    target_amount = db.Column(db.Float, nullable=False)
-    current_amount = db.Column(db.Float, default=0.0)
-
-class SendwavePayment(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    plan_requested = db.Column(db.String(20), nullable=False)
-    amount = db.Column(db.Float, nullable=False)
-    reference_code = db.Column(db.String(100), nullable=False)
+    return None
     sender_name = db.Column(db.String(120), nullable=True)
     status = db.Column(db.String(20), default="PENDING")
     submitted_at = db.Column(db.DateTime, default=datetime.utcnow)
