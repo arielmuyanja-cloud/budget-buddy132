@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card p-3">
+                <h6 class="fw-bold mb-3">Add Client</h6>
+                <form action="{{ url_for('manage_clients') }}" method="POST">
+                    <div class="mb-3">
+                        <input type="text" name="name" class="form-control" placeholder="Client Name" required>
+                    </div>
+                    <div class="mb-3">
+                        <input type="number" step="0.01" name="retainer_amount" class="form-control" placeholder="Monthly Retainer ($)">
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Add Client</button>
+                </form>
+            </div>
+        </div>
+        <div class="col-md-8">
+            <div class="card p-3 mb-3">
+                <h6 class="fw-bold mb-3">Existing Clients</h6>
+                <ul class="list-group list-group-flush">
+                    {% for c in clients %}
+                    <li class="list-group-item bg-transparent text-white d-flex justify-content-between align-items-center">
+                        <span>{{ c.name }}{% if c.retainer_amount %} <span class="badge bg-secondary ms-2">${{ '%.2f'|format(c.retainer_amount) }}/mo retainer</span>{% endif %}</span>
+                        <form action="{{ url_for('delete_client', client_id=c.id) }}" method="POST">
+                            <button type="submit" class="btn btn-link text-danger p-0"><i class="bi bi-trash"></i></button>
+                        </form>
+                    </li>
+                    {% endfor %}
+                    {% if not clients %}
+                    <li class="list-group-item bg-transparent text-white">No clients added yet.</li>
+                    {% endif %}
+                </ul>
+            </div>
+            <div class="card p-3">
+                <h6 class="fw-bold mb-3">Client Profitability</h6>
+                {% if client_pnl %}
+                <div class="table-responsive">
+                    <table class="table table-dark table-sm align-middle mb-0">
+                        <thead>
+                            <tr><th>Client</th><th class="text-end">Revenue</th><th class="text-end">Expense</th><th class="text-end">Profit</th><th class="text-end">Margin</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for row in client_pnl %}
+                            <tr>
+                                <td>{{ row.client_name }}</td>
+                                <td class="text-end">${{ '{:,.2f}'.format(row.revenue) }}</td>
+                                <td class="text-end">${{ '{:,.2f}'.format(row.expense) }}</td>
+                                <td class="text-end {{ 'text-success' if row.profit >= 0 else 'text-danger' }}">${{ '{:,.2f}'.format(row.profit) }}</td>
+                                <td class="text-end">{{ '%.1f'|format(row.margin) }}%</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-white-50 mb-0">No transactions tagged to a client yet — import transactions and assign a client name to see revenue, expense and margin here.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
