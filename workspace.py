@@ -126,8 +126,12 @@ def ensure_workspace_columns():
     additions = {"q1_client_workflow":"BOOLEAN","q2_active_use":"BOOLEAN","q3_important_files":"BOOLEAN","q4_critical_integrations":"BOOLEAN"}
     for name, sql_type in additions.items():
         if name not in columns:
-            db.session.execute(text(f"ALTER TABLE workspace_decision ADD COLUMN {name} {sql_type}"))
-    db.session.commit()
+            try:
+                db.session.execute(text(f"ALTER TABLE workspace_decision ADD COLUMN {name} {sql_type}"))
+                db.session.commit()
+            except Exception:
+                # Another worker likely added this column concurrently at boot.
+                db.session.rollback()
 
 
 @workspace_bp.route("/workspace")
@@ -183,5 +187,7 @@ def toggle_decision(decision_id):
 
 
 def register_workspace(app):
-    if "workspace_home" not in app.view_functions: app.register_blueprint(workspace_bp)
-    with app.app_context(): ensure_workspace_columns()
+    if "workspace.workspace_home" not in app.view_functions:
+        app.register_blueprint(workspace_bp)
+    with app.app_context():
+        ensure_workspace_columns()
