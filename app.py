@@ -24,6 +24,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("budget_buddy")
 
 app = Flask(__name__)
+app.jinja_env.globals['has_endpoint'] = lambda name: name in app.view_functions
 app.secret_key = os.environ.get("SECRET_KEY", "budget-buddy-super-secret-key-2026")
 
 # Database Configuration (PostgreSQL on Render / SQLite locally)
