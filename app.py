@@ -725,13 +725,12 @@ def call_ai_provider(system_prompt, question):
                 ),
             )
             text = (res.text or "").strip()
-            if text:
-                return text
-        except Exception as e:
-            logger.warning(f"Gemini call failed or timed out: {e}")
-
-    if OPENAI_API_KEY:
         try:
+        response = model.generate_content(
+            contents=question
+        )
+        ai_reply = response.text
+
             client = openai.OpenAI(api_key=OPENAI_API_KEY, timeout=10.0)
             res = client.chat.completions.create(
                 model="gpt-4o-mini",
