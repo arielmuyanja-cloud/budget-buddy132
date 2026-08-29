@@ -11,6 +11,7 @@
 {% if session.get('user_id') %}
 <li class="nav-item"><a class="nav-link" href="{{ url_for('dashboard') }}">Dashboard</a></li>
 <li class="nav-item"><a class="nav-link fw-bold" href="{{ url_for('workspace.workspace_home') }}"><i class="bi bi-lightning-charge me-1"></i>Decision Workspace</a></li>
+<li class="nav-item"><a class="nav-link" href="{{ url_for('profit_simulator.simulator_home') }}"><i class="bi bi-graph-up-arrow me-1"></i>Profit Simulator</a></li>
 <li class="nav-item"><a class="nav-link" href="{{ url_for('auditor_console') }}"><i class="bi bi-shield-check me-1"></i>Auditor Console</a></li>
 <li class="nav-item"><a class="nav-link" href="{{ url_for('manage_categories') }}">Categories</a></li>
 {% if current_user and current_user.plan_tier in ['GROWTH','PRO'] %}<li class="nav-item"><a class="nav-link" href="{{ url_for('pro') }}"><i class="bi bi-cpu me-1"></i>AI Insights</a></li>{% endif %}
