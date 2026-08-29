@@ -851,7 +851,7 @@ def register():
             is_verified=True
         )
         db.session.add(user)
-        db.session.commit()
+        db.session.flush()  # assigns user.id without committing yet
 
         defaults = [
             Category(user_id=user.id, name="Advertising", type="EXPENSE"),
@@ -870,7 +870,13 @@ def register():
             CategoryRule(user_id=user.id, keyword="google ads", target_category="Advertising"),
         ]
         db.session.add_all(default_rules)
-        db.session.commit()
+
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            flash("Something went wrong creating your account. Please try again.", "danger")
+            return redirect(url_for('register'))
 
         session['user_id'] = user.id
         flash("Welcome to Budget Buddy!", "success")
