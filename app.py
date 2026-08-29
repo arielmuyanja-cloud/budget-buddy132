@@ -717,8 +717,7 @@ def call_ai_provider(system_prompt, question):
             from google import genai
             from google.genai import types
             client = genai.Client(api_key=GEMINI_API_KEY)
-            res = client.models.generate_content(
-                model="gemini-2.5-flash",
+            model="gemini-3.6-flash",
                 contents=question,
                 config=types.GenerateContentConfig(
                     system_instruction=system_prompt,
@@ -1495,7 +1494,7 @@ def scan_receipt():
             )
             
             response = client.models.generate_content(
-                model="gemini-2.5-flash",
+                model="gemini-3.6-flash",
                 contents=[
                     types.Part.from_bytes(data=raw_bytes, mime_type=mime_type),
                     prompt
