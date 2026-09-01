@@ -2,7 +2,7 @@ import re
 from datetime import datetime
 from flask import Blueprint, render_template, request, jsonify, session
 from sqlalchemy import inspect, text
-from app import db, Transaction, login_required
+from app import db, Transaction, login_required, pro_required
 
 workspace_bp = Blueprint("workspace", __name__)
 VENDOR_DIRECTORY = {
@@ -13,6 +13,38 @@ VENDOR_DIRECTORY = {
     "github": ("GitHub", "Developer Tools"), "vercel": ("Vercel", "Hosting / Deployment"), "render": ("Render", "Hosting / Deployment"), "aws": ("AWS", "Cloud Infrastructure"),
     "openai": ("OpenAI", "AI / API"), "chatgpt": ("ChatGPT", "AI / API"),
 }
+
+# Software Replacement Engine: cheaper/free alternative + the reasoning, per known vendor.
+# Deliberately no dollar-figure competitor pricing here — those go stale and can't be verified
+# per-account, so the reasoning stays structural (free tier, already-owned bundle, one-time buy).
+REPLACEMENT_DIRECTORY = {
+    "asana": {"alt": "Trello or ClickUp (Free tier)", "reason": "Their free tiers cover basic kanban/task tracking for small teams without a per-seat bill."},
+    "monday": {"alt": "ClickUp (Free tier) or Trello", "reason": "Covers standard board/task workflows without monday.com's per-seat pricing."},
+    "clickup": {"alt": "Trello (Free tier)", "reason": "If advanced automations aren't in active use, Trello's free tier covers basic boards."},
+    "notion": {"alt": "Google Docs/Sheets (already in Google Workspace)", "reason": "If Workspace is already paid for, basic docs/wikis may not need a separate tool."},
+    "slack": {"alt": "Google Chat (included in Google Workspace) or Discord (Free)", "reason": "Covers team messaging without a second communication-tool subscription."},
+    "zoom": {"alt": "Google Meet (included in Google Workspace)", "reason": "Covers most client calls if Workspace is already paid for — no separate video line item needed."},
+    "loom": {"alt": "Native OS screen recording (QuickTime / Windows tools)", "reason": "Free for internal walkthroughs; Loom's free tier also covers light external use."},
+    "canva": {"alt": "Canva Free tier", "reason": "Covers most design needs — Pro mainly adds brand kits and background remover at volume."},
+    "figma": {"alt": "Figma Free tier", "reason": "Supports a handful of active files, which covers most small agencies' live project load."},
+    "adobe": {"alt": "Affinity Suite (one-time purchase)", "reason": "No recurring subscription — a one-time buy covers most Photoshop/Illustrator-equivalent work."},
+    "hubspot": {"alt": "HubSpot Free CRM or a lighter CRM", "reason": "Agencies with a small client list rarely need the paid HubSpot tier's automation depth."},
+    "mailchimp": {"alt": "Mailchimp Free tier", "reason": "Covers small contact lists — check your actual list size against the free-tier cap before paying."},
+    "semrush": {"alt": "Google Search Console + a lighter SEO tool", "reason": "Covers basic keyword/ranking tracking for smaller accounts without the full Semrush suite."},
+    "ahrefs": {"alt": "Google Search Console + a lighter SEO tool", "reason": "Covers basic keyword/ranking tracking for smaller accounts without the full Ahrefs suite."},
+    "github": {"alt": "GitHub Free tier", "reason": "Unlimited private repos are already free — confirm the paid tier's extra features are actually used."},
+    "vercel": {"alt": "Vercel Hobby (Free) tier", "reason": "Covers client staging sites; only needed for commercial/team collaboration limits."},
+    "render": {"alt": "Render Free tier", "reason": "Fine for low-traffic staging — only pay for services that need to stay always-on."},
+    "aws": {"alt": "A fixed-cost VPS (e.g. DigitalOcean, Render)", "reason": "Usage-based AWS billing can balloon for small, low-traffic workloads."},
+    "chatgpt": {"alt": "Consolidate to one seat/plan", "reason": "Check you're not paying for both a ChatGPT Plus seat and separate API usage for the same work."},
+}
+
+
+def suggest_replacement(vendor_name):
+    if not vendor_name:
+        return None
+    key = vendor_name.strip().lower()
+    return REPLACEMENT_DIRECTORY.get(key)
 
 class WorkspaceDecision(db.Model):
     __tablename__ = "workspace_decision"
@@ -76,7 +108,7 @@ def recurring_candidates(user_id):
         stable = bool(amounts) and max(amounts) - min(amounts) < 0.01
         consecutive = all((month_keys[i][0] * 12 + month_keys[i][1]) - (month_keys[i-1][0] * 12 + month_keys[i-1][1]) == 1 for i in range(1, len(month_keys)))
         score = evidence_score(len(month_keys), vendor, taxonomy, False, stable)
-        candidates.append({"merchant_key":key,"raw_merchant":group["raw"],"vendor":vendor or group["raw"],"taxonomy":taxonomy,"amount":round(sum(amounts)/len(amounts),2),"appearances":len(txs),"months":len(month_keys),"consecutive":consecutive,"points":score,"evidence_strength":evidence_tier(score),"is_known":bool(vendor)})
+        candidates.append({"merchant_key":key,"raw_merchant":group["raw"],"vendor":vendor or group["raw"],"taxonomy":taxonomy,"amount":round(sum(amounts)/len(amounts),2),"appearances":len(txs),"months":len(month_keys),"consecutive":consecutive,"points":score,"evidence_strength":evidence_tier(score),"is_known":bool(vendor),"replacement":suggest_replacement(vendor)})
     return candidates
 
 
@@ -136,23 +168,27 @@ def ensure_workspace_columns():
 
 @workspace_bp.route("/workspace")
 @login_required
+@pro_required
 def workspace_home():
     user_id = session["user_id"]
     discovery = build_discovery(user_id)
     candidates = recurring_candidates(user_id)
     decisions = WorkspaceDecision.query.filter_by(user_id=user_id).order_by(WorkspaceDecision.updated_at.desc()).all()
     current_spend = round(sum(c["amount"] for c in candidates if c["is_known"]), 2)
-    return render_template("decision_workspace.html", discovery=discovery, candidates=candidates, decisions=[serialize_decision(d) for d in decisions], totals=dashboard_totals(user_id), current_software_spend=current_spend)
+    replacements = [c for c in candidates if c["is_known"] and c["replacement"]]
+    return render_template("decision_workspace.html", discovery=discovery, candidates=candidates, decisions=[serialize_decision(d) for d in decisions], totals=dashboard_totals(user_id), current_software_spend=current_spend, replacements=replacements)
 
 
 @workspace_bp.route("/api/workspace/discovery", methods=["GET"])
 @login_required
+@pro_required
 def discovery_api():
     return jsonify(build_discovery(session["user_id"]))
 
 
 @workspace_bp.route("/api/workspace/decision", methods=["POST"])
 @login_required
+@pro_required
 def add_decision():
     data = request.get_json(silent=True) or request.form
     tool_name = (data.get("tool_name") or "").strip()
@@ -167,6 +203,7 @@ def add_decision():
 
 @workspace_bp.route("/api/workspace/decision/<int:decision_id>/risk", methods=["POST"])
 @login_required
+@pro_required
 def verify_risk(decision_id):
     d = WorkspaceDecision.query.filter_by(id=decision_id,user_id=session["user_id"]).first_or_404()
     data = request.get_json(silent=True) or request.form
@@ -179,6 +216,7 @@ def verify_risk(decision_id):
 
 @workspace_bp.route("/api/workspace/decision/<int:decision_id>/toggle", methods=["POST"])
 @login_required
+@pro_required
 def toggle_decision(decision_id):
     d = WorkspaceDecision.query.filter_by(id=decision_id,user_id=session["user_id"]).first_or_404()
     d.active = not d.active
