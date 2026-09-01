@@ -1,24 +1,231 @@
-{% extends "base.html" %}
-{% block title %}Decision Workspace - Budget Buddy{% endblock %}
-{% block content %}
-<style>
-.dw{display:grid;grid-template-columns:240px minmax(0,1fr);min-height:calc(100vh - 70px)}.dw-side{background:#0e1b2a;color:#fff;padding:20px;position:sticky;top:0;height:calc(100vh - 70px)}.dw-side h3{font-size:18px;margin:0 0 4px}.dw-side small{color:#9eacba}.dw-nav{margin-top:25px;display:grid;gap:5px}.dw-nav a{color:#dbe3ea;text-decoration:none;padding:10px;border-radius:8px;font-size:12px}.dw-nav a:hover{background:#1b3a5c}.dw-main{padding:26px;max-width:1200px;width:100%}.dw-hero{background:#102238;color:#fff;border-radius:14px;padding:25px;margin-bottom:16px}.dw-hero h1{margin:5px 0}.dw-hero p{color:#c7d1dc}.dw-grid{display:grid;grid-template-columns:1.2fr .8fr;gap:16px}.dw-card{background:#fff;border:1px solid #e5e1d8;border-radius:14px;padding:18px;margin-bottom:16px}.dw-card h2{font-size:16px;margin:0 0 14px}.muted{color:#697482;font-size:12px}.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.metric{background:#faf9f5;padding:13px;border-radius:9px}.value{font-size:21px;font-weight:800;margin-top:4px}.item{border:1px solid #e5e1d8;border-radius:9px;padding:12px;margin-top:9px}.row{display:flex;justify-content:space-between;align-items:center;gap:10px}.btn-dw{border:0;border-radius:8px;padding:9px 13px;background:#173b5d;color:#fff;font-weight:700;cursor:pointer}.btn-dw.alt{background:#fff;color:#173b5d;border:1px solid #d6d1c7}.pill{display:inline-block;border-radius:999px;padding:4px 8px;font-size:10px;font-weight:800}.unknown{background:#eee;color:#555}.low{background:#e3f1e7;color:#276b45}.medium{background:#fbefd9;color:#9a6b20}.high{background:#f6e3df;color:#96382d}.checks{display:grid;gap:8px}.checks label{border:1px solid #e5e1d8;border-radius:8px;padding:10px;font-size:12px}.checks input{margin-right:8px}.ledger{width:100%;border-collapse:collapse;font-size:12px}.ledger td,.ledger th{padding:9px;border-bottom:1px solid #e5e1d8;text-align:left}.buckets{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.bucket{padding:13px;border-radius:9px;background:#faf9f5}.notice{background:#faf9f5;padding:10px;border-radius:8px;font-size:11px;color:#697482;margin-top:12px}@media(max-width:850px){.dw{grid-template-columns:1fr}.dw-side{position:relative;height:auto}.dw-nav{display:flex;overflow:auto}.dw-nav a{white-space:nowrap}.dw-main{padding:14px}.dw-grid,.metrics,.buckets{grid-template-columns:1fr}}
-</style>
-<div class="dw"><aside class="dw-side"><h3>✓ Budget Buddy</h3><small>Decision Workspace</small><nav class="dw-nav"><a href="#discover">🔎 Find My Biggest Waste</a><a href="#evidence">📌 Evidence</a><a href="#simulate">🕹️ Profit Leak Simulator</a><a href="#risk">⚠️ Operational Risk</a><a href="#ledger">📋 Decision Ledger</a><a href="#savings">💰 Savings Buckets</a><a href="#sandbox">🧠 Strategic Sandbox</a></nav></aside>
-<main class="dw-main"><section class="dw-hero"><small>TRANSACTION-BACKED DECISION ENGINE</small><h1>Find the waste. Simulate the decision. Verify the risk.</h1><p>Budget Buddy uses your imported transactions to find recurring software-cost opportunities. It never cancels anything automatically.</p></section>
-<div class="dw-grid"><div>
-<section class="dw-card" id="discover"><h2>🔎 Find My Biggest Waste</h2>{% if discovery.mode == 'overlap' %}<div class="item"><div class="row"><strong>{{discovery.title}}</strong><span class="pill">{{discovery.evidence_strength}}</span></div><p class="muted">Potential reduction if one tool is removed: ${{'%.2f'|format(discovery.a.amount)}}–${{'%.2f'|format(discovery.b.amount)}}/mo</p><p class="muted">{{discovery.message}}</p><button class="btn-dw" onclick="stage({{discovery.b.vendor|tojson}},{{discovery.b.amount}},'REMOVE')">🕹️ Simulate the Decision</button></div>{% elif discovery.mode == 'unknown' %}<div class="item"><strong>{{discovery.candidate.vendor}}</strong><p class="muted">Largest unidentified recurring charge: ${{'%.2f'|format(discovery.candidate.amount)}}/mo.</p><button class="btn-dw" onclick="stage({{discovery.candidate.vendor|tojson}},{{discovery.candidate.amount}},'INVESTIGATE')">🔎 Investigate in Sandbox</button></div>{% else %}<p class="muted">{{discovery.message}}</p>{% endif %}</section>
-<section class="dw-card" id="evidence"><h2>📌 Evidence</h2><div class="item"><strong>Observed</strong><p class="muted">Transaction descriptions, dates, amounts, recurrence and number of months.</p></div><div class="item"><strong>Classified</strong><p class="muted">Merchant/category matches from Budget Buddy's vendor directory.</p></div><div class="item"><strong>Unknown</strong><p class="muted">Active usage, critical workflows, files and integrations cannot be proven from CSV data alone.</p></div></section>
-<section class="dw-card" id="simulate"><h2>🕹️ Profit Leak Simulator</h2><div class="metrics"><div class="metric"><span class="muted">Current known software spend</span><div class="value">${{'%.2f'|format(current_software_spend)}}/mo</div></div><div class="metric"><span class="muted">Simulated reduction</span><div class="value" id="simMonthly">${{'%.2f'|format(totals.total_simulated_monthly)}}/mo</div></div><div class="metric"><span class="muted">Annualized reduction</span><div class="value" id="simAnnual">${{'%.2f'|format(totals.annualized_potential)}}/yr</div></div></div><p class="muted">Stage a cancellation/investigation. Toggle it on or off. Numbers come from saved transaction-derived decisions.</p><div>{% for d in decisions %}<div class="item"><div class="row"><div><strong>{{d.tool_name}}</strong> · {{d.action}}<div class="muted">${{'%.2f'|format(d.savings_monthly)}}/mo · {{d.risk_rating}}</div></div><button class="btn-dw alt" onclick="toggleDecision({{d.id}})">{{'Active' if d.active else 'Inactive'}}</button></div></div>{% else %}<p class="muted">No staged decisions yet.</p>{% endfor %}</div><div class="notice">⚠️ This is a scenario based on transaction history. Actual savings depend on successful cancellation and whether the tool can be removed without replacing its functionality.</div></section>
-<section class="dw-card" id="ledger"><h2>📋 Decision Ledger</h2><table class="ledger"><tr><th>Tool</th><th>Decision</th><th>$/mo</th><th>Risk</th><th>Status</th></tr>{% for d in decisions %}<tr><td>{{d.tool_name}}</td><td>{{d.action}}</td><td>${{'%.2f'|format(d.savings_monthly)}}</td><td><span class="pill {{d.risk_rating|lower}}">{{d.risk_rating}}</span></td><td>{{d.status}}</td></tr>{% else %}<tr><td colspan="5" class="muted">No decisions saved.</td></tr>{% endfor %}</table></section>
-</div><aside>
-<section class="dw-card" id="risk"><h2>⚠️ Operational Risk Check</h2><select id="riskDecision" class="form-select"><option value="">Choose staged decision</option>{% for d in decisions %}<option value="{{d.id}}">{{d.tool_name}}</option>{% endfor %}</select><div class="checks" style="margin-top:10px"><label><input id="q1" type="checkbox">Critical client-facing workflow</label><label><input id="q2" type="checkbox">Team actively uses it</label><label><input id="q3" type="checkbox">Stores important files</label><label><input id="q4" type="checkbox">Connects to critical systems</label></div><p><span id="riskPill" class="pill unknown">Risk: Unknown</span></p><button class="btn-dw" onclick="saveRisk()">Save Risk Assessment</button><p class="muted">Q1/Q4 Yes → High. Otherwise Q2/Q3 Yes → Medium. All No → Low.</p></section>
-<section class="dw-card" id="savings"><h2>💰 Savings Buckets</h2><div class="buckets"><div class="bucket"><strong>Verified Low-Risk</strong><div>${{'%.2f'|format(totals.verified_low_risk_monthly)}}/mo</div></div><div class="bucket"><strong>Under Review</strong><div>${{'%.2f'|format(totals.potential_under_review_monthly)}}/mo</div></div><div class="bucket"><strong>Rejected</strong><div>${{'%.2f'|format(totals.rejected_monthly)}}/mo</div></div></div></section>
-<section class="dw-card" id="sandbox"><h2>🧠 Strategic Sandbox</h2><p class="muted">Combine active decisions before acting.</p><div class="metrics"><div class="metric"><span class="muted">Monthly reduction</span><div class="value">${{'%.2f'|format(totals.total_simulated_monthly)}}</div></div><div class="metric"><span class="muted">Annualized</span><div class="value">${{'%.2f'|format(totals.annualized_potential)}}</div></div><div class="metric"><span class="muted">Active scenarios</span><div class="value">{{decisions|selectattr('active')|list|length}}</div></div></div></section>
-</aside></div></main></div>
-<script>
-function stage(tool,savings,action){fetch('/api/workspace/decision',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tool_name:tool,savings_monthly:savings,action:action})}).then(r=>r.json()).then(x=>{if(!x.success)return alert(x.message||'Could not stage decision');location.reload()})}
-function toggleDecision(id){fetch('/api/workspace/decision/'+id+'/toggle',{method:'POST'}).then(r=>r.json()).then(x=>{if(!x.success)return alert('Could not toggle decision');location.reload()})}
-function saveRisk(){const id=document.getElementById('riskDecision').value;if(!id)return alert('Choose a staged decision first');const body={q1:document.getElementById('q1').checked,q2:document.getElementById('q2').checked,q3:document.getElementById('q3').checked,q4:document.getElementById('q4').checked};fetch('/api/workspace/decision/'+id+'/risk',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(r=>r.json()).then(x=>{if(!x.success)return alert('Could not save risk');location.reload()})}
-</script>
-{% endblock %}
+import re
+from datetime import datetime
+from flask import Blueprint, render_template, request, jsonify, session
+from sqlalchemy import inspect, text
+from app import db, Transaction, login_required, pro_required
+
+workspace_bp = Blueprint("workspace", __name__)
+VENDOR_DIRECTORY = {
+    "asana": ("Asana", "Project Management"), "clickup": ("ClickUp", "Project Management"), "monday": ("monday.com", "Project Management"), "trello": ("Trello", "Project Management"),
+    "notion": ("Notion", "Knowledge Management"), "slack": ("Slack", "Team Communication"), "zoom": ("Zoom", "Video Communication"), "loom": ("Loom", "Video Communication"),
+    "canva": ("Canva", "Design"), "figma": ("Figma", "Design"), "adobe": ("Adobe", "Design"), "hubspot": ("HubSpot", "CRM / Marketing Automation"), "mailchimp": ("Mailchimp", "Email Marketing"),
+    "semrush": ("Semrush", "SEO"), "ahrefs": ("Ahrefs", "SEO"), "google workspace": ("Google Workspace", "Productivity Suite"), "microsoft 365": ("Microsoft 365", "Productivity Suite"),
+    "github": ("GitHub", "Developer Tools"), "vercel": ("Vercel", "Hosting / Deployment"), "render": ("Render", "Hosting / Deployment"), "aws": ("AWS", "Cloud Infrastructure"),
+    "openai": ("OpenAI", "AI / API"), "chatgpt": ("ChatGPT", "AI / API"),
+}
+
+# Software Replacement Engine: cheaper/free alternative + the reasoning, per known vendor.
+# Deliberately no dollar-figure competitor pricing here — those go stale and can't be verified
+# per-account, so the reasoning stays structural (free tier, already-owned bundle, one-time buy).
+REPLACEMENT_DIRECTORY = {
+    "asana": {"alt": "Trello or ClickUp (Free tier)", "reason": "Their free tiers cover basic kanban/task tracking for small teams without a per-seat bill."},
+    "monday": {"alt": "ClickUp (Free tier) or Trello", "reason": "Covers standard board/task workflows without monday.com's per-seat pricing."},
+    "clickup": {"alt": "Trello (Free tier)", "reason": "If advanced automations aren't in active use, Trello's free tier covers basic boards."},
+    "notion": {"alt": "Google Docs/Sheets (already in Google Workspace)", "reason": "If Workspace is already paid for, basic docs/wikis may not need a separate tool."},
+    "slack": {"alt": "Google Chat (included in Google Workspace) or Discord (Free)", "reason": "Covers team messaging without a second communication-tool subscription."},
+    "zoom": {"alt": "Google Meet (included in Google Workspace)", "reason": "Covers most client calls if Workspace is already paid for — no separate video line item needed."},
+    "loom": {"alt": "Native OS screen recording (QuickTime / Windows tools)", "reason": "Free for internal walkthroughs; Loom's free tier also covers light external use."},
+    "canva": {"alt": "Canva Free tier", "reason": "Covers most design needs — Pro mainly adds brand kits and background remover at volume."},
+    "figma": {"alt": "Figma Free tier", "reason": "Supports a handful of active files, which covers most small agencies' live project load."},
+    "adobe": {"alt": "Affinity Suite (one-time purchase)", "reason": "No recurring subscription — a one-time buy covers most Photoshop/Illustrator-equivalent work."},
+    "hubspot": {"alt": "HubSpot Free CRM or a lighter CRM", "reason": "Agencies with a small client list rarely need the paid HubSpot tier's automation depth."},
+    "mailchimp": {"alt": "Mailchimp Free tier", "reason": "Covers small contact lists — check your actual list size against the free-tier cap before paying."},
+    "semrush": {"alt": "Google Search Console + a lighter SEO tool", "reason": "Covers basic keyword/ranking tracking for smaller accounts without the full Semrush suite."},
+    "ahrefs": {"alt": "Google Search Console + a lighter SEO tool", "reason": "Covers basic keyword/ranking tracking for smaller accounts without the full Ahrefs suite."},
+    "github": {"alt": "GitHub Free tier", "reason": "Unlimited private repos are already free — confirm the paid tier's extra features are actually used."},
+    "vercel": {"alt": "Vercel Hobby (Free) tier", "reason": "Covers client staging sites; only needed for commercial/team collaboration limits."},
+    "render": {"alt": "Render Free tier", "reason": "Fine for low-traffic staging — only pay for services that need to stay always-on."},
+    "aws": {"alt": "A fixed-cost VPS (e.g. DigitalOcean, Render)", "reason": "Usage-based AWS billing can balloon for small, low-traffic workloads."},
+    "chatgpt": {"alt": "Consolidate to one seat/plan", "reason": "Check you're not paying for both a ChatGPT Plus seat and separate API usage for the same work."},
+}
+
+
+def suggest_replacement(vendor_name):
+    if not vendor_name:
+        return None
+    key = vendor_name.strip().lower()
+    return REPLACEMENT_DIRECTORY.get(key)
+
+class WorkspaceDecision(db.Model):
+    __tablename__ = "workspace_decision"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, index=True)
+    tool_name = db.Column(db.String(200), nullable=False)
+    action = db.Column(db.String(20), nullable=False, default="INVESTIGATE")
+    savings_monthly = db.Column(db.Float, nullable=False, default=0.0)
+    risk_rating = db.Column(db.String(20), nullable=False, default="UNKNOWN")
+    status = db.Column(db.String(20), nullable=False, default="Open")
+    active = db.Column(db.Boolean, nullable=False, default=True)
+    q1_client_workflow = db.Column(db.Boolean, nullable=True)
+    q2_active_use = db.Column(db.Boolean, nullable=True)
+    q3_important_files = db.Column(db.Boolean, nullable=True)
+    q4_critical_integrations = db.Column(db.Boolean, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+def clean_merchant(text_value):
+    value = (text_value or "").lower()
+    value = re.sub(r"[^a-z0-9 ]+", " ", value)
+    value = re.sub(r"\b(inc|ltd|llc|com|payment|purchase|card|pos|online)\b", " ", value)
+    return re.sub(r"\s+", " ", value).strip()
+
+
+def classify_merchant(description):
+    cleaned = clean_merchant(description)
+    for key, (name, taxonomy) in VENDOR_DIRECTORY.items():
+        if key in cleaned or key in (description or "").lower():
+            return name, taxonomy
+    return None, None
+
+
+def evidence_score(months, vendor, taxonomy, overlap=False, stable_amount=False):
+    score = 25 if months >= 3 else -20
+    if vendor: score += 20
+    if taxonomy: score += 20
+    if overlap: score += 15
+    if stable_amount: score += 10
+    return max(0, min(score, 90))
+
+
+def evidence_tier(score):
+    return "Strong" if score >= 70 else "Medium" if score >= 40 else "Weak"
+
+
+def recurring_candidates(user_id):
+    transactions = Transaction.query.filter_by(user_id=user_id, type="EXPENSE").order_by(Transaction.date.asc()).all()
+    groups = {}
+    for tx in transactions:
+        key = clean_merchant(tx.description)
+        if key: groups.setdefault(key, {"raw": tx.description, "transactions": []})["transactions"].append(tx)
+    candidates = []
+    for key, group in groups.items():
+        txs = group["transactions"]
+        month_keys = sorted({(t.date.year, t.date.month) for t in txs})
+        if len(month_keys) < 2: continue
+        amounts = [float(t.amount or 0) for t in txs]
+        vendor, taxonomy = classify_merchant(group["raw"])
+        stable = bool(amounts) and max(amounts) - min(amounts) < 0.01
+        consecutive = all((month_keys[i][0] * 12 + month_keys[i][1]) - (month_keys[i-1][0] * 12 + month_keys[i-1][1]) == 1 for i in range(1, len(month_keys)))
+        score = evidence_score(len(month_keys), vendor, taxonomy, False, stable)
+        candidates.append({"merchant_key":key,"raw_merchant":group["raw"],"vendor":vendor or group["raw"],"taxonomy":taxonomy,"amount":round(sum(amounts)/len(amounts),2),"appearances":len(txs),"months":len(month_keys),"consecutive":consecutive,"points":score,"evidence_strength":evidence_tier(score),"is_known":bool(vendor),"replacement":suggest_replacement(vendor)})
+    return candidates
+
+
+def build_discovery(user_id):
+    candidates = recurring_candidates(user_id)
+    data_months = len({(t.date.year, t.date.month) for t in Transaction.query.filter_by(user_id=user_id).all()})
+    known = [c for c in candidates if c["is_known"]]
+    pairs = []
+    for i, a in enumerate(known):
+        for b in known[i + 1:]:
+            if a["taxonomy"] and a["taxonomy"] == b["taxonomy"]:
+                score = evidence_score(data_months, a["vendor"], a["taxonomy"], True, a["amount"] == b["amount"])
+                pairs.append((max(a["amount"], b["amount"]), a, b, score))
+    if pairs:
+        _, a, b, score = max(pairs, key=lambda x: x[0])
+        return {"mode":"overlap","title":f"{a['vendor']} + {b['vendor']}","a":a,"b":b,"taxonomy":a["taxonomy"],"evidence_strength":evidence_tier(score),"score":score,"months":data_months,"message":f"Potential overlap: both tools are classified as {a['taxonomy']}. Transaction data cannot establish redundant functionality or active use."}
+    unknown = [c for c in candidates if not c["is_known"]]
+    if unknown:
+        c = max(unknown, key=lambda x:x["amount"])
+        return {"mode":"unknown","candidate":c,"evidence_strength":c["evidence_strength"],"score":c["points"],"months":data_months,"message":"No defensible overlap was found. This is the largest unidentified recurring charge requiring review."}
+    return {"mode":"none","months":data_months,"message":"No defensible recurring software opportunity was found yet. Import at least two months of history."}
+
+
+def serialize_decision(d):
+    return {"id":d.id,"tool_name":d.tool_name,"action":d.action,"savings_monthly":round(d.savings_monthly or 0,2),"risk_rating":d.risk_rating,"status":d.status,"active":d.active,"answers":{"q1":d.q1_client_workflow,"q2":d.q2_active_use,"q3":d.q3_important_files,"q4":d.q4_critical_integrations}}
+
+
+def risk_from_answers(answers):
+    if answers.get("q1") or answers.get("q4"): return "HIGH", "Rejected"
+    if answers.get("q2") or answers.get("q3"): return "MEDIUM", "Investigating"
+    return "LOW", "Verified"
+
+
+def dashboard_totals(user_id):
+    rows = WorkspaceDecision.query.filter_by(user_id=user_id).all()
+    low = sum(d.savings_monthly for d in rows if d.active and d.risk_rating == "LOW" and d.status == "Verified")
+    review = sum(d.savings_monthly for d in rows if d.active and d.risk_rating in ("UNKNOWN", "MEDIUM"))
+    rejected = sum(d.savings_monthly for d in rows if d.risk_rating == "HIGH" or d.status == "Rejected")
+    active = sum(d.savings_monthly for d in rows if d.active)
+    return {"verified_low_risk_monthly":round(low,2),"potential_under_review_monthly":round(review,2),"rejected_monthly":round(rejected,2),"total_simulated_monthly":round(active,2),"annualized_potential":round(active*12,2)}
+
+
+def ensure_workspace_columns():
+    db.create_all()
+    inspector = inspect(db.engine)
+    columns = {c["name"] for c in inspector.get_columns("workspace_decision")} if "workspace_decision" in inspector.get_table_names() else set()
+    additions = {"q1_client_workflow":"BOOLEAN","q2_active_use":"BOOLEAN","q3_important_files":"BOOLEAN","q4_critical_integrations":"BOOLEAN"}
+    for name, sql_type in additions.items():
+        if name not in columns:
+            try:
+                db.session.execute(text(f"ALTER TABLE workspace_decision ADD COLUMN {name} {sql_type}"))
+                db.session.commit()
+            except Exception:
+                # Another worker likely added this column concurrently at boot.
+                db.session.rollback()
+
+
+@workspace_bp.route("/workspace")
+@login_required
+@pro_required
+def workspace_home():
+    user_id = session["user_id"]
+    discovery = build_discovery(user_id)
+    candidates = recurring_candidates(user_id)
+    decisions = WorkspaceDecision.query.filter_by(user_id=user_id).order_by(WorkspaceDecision.updated_at.desc()).all()
+    current_spend = round(sum(c["amount"] for c in candidates if c["is_known"]), 2)
+    replacements = [c for c in candidates if c["is_known"] and c["replacement"]]
+    return render_template("decision_workspace.html", discovery=discovery, candidates=candidates, decisions=[serialize_decision(d) for d in decisions], totals=dashboard_totals(user_id), current_software_spend=current_spend, replacements=replacements)
+
+
+@workspace_bp.route("/api/workspace/discovery", methods=["GET"])
+@login_required
+@pro_required
+def discovery_api():
+    return jsonify(build_discovery(session["user_id"]))
+
+
+@workspace_bp.route("/api/workspace/decision", methods=["POST"])
+@login_required
+@pro_required
+def add_decision():
+    data = request.get_json(silent=True) or request.form
+    tool_name = (data.get("tool_name") or "").strip()
+    if not tool_name: return jsonify({"success":False,"message":"Tool name is required."}),400
+    try: savings = max(0.0, float(data.get("savings_monthly") or 0))
+    except (TypeError, ValueError): return jsonify({"success":False,"message":"Savings must be a number."}),400
+    action = (data.get("action") or "INVESTIGATE").upper()
+    d = WorkspaceDecision(user_id=session["user_id"],tool_name=tool_name,action=action,savings_monthly=savings)
+    db.session.add(d); db.session.commit()
+    return jsonify({"success":True,"decision":serialize_decision(d),"totals":dashboard_totals(session["user_id"])})
+
+
+@workspace_bp.route("/api/workspace/decision/<int:decision_id>/risk", methods=["POST"])
+@login_required
+@pro_required
+def verify_risk(decision_id):
+    d = WorkspaceDecision.query.filter_by(id=decision_id,user_id=session["user_id"]).first_or_404()
+    data = request.get_json(silent=True) or request.form
+    answers = {k:str(data.get(k,"false")).lower() in ("true","1","yes","on") for k in ("q1","q2","q3","q4")}
+    d.q1_client_workflow,d.q2_active_use,d.q3_important_files,d.q4_critical_integrations = answers["q1"],answers["q2"],answers["q3"],answers["q4"]
+    d.risk_rating,d.status = risk_from_answers(answers)
+    db.session.commit()
+    return jsonify({"success":True,"decision":serialize_decision(d),"totals":dashboard_totals(session["user_id"])})
+
+
+@workspace_bp.route("/api/workspace/decision/<int:decision_id>/toggle", methods=["POST"])
+@login_required
+@pro_required
+def toggle_decision(decision_id):
+    d = WorkspaceDecision.query.filter_by(id=decision_id,user_id=session["user_id"]).first_or_404()
+    d.active = not d.active
+    db.session.commit()
+    return jsonify({"success":True,"decision":serialize_decision(d),"totals":dashboard_totals(session["user_id"])})
+
+
+def register_workspace(app):
+    if "workspace.workspace_home" not in app.view_functions:
+        app.register_blueprint(workspace_bp)
+    with app.app_context():
+        ensure_workspace_columns()
