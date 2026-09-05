@@ -14,6 +14,7 @@
 <li class="nav-item">{% if has_endpoint('profit_simulator.simulator_home') %}<a class="nav-link" href="{{ url_for('profit_simulator.simulator_home') }}"><i class="bi bi-graph-up-arrow me-1"></i>Profit Simulator</a>{% endif %}</li>
 <li class="nav-item"><a class="nav-link" href="{{ url_for('auditor_console') }}"><i class="bi bi-shield-check me-1"></i>Auditor Console</a></li>
 <li class="nav-item"><a class="nav-link" href="{{ url_for('manage_categories') }}">Categories</a></li>
+{% if current_user and current_user.plan_tier in ['GROWTH','PRO'] %}<li class="nav-item"><a class="nav-link" href="{{ url_for('rebilling') }}"><i class="bi bi-people me-1"></i>Re-billing</a></li>{% endif %}
 {% if current_user and current_user.plan_tier in ['GROWTH','PRO'] %}<li class="nav-item"><a class="nav-link" href="{{ url_for('pro') }}"><i class="bi bi-cpu me-1"></i>AI Insights</a></li>{% endif %}
 <li class="nav-item"><a class="nav-link" href="{{ url_for('pricing') }}"><i class="bi bi-star-fill me-1"></i>Plans</a></li><li class="nav-item"><a class="nav-link" href="{{ url_for('profile') }}">Profile</a></li><li class="nav-item ms-2"><a class="btn btn-outline-secondary btn-sm" href="{{ url_for('logout') }}">Logout</a></li>
 {% else %}<li class="nav-item"><a class="nav-link" href="{{ url_for('login') }}">Login</a></li><li class="nav-item ms-2"><a class="btn btn-primary btn-sm" href="{{ url_for('register') }}">Sign Up Free</a></li>{% endif %}
