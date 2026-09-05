@@ -8,6 +8,9 @@ import logging
 import requests
 from datetime import datetime, timedelta
 from functools import wraps
+from collections import defaultdict
+
+from vendor_intelligence import build_subscription_report, suggest_client_split, VENDOR_DB
 
 from flask import (
     Flask, render_template, request, redirect, 
@@ -148,6 +151,26 @@ class SendwavePayment(db.Model):
     action_token = db.Column(db.String(64), unique=True, nullable=True)
 
     user = db.relationship('User', backref=db.backref('sendwave_payments', cascade="all, delete-orphan"))
+
+class VendorVerification(db.Model):
+    """Agency-confirmed status for a detected vendor — the top confidence
+    tier in the audit (vs. a pattern-based 'confirmed' or one-off 'possible')."""
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    vendor_key = db.Column(db.String(80), nullable=False)
+    status = db.Column(db.String(20), default="ACTIVE")  # "ACTIVE" or "CANCELLED"
+    verified_at = db.Column(db.DateTime, default=datetime.utcnow)
+    notes = db.Column(db.String(300), nullable=True)
+
+class ClientAllocation(db.Model):
+    """How much of a shared vendor subscription gets billed back to a
+    given client, for the client cost re-billing feature."""
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    vendor_key = db.Column(db.String(80), nullable=False)
+    client_id = db.Column(db.Integer, db.ForeignKey('client.id'), nullable=False)
+    share_pct = db.Column(db.Float, default=0.0)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 # Safe Startup Database Initialization
 with app.app_context():
@@ -1011,7 +1034,9 @@ def dashboard():
         pct = min(100, int((g.current_amount / g.target_amount) * 100)) if g.target_amount > 0 else 0
         goal_data.append({"id": g.id, "title": g.title, "name": g.title, "target": g.target_amount, "current": g.current_amount, "pct": pct})
 
-    detected_subs = detect_subscriptions(transactions)
+    vendor_verifications = {v.vendor_key: v for v in VendorVerification.query.filter_by(user_id=user.id).all()}
+    detected_subs = build_subscription_report(transactions, vendor_verifications)
+    can_see_audit_detail = user.plan_tier in ['GROWTH', 'PRO']
     health_score = compute_financial_health(total_revenue, total_expenses, budgets, user.id, spent_by_category=spent_by_category)
     runway_data = compute_runway(user)
     tax_reserve = total_revenue * ((user.tax_rate or 20.0) / 100.0)
@@ -1043,6 +1068,7 @@ def dashboard():
         alerts=alerts,
         goals=goal_data,
         subscriptions=detected_subs,
+        can_see_audit_detail=can_see_audit_detail,
         health_score=health_score,
         runway=runway_data,
         tax_reserve=tax_reserve,
@@ -1443,6 +1469,110 @@ def import_csv():
         flash("Failed to process CSV statement.", "danger")
 
     return redirect(url_for('dashboard'))
+
+# --- VENDOR VERIFICATION (agency-confirmed confidence tier) ---
+@app.route('/vendor/<vendor_key>/verify', methods=['POST'])
+@login_required
+def verify_vendor(vendor_key):
+    if vendor_key not in VENDOR_DB:
+        abort(404)
+    status = request.form.get('status', 'ACTIVE').upper()
+    if status not in ['ACTIVE', 'CANCELLED']:
+        status = 'ACTIVE'
+    user_id = session['user_id']
+
+    existing = VendorVerification.query.filter_by(user_id=user_id, vendor_key=vendor_key).first()
+    if existing:
+        existing.status = status
+        existing.verified_at = datetime.utcnow()
+    else:
+        db.session.add(VendorVerification(user_id=user_id, vendor_key=vendor_key, status=status))
+    db.session.commit()
+
+    vendor_name = VENDOR_DB[vendor_key]["display_name"]
+    flash(f"Marked {vendor_name} as {'still active' if status == 'ACTIVE' else 'cancelled'} — confidence upgraded to agency-verified.", "success")
+    return redirect(url_for('dashboard') + '#subscriptions')
+
+# --- CLIENT COST RE-BILLING ---
+@app.route('/rebilling', methods=['GET', 'POST'])
+@login_required
+@pro_required
+def rebilling():
+    user_id = session['user_id']
+    user = User.query.get(user_id)
+    clients = Client.query.filter_by(user_id=user_id).all()
+    transactions = Transaction.query.filter_by(user_id=user_id).all()
+    verifications = {v.vendor_key: v for v in VendorVerification.query.filter_by(user_id=user_id).all()}
+    subscriptions = build_subscription_report(transactions, verifications)
+
+    if request.method == 'POST':
+        vendor_key = request.form.get('vendor_key', '')
+        if vendor_key not in VENDOR_DB:
+            flash("Unrecognized vendor.", "danger")
+            return redirect(url_for('rebilling'))
+
+        ClientAllocation.query.filter_by(user_id=user_id, vendor_key=vendor_key).delete()
+        total_pct = 0.0
+        for c in clients:
+            pct_raw = request.form.get(f'pct_{c.id}', '').strip()
+            if not pct_raw:
+                continue
+            try:
+                pct = float(pct_raw)
+            except ValueError:
+                continue
+            if pct > 0:
+                db.session.add(ClientAllocation(user_id=user_id, vendor_key=vendor_key, client_id=c.id, share_pct=pct))
+                total_pct += pct
+        db.session.commit()
+
+        msg = "Re-billing split saved."
+        if total_pct and abs(total_pct - 100.0) > 0.5:
+            msg += f" Heads up: splits add up to {total_pct:.0f}%, not 100%."
+        flash(msg, "success")
+        return redirect(url_for('rebilling'))
+
+    allocations = ClientAllocation.query.filter_by(user_id=user_id).all()
+    alloc_by_vendor = defaultdict(list)
+    for a in allocations:
+        alloc_by_vendor[a.vendor_key].append(a)
+
+    client_by_id = {c.id: c for c in clients}
+    rebilling_rows = []
+    for s in subscriptions:
+        vkey = s['vendor_key']
+        existing_allocs = alloc_by_vendor.get(vkey, [])
+        if existing_allocs:
+            splits = [{
+                "client_name": client_by_id.get(a.client_id).name if client_by_id.get(a.client_id) else "Unknown client",
+                "pct": a.share_pct,
+                "owed": round(s['amount'] * (a.share_pct / 100.0), 2),
+                "confirmed": True,
+            } for a in existing_allocs]
+        else:
+            suggestions = suggest_client_split(vkey, transactions, clients)
+            splits = [{
+                "client_name": sug['client_name'],
+                "pct": sug['suggested_pct'],
+                "owed": round(s['amount'] * (sug['suggested_pct'] / 100.0), 2),
+                "confirmed": False,
+                "evidence": sug['evidence'],
+            } for sug in suggestions]
+        rebilling_rows.append({**s, "splits": splits, "has_confirmed_split": bool(existing_allocs)})
+
+    client_totals = defaultdict(float)
+    for row in rebilling_rows:
+        if row["has_confirmed_split"]:
+            for sp in row['splits']:
+                client_totals[sp['client_name']] += sp['owed']
+
+    return render_template(
+        'rebilling.html',
+        user=user,
+        clients=clients,
+        rebilling_rows=rebilling_rows,
+        client_totals=dict(client_totals),
+    )
 
 @app.route('/upload-statements', methods=['POST'])
 @login_required
