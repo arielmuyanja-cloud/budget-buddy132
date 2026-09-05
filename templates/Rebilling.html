@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Budget Buddy — Client Re-billing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#FAF9F5;--surface:#fff;--border:#E6E2D8;--ink:#16202B;--muted:#5C6570;--faint:#8A9099;--navy:#1B3A5C;--dark:#0E1B2A;--brass:#A2792C;--brass-soft:#F3EBD8;--green:#1F6E45;--green-soft:#E4F0E8;--red:#9C3B2E;--red-soft:#F6E7E3;--amber:#B8822A;--amber-soft:#FBF0DD;--shadow:0 8px 28px rgba(22,32,43,.06);--r:14px}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px Inter,system-ui,sans-serif}
+a{text-decoration:none;color:inherit}button,input,select{font:inherit}
+.top{min-height:70px;background:#fff;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 28px}
+.brand{display:flex;align-items:center;gap:10px}.mark{width:34px;height:34px;border-radius:9px;background:var(--navy);display:grid;place-items:center;color:#fff;font-weight:800}
+.brand strong{display:block;font-size:18px}.brand small{display:block;color:var(--faint);font-size:9px;text-transform:uppercase;letter-spacing:.09em}
+.nav{display:flex;gap:18px;align-items:center}.nav a{font-size:12px;color:var(--muted);padding:24px 0}.nav a:hover{color:var(--navy);font-weight:700}
+.right{display:flex;align-items:center;gap:8px}.btn{display:inline-block;border:1px solid var(--border);background:#fff;border-radius:8px;padding:9px 13px;font-size:11px;font-weight:700;cursor:pointer}
+.btn:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(22,32,43,.08)}.btn.primary{background:var(--navy);border-color:var(--navy);color:#fff}
+main{max-width:1180px;margin:auto;padding:28px;display:grid;gap:18px}
+.hero{background:var(--dark);color:#fff;border-radius:var(--r);padding:26px;box-shadow:var(--shadow)}
+.eyebrow{color:#DCC58E;font-size:10px;font-weight:800;letter-spacing:.11em;text-transform:uppercase}
+.hero h1{font:600 26px/1.15 'Source Serif 4',Georgia,serif;margin:8px 0}.hero p{color:#B9C6D4;line-height:1.55;margin:0;max-width:680px}
+.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.card{background:#fff;border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow)}
+.metric{padding:18px}.label{font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);font-weight:800}
+.value{font:600 26px 'Source Serif 4',Georgia,serif;margin-top:6px}.muted{font-size:10px;color:var(--muted);margin-top:5px}
+.badge{display:inline-block;padding:4px 7px;border-radius:5px;font-size:9px;font-weight:800}
+.good{color:var(--green);background:var(--green-soft)}.warn{color:var(--amber);background:var(--amber-soft)}.verified{color:#fff;background:var(--navy)}
+.vendor-card{padding:0}.vhead{padding:16px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);gap:10px;flex-wrap:wrap}
+.vname{font-size:14px;font-weight:700}.vcat{font-size:10px;color:var(--faint);margin-top:3px}
+.vamount{font:600 16px 'IBM Plex Mono',monospace}
+.vbody{padding:16px 20px}
+table{width:100%;border-collapse:collapse}th{text-align:left;color:var(--faint);font-size:8px;text-transform:uppercase;letter-spacing:.07em;padding:0 0 8px;border-bottom:1px solid var(--border)}
+td{padding:8px 6px 8px 0;border-bottom:1px solid var(--border);font-size:11px}tr:last-child td{border:0}
+input.pct{width:70px;border:1px solid var(--border);border-radius:6px;padding:6px 8px;font-size:11px}
+.rowaction{margin-top:12px;display:flex;justify-content:flex-end;gap:8px}
+.empty{text-align:center;padding:30px 10px;color:var(--muted);font-size:11px}.empty strong{display:block;color:var(--ink);font-size:14px;margin-bottom:6px}
+.evidence{font-size:9.5px;color:var(--faint);font-style:italic}
+@media(max-width:900px){.metrics{grid-template-columns:1fr}.nav{display:none}}
+</style>
+</head>
+<body>
+<header class="top">
+<a class="brand" href="{{ url_for('dashboard') }}"><span class="mark">✓</span><span><strong>Budget Buddy</strong><small>Agency Software Auditor</small></span></a>
+<nav class="nav"><a href="{{ url_for('dashboard') }}">Dashboard</a><a href="{{ url_for('import_csv') }}">Import CSV</a><a href="{{ url_for('manage_clients') }}">Clients</a><a href="{{ url_for('rebilling') }}" style="color:var(--navy);font-weight:700">Re-billing</a><a href="{{ url_for('pricing') }}">Plans</a></nav>
+<div class="right"><a class="btn" href="{{ url_for('dashboard') }}">← Dashboard</a></div>
+</header>
+<main>
+
+<section class="hero">
+<div class="eyebrow">Client cost re-billing</div>
+<h1>Know exactly who to bill for shared software.</h1>
+<p>Every detected subscription below can be split across the clients who actually use it. Confirmed splits count toward the totals; unconfirmed ones are starting-point suggestions for you to check.</p>
+</section>
+
+<section class="metrics">
+<div class="card metric"><div class="label">Shared software spend</div><div class="value">{{ user.currency|default('USD') }} {{ '{:,.2f}'.format(rebilling_rows|sum(attribute='amount') if rebilling_rows else 0) }}/mo</div><div class="muted">Across {{ rebilling_rows|length }} detected vendor{{ '' if rebilling_rows|length == 1 else 's' }}</div></div>
+<div class="card metric"><div class="label">Confirmed re-billable</div><div class="value">{{ user.currency|default('USD') }} {{ '{:,.2f}'.format(client_totals.values()|sum if client_totals else 0) }}/mo</div><div class="muted">From splits you've confirmed below</div></div>
+<div class="card metric"><div class="label">Clients on file</div><div class="value">{{ clients|length }}</div><div class="muted"><a href="{{ url_for('manage_clients') }}">Manage clients →</a></div></div>
+</section>
+
+{% if client_totals %}
+<section class="card">
+<div class="vhead"><div class="vname">Amount owed per client this month</div></div>
+<div class="vbody">
+<table><thead><tr><th>Client</th><th style="text-align:right">Owed</th></tr></thead><tbody>
+{% for name, total in client_totals.items() %}<tr><td>{{ name }}</td><td style="text-align:right;font-family:'IBM Plex Mono',monospace">{{ user.currency|default('USD') }} {{ '{:,.2f}'.format(total) }}</td></tr>{% endfor %}
+</tbody></table>
+</div>
+</section>
+{% endif %}
+
+{% if not rebilling_rows %}
+<section class="card"><div class="empty"><strong>No shared subscriptions detected yet</strong>Import a CSV on the dashboard to start finding software you can split across clients.<br><br><a class="btn primary" href="{{ url_for('import_csv') }}">Import CSV</a></div></section>
+{% endif %}
+
+{% if not clients and rebilling_rows %}
+<section class="card"><div class="empty"><strong>Add clients first</strong>You'll need at least one client on file before you can split a subscription's cost across them.<br><br><a class="btn primary" href="{{ url_for('manage_clients') }}">Add a client</a></div></section>
+{% endif %}
+
+{% for row in rebilling_rows %}
+<section class="card vendor-card" id="{{ row.vendor_key }}">
+<div class="vhead">
+<div><div class="vname">{{ row.name }} <span class="badge {% if row.confidence == 'agency_verified' %}verified{% elif row.confidence == 'confirmed' %}good{% else %}warn{% endif %}">{% if row.confidence == 'agency_verified' %}{{ 'Verified active' if row.verified_status == 'ACTIVE' else 'Verified cancelled' }}{% elif row.confidence == 'confirmed' %}Confirmed{% else %}Possible{% endif %}</span></div><div class="vcat">{{ row.category }} · {{ row.occurrences }} charge{{ '' if row.occurrences == 1 else 's' }} seen{% if row.has_confirmed_split %} · Split confirmed{% else %} · Suggested split — not yet confirmed{% endif %}</div></div>
+<div class="vamount">{{ user.currency|default('USD') }} {{ '{:,.2f}'.format(row.amount) }}/mo</div>
+</div>
+{% if clients %}
+<div class="vbody">
+<table><thead><tr><th>Client</th><th>Share</th><th style="text-align:right">Owed / mo</th></tr></thead><tbody>
+{% for sp in row.splits %}<tr><td>{{ sp.client_name }}{% if not sp.confirmed %}<div class="evidence">{{ sp.evidence }}</div>{% endif %}</td><td>{{ sp.pct }}%</td><td style="text-align:right;font-family:'IBM Plex Mono',monospace">{{ user.currency|default('USD') }} {{ '{:,.2f}'.format(sp.owed) }}</td></tr>{% endfor %}
+{% if not row.splits %}<tr><td colspan="3" style="color:var(--faint)">No clients to split this across yet.</td></tr>{% endif %}
+</tbody></table>
+
+<form method="post" action="{{ url_for('rebilling') }}">
+<input type="hidden" name="vendor_key" value="{{ row.vendor_key }}">
+<div style="margin-top:14px;display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end">
+{% for c in clients %}
+<div><label style="display:block;font-size:9px;color:var(--faint);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">{{ c.name }} %</label><input class="pct" type="number" step="0.1" min="0" max="100" name="pct_{{ c.id }}" placeholder="0"></div>
+{% endfor %}
+</div>
+<div class="rowaction"><button class="btn primary" type="submit">Save split for {{ row.name }}</button></div>
+</form>
+</div>
+{% endif %}
+</section>
+{% endfor %}
+
+</main>
+</body></html>
+
