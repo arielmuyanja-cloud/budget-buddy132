@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-5" style="max-width:720px;">
+  <div class="card border-0 shadow-sm rounded-4">
+    <div class="card-body p-4 p-md-5">
+      <div class="text-center mb-4">
+        <div class="display-6 mb-2">💳</div>
+        <h1 class="fw-bold mb-2">Pay for Budget Buddy {{ plan }}</h1>
+        <p class="text-muted mb-0">Relworx mobile-money checkout</p>
+      </div>
+
+      {% if error %}
+        <div class="alert alert-danger rounded-3">{{ error }}</div>
+      {% endif %}
+
+      {% if pending %}
+        <div id="payment-status" class="text-center">
+          <div class="alert alert-info rounded-3">
+            <strong>Payment request sent.</strong><br>
+            Approve the mobile-money prompt on <strong>{{ pending.reference }}</strong>.
+          </div>
+          <div class="mb-3">
+            <div class="fw-semibold">{{ pending.amount|int }} UGX</div>
+            <div class="text-muted small">Plan: {{ pending.plan }}</div>
+          </div>
+          <div class="spinner-border mb-3" role="status" aria-hidden="true"></div>
+          <p class="text-muted mb-0">Waiting for payment confirmation…</p>
+        </div>
+
+        <div id="payment-success" class="alert alert-success rounded-3 d-none">
+          Payment confirmed. Your <strong>{{ pending.plan }}</strong> plan is now active.
+          <a class="alert-link" href="{{ url_for('dashboard') }}">Go to dashboard</a>.
+        </div>
+
+        <div id="payment-failed" class="alert alert-danger rounded-3 d-none"></div>
+
+        <script>
+          (function () {
+            const statusBox = document.getElementById('payment-status');
+            const successBox = document.getElementById('payment-success');
+            const failedBox = document.getElementById('payment-failed');
+
+            async function poll() {
+              try {
+                const response = await fetch('{{ url_for("relworx_status") }}', {
+                  headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                  statusBox.classList.add('d-none');
+                  successBox.classList.remove('d-none');
+                  return;
+                }
+
+                if (data.status === 'failed' || data.status === 'mismatch') {
+                  statusBox.classList.add('d-none');
+                  failedBox.textContent = data.message || 'The payment did not complete.';
+                  failedBox.classList.remove('d-none');
+                  return;
+                }
+              } catch (err) {
+                // Keep polling through temporary network errors.
+              }
+              window.setTimeout(poll, 5000);
+            }
+
+            poll();
+          })();
+        </script>
+      {% else %}
+        <div class="bg-body-tertiary rounded-3 p-4 mb-4">
+          <div class="d-flex justify-content-between mb-2">
+            <span class="text-muted">Plan</span>
+            <strong>{{ plan }}</strong>
+          </div>
+          <div class="d-flex justify-content-between">
+            <span class="text-muted">Amount</span>
+            <strong>{{ amount_ugx|int }} UGX</strong>
+          </div>
+        </div>
+
+        <form action="{{ url_for('create_checkout_session') }}" method="POST">
+          <input type="hidden" name="plan" value="{{ plan }}">
+          <label for="phone" class="form-label fw-semibold">Uganda mobile-money number</label>
+          <input
+            id="phone"
+            name="phone"
+            type="tel"
+            class="form-control form-control-lg mb-2"
+            placeholder="0771234567"
+            autocomplete="tel"
+            inputmode="tel"
+            required
+          >
+          <div class="form-text mb-4">Use an MTN or Airtel Uganda number in local or +256 format.</div>
+
+          <button type="submit" class="btn btn-primary btn-lg w-100 rounded-3">
+            Request payment
+          </button>
+        </form>
+
+        <div class="text-center mt-3">
+          <a href="{{ url_for('pricing') }}" class="small text-muted">← Back to pricing</a>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
