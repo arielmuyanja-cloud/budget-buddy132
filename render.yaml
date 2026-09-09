@@ -27,6 +27,16 @@ services:
         sync: false
       - key: ADMIN_EMAIL
         sync: false
+      - key: RELWORX_API_KEY
+        sync: false
+      - key: RELWORX_ACCOUNT_NO
+        sync: false
+      - key: RELWORX_STARTER_UGX
+        sync: false
+      - key: RELWORX_GROWTH_UGX
+        sync: false
+      - key: RELWORX_PRO_UGX
+        sync: false
 
 databases:
   - name: budget-buddy-db
