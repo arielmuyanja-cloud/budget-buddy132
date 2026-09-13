@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Your Audit Results — Budget Buddy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#FAF9F5;--surface:#fff;--border:#E6E2D8;--ink:#16202B;--muted:#5C6570;--faint:#8A9099;--navy:#1B3A5C;--dark:#0E1B2A;--brass:#A2792C;--brass-soft:#F3EBD8;--green:#1F6E45;--green-soft:#E4F0E8;--red:#9C3B2E;--red-soft:#F6E7E3;--shadow:0 10px 35px rgba(22,32,43,.07);--r:14px}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,sans-serif}
+a{text-decoration:none;color:inherit}
+.top{height:70px;background:#fff;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 28px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:16px}
+.mark{width:32px;height:32px;border-radius:9px;background:var(--navy);display:grid;place-items:center;color:#fff;font-weight:800}
+.btn{display:inline-block;border:1px solid var(--border);background:#fff;border-radius:9px;padding:10px 16px;font-size:12.5px;font-weight:700;cursor:pointer}
+.btn.primary{background:var(--navy);border-color:var(--navy);color:#fff}
+.btn.gold{background:var(--brass);border-color:var(--brass);color:#fff}
+main{max-width:720px;margin:0 auto;padding:48px 24px 70px}
+.headline{text-align:center;margin-bottom:28px}
+.eyebrow{display:inline-block;background:var(--brass-soft);color:var(--brass);padding:6px 13px;border-radius:20px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em}
+h1{font:600 30px/1.2 'Source Serif 4',Georgia,serif;margin:16px 0 6px}
+.headline p{color:var(--muted);font-size:14px;margin:0}
+.hero-num{background:var(--dark);color:#fff;border-radius:var(--r);padding:26px;text-align:center;margin-bottom:20px;box-shadow:var(--shadow)}
+.hero-num .amt{font:600 40px 'Source Serif 4',Georgia,serif;color:#F3EBD8}
+.hero-num .lbl{font-size:11px;color:#B9C6D4;text-transform:uppercase;letter-spacing:.08em;margin-top:4px}
+.card{background:#fff;border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow);padding:8px 20px 18px;margin-bottom:18px}
+.head{padding:14px 0 6px;display:flex;justify-content:space-between;align-items:center}
+.head h2{font-size:14px;margin:0}
+.head span{font-size:10px;color:var(--faint)}
+.subrow{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--border);gap:10px}
+.subrow:last-child{border:0}
+.subleft{display:flex;gap:9px;align-items:center;min-width:0}
+.icon{width:29px;height:29px;border-radius:8px;background:#F3F0E8;color:var(--brass);display:grid;place-items:center;font-size:9px;font-weight:800;flex-shrink:0}
+.subname{font-size:12px;font-weight:700}
+.subcat{font-size:9.5px;color:var(--faint);margin-top:2px}
+.amount{font:600 11px 'IBM Plex Mono',monospace;white-space:nowrap}
+.empty{text-align:center;padding:25px 10px;color:var(--muted);font-size:12px}
+.gate{background:#fff;border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow);padding:26px;text-align:center}
+.gate h2{font:600 20px 'Source Serif 4',Georgia,serif;margin:0 0 8px}
+.gate p{color:var(--muted);font-size:13px;margin:0 0 18px;line-height:1.55}
+.count{text-align:center;font-size:11.5px;color:var(--muted);margin:22px 0}
+.count b{color:var(--navy)}
+.blur-note{font-size:10.5px;color:var(--faint);text-align:center;margin-top:6px}
+</style>
+</head>
+<body>
+<header class="top">
+<a class="brand" href="{{ url_for('index') }}"><span class="mark">✓</span>Budget Buddy</a>
+<a class="btn" href="{{ url_for('login') }}">Log in</a>
+</header>
+<main>
+<div class="headline">
+<span class="eyebrow">Your free audit</span>
+<h1>Here's what we found.</h1>
+<p>Scanned {{ imported_count }} transaction{{ '' if imported_count == 1 else 's' }}{% if skipped_count %}, skipped {{ skipped_count }} unreadable row{{ '' if skipped_count == 1 else 's' }}{% endif %}.</p>
+</div>
+
+{% if detected_subs %}
+<div class="hero-num">
+<div class="amt">${{ '{:,.2f}'.format(total_waste) }}/mo</div>
+<div class="lbl">in software spend detected across {{ detected_subs|length }} vendor{{ '' if detected_subs|length == 1 else 's' }}</div>
+</div>
+
+<div class="card">
+<div class="head"><h2>Detected subscriptions</h2><span>{{ detected_subs|length }} found</span></div>
+{% for s in detected_subs[:15] %}
+<div class="subrow">
+<div class="subleft"><span class="icon">{{ s.name[:2]|upper }}</span>
+<div><div class="subname">{{ s.name }}</div><div class="subcat">{{ s.category|default('Software') }} · {{ s.occurrences }} charge{{ '' if s.occurrences == 1 else 's' }} seen</div></div>
+</div>
+<span class="amount">${{ '{:,.2f}'.format(s.amount|default(0)) }}</span>
+</div>
+{% endfor %}
+</div>
+{% else %}
+<div class="card"><div class="empty"><strong>No recognized subscriptions in this file.</strong><br>Try a longer statement export, or a different account.</div></div>
+{% endif %}
+
+{% if out_of_audits %}
+<div class="gate">
+<h2>That was your last free audit</h2>
+<p>Create a free account to keep auditing, save these results, and unlock confidence scoring on every vendor.</p>
+<a class="btn primary" href="{{ url_for('register') }}">Create free account →</a>
+</div>
+{% else %}
+<div class="count">You have <b>{{ audits_remaining }}</b> of {{ audit_limit }} free audits left.</div>
+<div style="text-align:center;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+<a class="btn" href="{{ url_for('try_audit') }}">Run another free audit</a>
+<a class="btn gold" href="{{ url_for('register') }}">Save these results — create free account →</a>
+</div>
+{% endif %}
+</main>
+</body>
+</html>
