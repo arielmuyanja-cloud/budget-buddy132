@@ -18,6 +18,10 @@
                         <label class="form-label small text-secondary">Password</label>
                         <input type="password" name="password" class="form-control" placeholder="••••••••" required>
                     </div>
+                    <div class="mb-4 form-check">
+                        <input type="checkbox" class="form-check-input" id="agreeTerms" name="agree_terms" required>
+                        <label class="form-check-label small text-secondary" for="agreeTerms">I've read and agree to the <a href="{{ url_for('terms') }}" target="_blank" rel="noopener">Terms and Conditions</a></label>
+                    </div>
                     <button type="submit" class="btn btn-primary w-100 fw-bold">Register Account</button>
                 </form>
             </div>
