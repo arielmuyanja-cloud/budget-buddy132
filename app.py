@@ -854,6 +854,166 @@ def apply_auto_rules(user_id, description, default_cat="General"):
             return r.target_category
     return default_cat
 
+# --- GUEST AUDIT (no-signup trial) ---
+# Lets a visitor upload a CSV and see real findings before creating an
+# account. Nothing here touches the database — everything lives only
+# for the length of one request. Session cookie tracks how many free
+# audits a browser has used so the offer doesn't repeat forever.
+GUEST_AUDIT_LIMIT = 3
+GUEST_AUDIT_MAX_ROWS = 500
+
+class GuestTransaction:
+    """Plain in-memory stand-in for a Transaction row. Only carries the
+    attributes build_subscription_report() actually reads, so a guest's
+    data never has to be persisted to audit it."""
+    __slots__ = ("type", "description", "amount", "date", "client_name")
+    def __init__(self, type, description, amount, date, client_name=None):
+        self.type = type
+        self.description = description
+        self.amount = amount
+        self.date = date
+        self.client_name = client_name
+
+def parse_guest_csv(raw_bytes):
+    """
+    Mirrors the column-detection rules in import_csv(), but returns
+    lightweight in-memory transactions instead of writing to the
+    database. Returns (transactions, imported_count, skipped_count).
+    """
+    text = None
+    for enc in ["utf-8-sig", "utf-8", "latin-1", "cp1252", "iso-8859-1"]:
+        try:
+            text = raw_bytes.decode(enc)
+            break
+        except (UnicodeDecodeError, LookupError):
+            continue
+    if text is None:
+        text = raw_bytes.decode("utf-8", errors="replace")
+
+    stream = io.StringIO(text, newline="")
+    csv_reader = csv.DictReader(stream)
+    if not csv_reader.fieldnames:
+        return [], 0, 0
+
+    DESC_FIELDS = ["description", "name", "merchant", "vendor", "transaction", "details", "memo", "narration", "reference", "payee", "particulars"]
+    DATE_FIELDS = ["date", "transaction date", "trans date", "posted date", "transaction_date", "posting date", "value date"]
+    AMOUNT_FIELDS = ["amount", "transaction amount", "value", "total", "transaction_amount", "net amount"]
+    DEBIT_FIELDS = ["debit", "debit amount", "withdrawal", "spent", "paid out", "charge"]
+    CREDIT_FIELDS = ["credit", "credit amount", "deposit", "received", "paid in", "income"]
+    TYPE_FIELDS = ["type", "transaction type", "trans type", "entry type"]
+    CLIENT_FIELDS = ["client", "client name", "customer", "project", "client_name"]
+
+    transactions = []
+    imported_count = 0
+    skipped_count = 0
+
+    for row_idx, row in enumerate(csv_reader, start=2):
+        if len(transactions) >= GUEST_AUDIT_MAX_ROWS:
+            break
+        try:
+            if not row or not any(row.values()):
+                continue
+
+            row_map = {}
+            for k, v in row.items():
+                if k is not None:
+                    row_map[normalize_csv_header(k)] = str(v).strip() if v is not None else ""
+
+            description = None
+            for field in DESC_FIELDS:
+                if row_map.get(field):
+                    description = row_map[field]
+                    break
+            if not description:
+                description = "CSV Import"
+            description = str(description)[:200]
+
+            date_val = None
+            for field in DATE_FIELDS:
+                if row_map.get(field):
+                    date_val = row_map[field]
+                    break
+
+            parsed_date, date_valid = parse_csv_date(date_val)
+            if not date_valid:
+                skipped_count += 1
+                continue
+
+            amount = None
+            tx_type = None
+
+            for field in AMOUNT_FIELDS:
+                if row_map.get(field):
+                    parsed_amt = parse_money(row_map[field])
+                    if parsed_amt is not None:
+                        amount = parsed_amt
+                        break
+
+            if amount is None:
+                debit_val = None
+                credit_val = None
+                for df in DEBIT_FIELDS:
+                    if row_map.get(df):
+                        debit_val = parse_money(row_map[df])
+                        if debit_val is not None: break
+                for cf in CREDIT_FIELDS:
+                    if row_map.get(cf):
+                        credit_val = parse_money(row_map[cf])
+                        if credit_val is not None: break
+
+                if credit_val is not None and credit_val > 0:
+                    amount = abs(credit_val)
+                    tx_type = "INCOME"
+                elif debit_val is not None and debit_val > 0:
+                    amount = abs(debit_val)
+                    tx_type = "EXPENSE"
+                elif credit_val is not None and credit_val != 0:
+                    amount = abs(credit_val)
+                    tx_type = "INCOME" if credit_val > 0 else "EXPENSE"
+                elif debit_val is not None and debit_val != 0:
+                    amount = abs(debit_val)
+                    tx_type = "EXPENSE"
+
+            if amount is None:
+                skipped_count += 1
+                continue
+
+            if tx_type is None:
+                explicit_type_val = None
+                for tf in TYPE_FIELDS:
+                    if row_map.get(tf):
+                        explicit_type_val = row_map[tf].lower()
+                        break
+
+                if explicit_type_val in ["credit", "income", "deposit", "refund"]:
+                    tx_type = "INCOME"
+                elif explicit_type_val in ["debit", "expense", "withdrawal", "payment", "charge"]:
+                    tx_type = "EXPENSE"
+                else:
+                    tx_type = "INCOME" if amount > 0 else "EXPENSE"
+
+            client_tag = None
+            for cl_field in CLIENT_FIELDS:
+                if row_map.get(cl_field):
+                    client_tag = row_map[cl_field][:100]
+                    break
+
+            transactions.append(GuestTransaction(
+                type=tx_type,
+                description=description,
+                amount=abs(float(amount)),
+                date=parsed_date,
+                client_name=client_tag
+            ))
+            imported_count += 1
+
+        except Exception as row_err:
+            skipped_count += 1
+            logger.warning(f"Guest CSV row {row_idx} error: {row_err}")
+            continue
+
+    return transactions, imported_count, skipped_count
+
 # --- AUTH ROUTES ---
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -862,6 +1022,10 @@ def register():
         password = request.form.get('password')
         agency_name = request.form.get('agency_name')
         currency = request.form.get('currency', 'USD').upper()
+
+        if not request.form.get('agree_terms'):
+            flash("You must agree to the Terms and Conditions to create an account.", "danger")
+            return redirect(url_for('register'))
 
         if User.query.filter_by(email=email).first():
             flash("Email already registered.", "danger")
@@ -1469,6 +1633,70 @@ def import_csv():
         flash("Failed to process CSV statement.", "danger")
 
     return redirect(url_for('dashboard'))
+
+@app.route('/try-audit', methods=['GET', 'POST'])
+def try_audit():
+    """No-signup trial audit. A visitor gets GUEST_AUDIT_LIMIT free runs,
+    tracked per-browser via the session cookie, before being asked to
+    create an account. Nothing uploaded here is saved."""
+    audits_used = session.get('guest_audits_used', 0)
+    audits_remaining = max(0, GUEST_AUDIT_LIMIT - audits_used)
+
+    if request.method == 'GET':
+        return render_template(
+            'try_audit.html',
+            audits_remaining=audits_remaining,
+            audit_limit=GUEST_AUDIT_LIMIT
+        )
+
+    if audits_remaining <= 0:
+        flash("You've used all your free audits. Create a free account to keep auditing your stack.", "info")
+        return redirect(url_for('register'))
+
+    file = request.files.get('file')
+    if not file or not file.filename:
+        flash("Please select a CSV file to upload.", "danger")
+        return redirect(url_for('try_audit'))
+
+    if not file.filename.lower().endswith('.csv'):
+        flash("Upload a valid CSV statement file (.csv).", "danger")
+        return redirect(url_for('try_audit'))
+
+    try:
+        raw_bytes = file.stream.read()
+        if not raw_bytes or not raw_bytes.strip():
+            flash("The uploaded CSV file is empty.", "warning")
+            return redirect(url_for('try_audit'))
+
+        transactions, imported_count, skipped_count = parse_guest_csv(raw_bytes)
+
+        if imported_count == 0:
+            flash("Couldn't find any usable transactions in that file. Try exporting a standard bank/card CSV.", "warning")
+            return redirect(url_for('try_audit'))
+
+        detected_subs = build_subscription_report(transactions)
+        total_waste = sum(s['amount'] for s in detected_subs)
+
+        session['guest_audits_used'] = audits_used + 1
+        audits_remaining_after = max(0, GUEST_AUDIT_LIMIT - session['guest_audits_used'])
+
+        logger.info(f"Guest audit run ({session['guest_audits_used']}/{GUEST_AUDIT_LIMIT}): {imported_count} rows, {len(detected_subs)} vendors found.")
+
+        return render_template(
+            'try_audit_results.html',
+            detected_subs=detected_subs,
+            total_waste=total_waste,
+            imported_count=imported_count,
+            skipped_count=skipped_count,
+            audits_remaining=audits_remaining_after,
+            audit_limit=GUEST_AUDIT_LIMIT,
+            out_of_audits=(audits_remaining_after <= 0)
+        )
+
+    except Exception as e:
+        logger.exception(f"Guest audit failed: {e}")
+        flash("Failed to process that CSV file.", "danger")
+        return redirect(url_for('try_audit'))
 
 # --- VENDOR VERIFICATION (agency-confirmed confidence tier) ---
 @app.route('/vendor/<vendor_key>/verify', methods=['POST'])
@@ -2160,38 +2388,4 @@ def admin_sendwave_reject(payment_id):
     payment.admin_notes = request.form.get('notes', '').strip() or None
     db.session.commit()
     flash("Marked as rejected.", "info")
-    return redirect(url_for('admin_sendwave'))
-
-# --- TOKEN-GATED REVIEW ACTIONS FROM EMAIL ---
-def _get_payment_by_token(payment_id, token):
-    payment = SendwavePayment.query.get_or_404(payment_id)
-    if not payment.action_token or not secrets.compare_digest(payment.action_token, token):
-        abort(404)
-    return payment
-
-@app.route('/sendwave/review/<int:payment_id>/<token>')
-def sendwave_email_review(payment_id, token):
-    payment = _get_payment_by_token(payment_id, token)
-    return render_template('sendwave_email_review.html', payment=payment)
-
-@app.route('/sendwave/review/<int:payment_id>/<token>/approve', methods=['POST'])
-def sendwave_email_approve(payment_id, token):
-    payment = _get_payment_by_token(payment_id, token)
-    if payment.status == "PENDING":
-        payment.status = "APPROVED"
-        payment.reviewed_at = datetime.utcnow()
-        payment.user.plan_tier = payment.plan_requested
-        db.session.commit()
-    return render_template('sendwave_email_review.html', payment=payment, just_actioned=True)
-
-@app.route('/sendwave/review/<int:payment_id>/<token>/decline', methods=['POST'])
-def sendwave_email_decline(payment_id, token):
-    payment = _get_payment_by_token(payment_id, token)
-    if payment.status == "PENDING":
-        payment.status = "REJECTED"
-        payment.reviewed_at = datetime.utcnow()
-        db.session.commit()
-    return render_template('sendwave_email_review.html', payment=payment, just_actioned=True)
-
-if __name__ == '__main__':
-    app.run(debug=True)
+    return redirect(
