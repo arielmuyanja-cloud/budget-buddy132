@@ -2385,4 +2385,41 @@ def admin_sendwave_reject(payment_id):
     payment = SendwavePayment.query.get_or_404(payment_id)
     payment.status = "REJECTED"
     payment.reviewed_at = datetime.utcnow()
-    payment.admin_notes = request.form.get('notes', '').strip(
+    payment.admin_notes = request.form.get('notes', '').strip() or None
+    db.session.commit()
+    flash("Marked as rejected.", "info")
+    return redirect(url_for('admin_sendwave'))
+
+# --- TOKEN-GATED REVIEW ACTIONS FROM EMAIL ---
+def _get_payment_by_token(payment_id, token):
+    payment = SendwavePayment.query.get_or_404(payment_id)
+    if not payment.action_token or not secrets.compare_digest(payment.action_token, token):
+        abort(404)
+    return payment
+
+@app.route('/sendwave/review/<int:payment_id>/<token>')
+def sendwave_email_review(payment_id, token):
+    payment = _get_payment_by_token(payment_id, token)
+    return render_template('sendwave_email_review.html', payment=payment)
+
+@app.route('/sendwave/review/<int:payment_id>/<token>/approve', methods=['POST'])
+def sendwave_email_approve(payment_id, token):
+    payment = _get_payment_by_token(payment_id, token)
+    if payment.status == "PENDING":
+        payment.status = "APPROVED"
+        payment.reviewed_at = datetime.utcnow()
+        payment.user.plan_tier = payment.plan_requested
+        db.session.commit()
+    return render_template('sendwave_email_review.html', payment=payment, just_actioned=True)
+
+@app.route('/sendwave/review/<int:payment_id>/<token>/decline', methods=['POST'])
+def sendwave_email_decline(payment_id, token):
+    payment = _get_payment_by_token(payment_id, token)
+    if payment.status == "PENDING":
+        payment.status = "REJECTED"
+        payment.reviewed_at = datetime.utcnow()
+        db.session.commit()
+    return render_template('sendwave_email_review.html', payment=payment, just_actioned=True)
+
+if __name__ == '__main__':
+    app.run(debug=True)
