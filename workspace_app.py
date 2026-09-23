@@ -2,6 +2,7 @@ from app import app
 from workspace import register_workspace
 from profit_simulator import register_profit_simulator
 from relworx_payments import register_relworx
+from nowpayments_payments import register_nowpayments
 
 try:
     register_workspace(app)
@@ -17,6 +18,11 @@ try:
     register_relworx(app)
 except Exception as e:
     app.logger.error(f"Relworx registration failed: {e}")
+
+try:
+    register_nowpayments(app)
+except Exception as e:
+    app.logger.error(f"NOWPayments registration failed: {e}")
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)

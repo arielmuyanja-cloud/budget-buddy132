@@ -152,6 +152,26 @@ class SendwavePayment(db.Model):
 
     user = db.relationship('User', backref=db.backref('sendwave_payments', cascade="all, delete-orphan"))
 
+class NowPaymentsOrder(db.Model):
+    """Crypto payments via NOWPayments, confirmed automatically through the
+    IPN webhook instead of manual review. Covers both plan upgrades
+    (order_type='PLAN') and one-time paid audits (order_type='AUDIT'),
+    which are sold to guests who don't have a Budget Buddy account yet."""
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    order_type = db.Column(db.String(20), nullable=False)  # "PLAN" or "AUDIT"
+    plan_requested = db.Column(db.String(20), nullable=True)  # set for PLAN orders
+    order_id = db.Column(db.String(64), unique=True, nullable=False)
+    payment_id = db.Column(db.String(64), nullable=True)  # NOWPayments' own ID, filled in by the webhook
+    amount_usd = db.Column(db.Float, nullable=False)
+    customer_email = db.Column(db.String(120), nullable=True)
+    customer_name = db.Column(db.String(120), nullable=True)
+    status = db.Column(db.String(20), default="PENDING")  # PENDING, PAID, FAILED, EXPIRED
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    paid_at = db.Column(db.DateTime, nullable=True)
+
+    user = db.relationship('User', backref=db.backref('nowpayments_orders', cascade="all, delete-orphan"))
+
 class VendorVerification(db.Model):
     """Agency-confirmed status for a detected vendor — the top confidence
     tier in the audit (vs. a pattern-based 'confirmed' or one-off 'possible')."""
