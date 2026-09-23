@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-lg-6">
+      <div class="card border-0 rounded-4 shadow-sm">
+        <div class="card-body p-5">
+          <h2 class="fw-bold mb-2">One-Time Agency Software Audit</h2>
+          <p class="text-muted mb-4">
+            We'll review your software stack and hand you a report of unused
+            seats, duplicate charges, and price increases you can cut — no
+            subscription required.
+          </p>
+
+          <div class="my-4">
+            <span class="fs-1 fw-bold">${{ "%.0f"|format(price) }}</span>
+            <span class="text-muted">one-time</span>
+          </div>
+
+          {% if error %}
+          <div class="alert alert-danger">{{ error }}</div>
+          {% endif %}
+
+          <form method="POST">
+            <div class="mb-3">
+              <label class="form-label">Your name</label>
+              <input type="text" name="name" class="form-control py-2" placeholder="Jane Smith">
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Agency name</label>
+              <input type="text" name="agency" class="form-control py-2" placeholder="Acme Marketing">
+            </div>
+            <div class="mb-4">
+              <label class="form-label">Email <span class="text-danger">*</span></label>
+              <input type="email" name="email" class="form-control py-2" placeholder="jane@acmemarketing.com" required>
+            </div>
+            <button type="submit" class="btn btn-primary w-100 rounded-3 py-3 fw-bold">
+              <i class="bi bi-currency-bitcoin me-1"></i>Pay ${{ "%.0f"|format(price) }} with Crypto
+            </button>
+          </form>
+
+          <p class="text-muted small mt-3 mb-0">
+            After payment, we'll email you at the address above with next steps.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
