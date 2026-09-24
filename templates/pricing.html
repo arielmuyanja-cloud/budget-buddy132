@@ -7,6 +7,12 @@
     <p class="text-muted">Choose the right plan to track expenses, spot leaks, and scale your savings.</p>
   </div>
 
+  <div class="alert alert-primary border-0 rounded-4 text-center mb-5">
+    <strong>Not ready for a subscription?</strong>
+    Get a one-time audit of your agency's software spend, no account needed.
+    <a href="{{ url_for('audit_buy') }}" class="alert-link ms-1">Get the one-time audit</a>
+  </div>
+
   <div class="row row-cols-1 row-cols-md-2 row-cols-xl-4 g-4 align-items-stretch">
 
     <!-- FREE TIER -->
@@ -61,8 +67,7 @@
             <button type="submit" class="btn btn-primary w-100 rounded-3 py-2">Upgrade to Starter</button>
           </form>
           {% if session.get('user_id') %}
-          <!-- FIXED: Changed endpoint to 'checkout' -->
-          <form action="{{ url_for('checkout', plan='STARTER') }}" method="POST" class="mt-2">
+          <form action="{{ url_for('nowpayments_plan_checkout', plan='STARTER') }}" method="POST" class="mt-2">
             <button type="submit" class="btn btn-outline-secondary btn-sm w-100 rounded-3"><i class="bi bi-currency-bitcoin me-1"></i>Pay with Crypto</button>
           </form>
           {% endif %}
@@ -106,8 +111,7 @@
             <button type="submit" class="btn btn-primary w-100 rounded-3 py-2 fw-bold">Upgrade to Growth</button>
           </form>
           {% if session.get('user_id') %}
-          <!-- FIXED: Changed endpoint to 'checkout' -->
-          <form action="{{ url_for('checkout', plan='GROWTH') }}" method="POST" class="mt-2">
+          <form action="{{ url_for('nowpayments_plan_checkout', plan='GROWTH') }}" method="POST" class="mt-2">
             <button type="submit" class="btn btn-outline-secondary btn-sm w-100 rounded-3"><i class="bi bi-currency-bitcoin me-1"></i>Pay with Crypto</button>
           </form>
           {% endif %}
@@ -145,6 +149,11 @@
             <input type="hidden" name="amount" value="299">
             <button type="submit" class="btn btn-outline-primary w-100 rounded-3 py-2">Upgrade to Pro</button>
           </form>
+          {% if session.get('user_id') %}
+          <form action="{{ url_for('nowpayments_plan_checkout', plan='PRO') }}" method="POST" class="mt-2">
+            <button type="submit" class="btn btn-outline-secondary btn-sm w-100 rounded-3"><i class="bi bi-currency-bitcoin me-1"></i>Pay with Crypto</button>
+          </form>
+          {% endif %}
         </div>
       </div>
     </div>
