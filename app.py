@@ -2441,5 +2441,46 @@ def sendwave_email_decline(payment_id, token):
         db.session.commit()
     return render_template('sendwave_email_review.html', payment=payment, just_actioned=True)
 
+# --- OPTIONAL MODULE REGISTRATION -------------------------------------------
+# Registered here (not only in workspace_app.py) so the routes exist no matter
+# which entry point the host uses: `gunicorn app:app` or `gunicorn workspace_app:app`.
+# Each step is guarded, so running it more than once is safe.
+def _register_optional_modules():
+    def _try(label, fn):
+        try:
+            fn()
+        except Exception:
+            app.logger.exception("%s registration failed", label)
+
+    def _workspace():
+        from workspace import register_workspace
+        register_workspace(app)
+
+    def _profit_simulator():
+        from profit_simulator import register_profit_simulator
+        register_profit_simulator(app)
+
+    def _relworx():
+        if "_relworx_checkout_internal" not in app.view_functions:
+            from relworx_payments import register_relworx
+            register_relworx(app)
+
+    def _nowpayments():
+        if "nowpayments_plan_checkout" not in app.view_functions:
+            from nowpayments_payments import register_nowpayments
+            register_nowpayments(app)
+
+    _try("workspace", _workspace)
+    _try("profit simulator", _profit_simulator)
+    _try("Relworx", _relworx)
+    _try("NOWPayments", _nowpayments)
+
+
+if __name__ != '__main__':
+    _register_optional_modules()
+
 if __name__ == '__main__':
-    app.run(debug=True)
+    # Running `python app.py` directly: import via workspace_app so modules
+    # that do `from app import ...` see the same module instance.
+    import workspace_app  # noqa: F401  (registers everything on import)
+    workspace_app.app.run(debug=True)
