@@ -12,7 +12,7 @@ Env vars required:
   NOWPAYMENTS_API_KEY
   NOWPAYMENTS_IPN_SECRET
 Optional:
-  NOWPAYMENTS_AUDIT_PRICE_USD  (default 149)
+  NOWPAYMENTS_AUDIT_PRICE_USD  (default 99)
 
 Registration pattern mirrors relworx_payments.py: a register_nowpayments(app)
 function called from workspace_app.py after app.py's routes are loaded.
@@ -38,7 +38,7 @@ PLAN_AMOUNTS_USD = {
     "PRO": 299,
 }
 
-AUDIT_PRICE_USD = float(os.environ.get("NOWPAYMENTS_AUDIT_PRICE_USD", "149") or 149)
+AUDIT_PRICE_USD = float(os.environ.get("NOWPAYMENTS_AUDIT_PRICE_USD", "99") or 99)
 
 
 def _headers():
